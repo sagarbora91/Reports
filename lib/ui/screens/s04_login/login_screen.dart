@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../data/db/database.dart';
 import '../../../providers/auth_provider.dart';
@@ -65,10 +66,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!mounted) return;
 
     if (ok) {
-      // S5 Home not implemented in Week 1 — placeholder confirmation.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Logged in. (S5 Home not built yet.)')),
-      );
+      context.goNamed('s05_home');
       return;
     }
 

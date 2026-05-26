@@ -7,6 +7,10 @@ import 'ui/screens/s01_splash/splash_screen.dart';
 import 'ui/screens/s02_language/language_screen.dart';
 import 'ui/screens/s03_first_setup/first_setup_screen.dart';
 import 'ui/screens/s04_login/login_screen.dart';
+import 'ui/screens/s05_home/home_screen.dart';
+import 'ui/screens/s06_start_audit/start_audit_screen.dart';
+import 'ui/screens/s07_checkpoint/checkpoint_screen.dart';
+import 'ui/screens/s08_fail_detail/fail_detail_screen.dart';
 import 'ui/theme/app_theme.dart';
 
 /// Root app widget. Owns the [GoRouter] and the [MaterialApp] config.
@@ -38,7 +42,28 @@ class SaagarAuditApp extends ConsumerWidget {
           name: 's04_login',
           builder: (_, __) => const LoginScreen(),
         ),
-        // S5+ routes added in subsequent W1.6 / W2 milestones.
+        GoRoute(
+          path: '/home',
+          name: 's05_home',
+          builder: (_, __) => const HomeScreen(),
+        ),
+        GoRoute(
+          path: '/audit/start',
+          name: 's06_start_audit',
+          builder: (_, __) => const StartAuditScreen(),
+        ),
+        GoRoute(
+          path: '/audit/checkpoint',
+          name: 's07_checkpoint',
+          builder: (_, __) => const CheckpointScreen(),
+        ),
+        GoRoute(
+          path: '/audit/fail-detail',
+          name: 's08_fail_detail',
+          builder: (_, __) => const FailDetailScreen(),
+        ),
+        // S9 Photo Capture is folded into S8 (inline camera launch).
+        // S10–S32 land in Week 3+.
       ],
     );
 
