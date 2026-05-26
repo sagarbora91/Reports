@@ -1,0 +1,11 @@
+{
+  "appId": "com.saagar.audit",
+  "appName": "Saagar Audit",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "saagar-audit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Saagar Traders retail audit app — HTML/JS wrapped to Android via Capacitor.",
+  "scripts": {
+    "sync": "cap sync android",
+    "open-android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}

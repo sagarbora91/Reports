@@ -1,114 +1,73 @@
-# Saagar Audit App
+# Saagar Audit
 
-Android app for daily / weekly / monthly retail compliance audits at Saagar Traders' Titan World (`WLMHW`) and Helios (`HEMW`) stores, Latur.
+Android app for daily retail compliance audits at Saagar Traders' Titan World (`WLMHW`) and Helios (`HEMW`) outlets, Latur.
 
-Built per the spec in [`Documentation/Saagar_P1_App_Spec_v1.docx`](Documentation/Saagar_P1_App_Spec_v1.docx). The workbook in [`Documentation/Saagar_P1_Audit_Workbook_v1.docx`](Documentation/Saagar_P1_Audit_Workbook_v1.docx) is the operational ground truth — on any conflict, the workbook wins.
+## What this is
 
-## Status
+A single-page HTML/JS app wrapped as an Android APK by [Capacitor](https://capacitorjs.com). All audit data lives on your phone in `localStorage` — nothing leaves the device unless you tap **Export CSV**.
 
-**Phase 1 — Week 1 in progress.** Project scaffold + SQLite schema + seed JSON + score engine + S1–S4 (splash, language, first-time setup, login).
+68 daily checkpoints across 8 SOPs, weighted to a max of 90 points, scored to a 5-band rating per the [Saagar P1 Spec](Documentation/Saagar_P1_App_Spec_v1.docx) — Excellent ≥ 95%, Good ≥ 90%, Fair ≥ 85%, Poor ≥ 80%, Critical < 80%.
 
-| Phase | Weeks | Scope |
-|---|---|---|
-| P1 | 1–4 | Daily audit foundation: S1–S17, S22–S32, CAP create + mark done |
-| P2 | 5–8 | Weekly audit, CAP verify + close, GM dashboard |
-| P3 | 9–11 | Monthly audit, escalation engine (7 triggers), trend analytics |
-| P4 | 12–13 | Polish, signing, Play Store internal track |
+## How to get the APK
 
-## Tech stack (LOCKED — see spec §2)
+Every push to `main` or `capacitor` triggers a GitHub Actions build at <https://github.com/sagarbora91/Reports/actions>:
 
-Flutter ≥3.16 · Dart ≥3.2 · sqflite · Firestore · Firebase Storage · local PIN + bcrypt · Riverpod · go_router · ARB EN+MR · `pdf` · `image_picker`/`camera` · `flutter_local_notifications` · `url_launcher` · `fl_chart` · Android API 24+.
+1. Wait for the green check (~5 minutes on a cold cache, ~2 minutes warm).
+2. Open the run → **Artifacts** panel at the top → download `saagar-audit-<sha>.zip`.
+3. Unzip → you'll get `app-debug.apk`.
+4. Transfer the APK to your Android phone (USB, Google Drive, WhatsApp self-chat, whatever).
+5. Open it from your file manager — Android will prompt you to allow installs from unknown sources. Approve, then tap Install.
+6. Open the **Saagar Audit** app.
 
-No: Firebase Auth · drift/isar · Provider/Bloc · auto_route · iOS · tablet · FCM push.
+## Using the app
 
-## How the build works
+**First time**:
+1. Go to **Settings** tab → **+ Add CRO** for each of your floor staff.
+2. Switch to **Audit** tab → enter your name → today's date is pre-filled → tick the CROs on duty → **Start daily audit**.
 
-You don't need Flutter installed locally. Every push to `main` triggers a GitHub Actions workflow that:
+**Each checkpoint**:
+- **PASS** — auto-advances to the next.
+- **FAIL** — popup asks for a short finding (5+ chars) and which CRO is involved (optional).
+- **N/A** — popup asks the reason.
 
-1. Installs Java 17 + Flutter 3.16 in a clean Ubuntu runner
-2. Restores `android/` folder if missing (`flutter create . --platforms=android`)
-3. Runs `flutter pub get`, then `flutter test` (score engine canonical test must pass)
-4. Builds `app-debug.apk`
-5. Uploads the APK as a workflow artifact
+After all 68 checkpoints you'll see the score. Hit **Submit audit** and it appears in **History**.
 
-Download the APK from the latest green run → transfer to your Android phone → enable "Install from unknown sources" for the file manager → tap to install.
-
-## If you want to develop locally (optional)
-
-You'll need:
-
-1. **Flutter SDK** — download from <https://docs.flutter.dev/get-started/install/windows>, extract to `C:\flutter`, add `C:\flutter\bin` to your PATH.
-2. **Android Studio** — for the Android SDK + emulator. <https://developer.android.com/studio>
-3. **Java 17** — bundled with recent Android Studio.
-
-Then:
-
-```powershell
-flutter doctor          # fix any red items
-flutter create . --platforms=android   # only first time; generates android/
-flutter pub get
-flutter test            # run score engine tests
-flutter run             # build & install to connected device or emulator
-```
-
-## Firebase setup (one-time, done by Sagar)
-
-Spec §2 commits us to Firestore + Storage on the free tier. Sagar will:
-
-1. <https://console.firebase.google.com> → Add project `saagar-reports` → disable Analytics.
-2. **Authentication is NOT used** — spec specifies local PIN. Skip this section.
-3. **Firestore Database** → Create → Production mode → location `asia-south1` (Mumbai).
-4. **Storage** → Get started → Production mode → same Mumbai location.
-5. Add an Android app → package name `com.saagar.audit` → download `google-services.json` → place at `android/app/google-services.json`.
-
-`google-services.json` is **gitignored** — share it via 1Password / encrypted Slack DM, not the repo. Add the same file as a GitHub Actions secret `GOOGLE_SERVICES_JSON` so CI builds can use it.
-
-## Repository layout
+## Repository structure
 
 ```
-saagar-audit-app/
-├── lib/                          # All Dart source
-│   ├── main.dart                 # App entry
-│   ├── app.dart                  # MaterialApp + go_router root
-│   ├── data/                     # Models, DB, Firestore, seed loaders
-│   ├── domain/                   # Score engine, escalation engine, CAP state machine, PDF generator
-│   ├── providers/                # Riverpod providers
-│   ├── ui/
-│   │   ├── theme/                # Saagar design system (navy + gold + DM Serif + DM Sans)
-│   │   ├── screens/sNN_name/     # One folder per screen
-│   │   └── widgets/              # Shared widgets (numpad, score pill, etc.)
-│   └── utils/
-├── assets/
-│   ├── seed/                     # sops.json, checkpoints.json (loaded on first launch)
-│   ├── translations/             # app_en.arb, app_mr.arb (kept in lock-step)
-│   ├── reference/                # rating_scale.json, glossary.json, etc.
-│   └── images/
-├── test/                         # Unit tests; canonical score tests must pass
-├── integration_test/             # End-to-end audit flow tests
-├── android/                      # Generated by flutter create (gitignored .gradle, local.properties)
-├── docs/                         # Spec + workbook extracts, data model, decision log
-├── Documentation/                # Original .docx source documents
-└── .github/workflows/            # GitHub Actions APK build
+Reports/
+├── www/                # The actual app (HTML + CSS + JS + data)
+│   ├── index.html
+│   ├── style.css
+│   ├── app.js          # State, score logic, UI rendering
+│   └── data.js         # 68 checkpoints + 8 SOPs, baked in
+├── capacitor.config.json
+├── package.json        # Capacitor deps
+├── .github/workflows/
+│   └── apk.yml         # CI: npm install → cap add android → gradle assembleDebug
+└── Documentation/      # Original .docx spec & workbook
 ```
 
-## Canonical correctness checks
+The `android/` folder is **not committed** — CI regenerates it cleanly from the `www/` folder on every push.
 
-The score engine **must** produce these exact values (Workbook §5.1, §5.2):
+## Branches
 
-- Daily canonical: 81 / 90 = **90.0% Good**
-- Weekly canonical (P2): 104.8 / 124 = **84.5% Poor**
+- **capacitor** — the active branch you're looking at.
+- **phase-1** — earlier Flutter scaffolding (preserved for reference; not currently buildable).
 
-These are encoded in [`test/score_engine_test.dart`](test/score_engine_test.dart). If those tests ever go red, the engine is wrong.
+## Local development (optional)
 
-## Hard rules (spec §14.1)
+You don't need this to ship — CI does the build. But if you want to iterate on the HTML locally:
 
-1. Workbook is ground truth.
-2. Tech stack is locked.
-3. Both ARB files updated together.
-4. Score must match canonical tests.
-5. Submitted audits are immutable (only Owner can HIDE).
-6. PIN security: bcrypt only, never plaintext, never logged.
-7. Mandatory photos on Cash & Inventory Fails.
-8. Offline-first — SQLite is source of truth, Firestore is mirror.
-9. No out-of-phase features.
-10. Commit after every change.
+1. Open `www/index.html` in Chrome on your laptop — the app runs as-is.
+2. Edit, refresh, repeat.
+3. Push to GitHub when ready; CI rebuilds the APK.
+
+If you want to test the actual Android build locally:
+```bash
+npm install
+npx cap add android      # first time only
+npx cap sync android
+cd android && ./gradlew assembleDebug
+```
+That needs Node 20+, Java 17+, and the Android SDK installed.
