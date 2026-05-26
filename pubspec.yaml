@@ -1,0 +1,77 @@
+name: saagar_audit_app
+description: Saagar Traders P1 retail audit app — daily/weekly/monthly compliance audits for Titan World (WLMHW) and Helios (HEMW) stores, Latur.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State & routing — LOCKED by spec §2
+  flutter_riverpod: ^2.4.9
+  go_router: ^12.1.3
+
+  # Local DB — LOCKED to sqflite (NOT drift/isar)
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  path_provider: ^2.1.1
+  sqflite_migration_plan: ^0.4.0
+
+  # Cloud
+  firebase_core: ^2.24.0
+  cloud_firestore: ^4.13.6
+  firebase_storage: ^11.5.6
+
+  # Auth — local PIN with bcrypt (NOT firebase_auth)
+  bcrypt: ^1.1.3
+
+  # Media & files
+  image_picker: ^1.0.4
+  camera: ^0.10.5+9
+  flutter_image_compress: ^2.1.0
+  pdf: ^3.10.7
+  printing: ^5.11.1
+
+  # i18n
+  intl: ^0.18.1
+
+  # Fonts — runtime-downloaded + cached; replace with bundled TTFs before
+  # P1 release (Spec §2 offline-first). For dev iteration the cache is fine.
+  google_fonts: ^6.1.0
+
+  # Notifications & deep links
+  flutter_local_notifications: ^16.2.0
+  url_launcher: ^6.2.2
+
+  # Charts (Phase 3 use, declared now so dep set is stable)
+  fl_chart: ^0.65.0
+
+  # Utility
+  uuid: ^4.2.1
+  geolocator: ^10.1.0
+  connectivity_plus: ^5.0.2
+  shared_preferences: ^2.2.2
+  workmanager: ^0.5.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+  generate: true
+  assets:
+    - assets/seed/
+    - assets/translations/
+    - assets/reference/
+    - assets/images/
+  # Fonts are loaded via the google_fonts package at runtime (DM Serif Display
+  # for headings, DM Sans for body). When we move to a fully-offline P1
+  # release, drop the TTFs in assets/fonts/ and declare them here.

@@ -1,0 +1,78 @@
+[
+  {
+    "id": "SOP1",
+    "number": 1,
+    "name_en": "Grooming",
+    "name_mr": "वेशभूषा",
+    "weight": 1,
+    "is_critical": 0,
+    "display_order": 4,
+    "_note": "Audit time block 4 per Workbook §2.10."
+  },
+  {
+    "id": "SOP2",
+    "number": 2,
+    "name_en": "Sales Buddy",
+    "name_mr": "सेल्स बडी",
+    "weight": 1,
+    "is_critical": 0,
+    "display_order": 1,
+    "_note": "Audit time block 1 — opens the daily flow."
+  },
+  {
+    "id": "SOP3",
+    "number": 3,
+    "name_en": "NPS Calling",
+    "name_mr": "एनपीएस कॉलिंग",
+    "weight": 1,
+    "is_critical": 0,
+    "display_order": 7
+  },
+  {
+    "id": "SOP4",
+    "number": 4,
+    "name_en": "Customer Data",
+    "name_mr": "ग्राहक माहिती",
+    "weight": 1,
+    "is_critical": 0,
+    "display_order": 2
+  },
+  {
+    "id": "SOP5",
+    "number": 5,
+    "name_en": "Display & Planogram",
+    "name_mr": "प्रदर्शन व प्लॅनोग्राम",
+    "weight": 1,
+    "is_critical": 0,
+    "display_order": 3
+  },
+  {
+    "id": "SOP6",
+    "number": 6,
+    "name_en": "Cash Management",
+    "name_mr": "रोख व्यवस्थापन",
+    "weight": 2,
+    "is_critical": 1,
+    "display_order": 5,
+    "_note": "★ Critical — double weight + mandatory photo on every Fail."
+  },
+  {
+    "id": "SOP7",
+    "number": 7,
+    "name_en": "Inventory Management",
+    "name_mr": "साठा व्यवस्थापन",
+    "weight": 2,
+    "is_critical": 1,
+    "display_order": 6,
+    "_note": "★ Critical — double weight + mandatory photo on every Fail."
+  },
+  {
+    "id": "SOP8",
+    "number": 8,
+    "name_en": "Service Intake",
+    "name_mr": "सेवा स्वीकृती",
+    "weight": 1,
+    "is_critical": 0,
+    "display_order": 8
+  }
+]

@@ -1,0 +1,63 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Android
+android/.gradle/
+android/local.properties
+android/key.properties
+android/app/upload-keystore.jks
+android/app/debug.keystore
+android/captures/
+android/.cxx/
+
+# iOS (not in P1 scope but ignore anyway)
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets — NEVER commit
+google-services.json
+firebase_options.dart
+*.keystore
+*.jks
+*.p12
+.env
+.env.*
+
+# Build outputs
+*.apk
+*.aab
+*.ipa
+builds/
+
+# Generated localization
+lib/l10n/generated/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Documentation scratch (keep the .docx source files; ignore extracts and summaries)
+Documentation/_extract_*.txt
+Documentation/_p1_spec_summary.md
+
+# Memory (lives outside repo, but if symlinked, ignore)
+.claude/
