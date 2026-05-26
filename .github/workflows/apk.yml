@@ -1,0 +1,65 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main, capacitor]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Add or sync Android platform
+        run: |
+          if [ ! -d "android" ]; then
+            echo "Generating android/ from scratch"
+            npx cap add android
+          else
+            echo "android/ exists, syncing"
+            npx cap sync android
+          fi
+
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: saagar-audit-${{ github.sha }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "### Saagar Audit APK ready" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Download artifact: **saagar-audit-${{ github.sha }}** from the Artifacts panel above." >> $GITHUB_STEP_SUMMARY
+          echo "Transfer to your Android phone → enable 'Install from unknown sources' in your file manager → tap to install." >> $GITHUB_STEP_SUMMARY
