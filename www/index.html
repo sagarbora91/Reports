@@ -356,6 +356,179 @@ textarea { resize: vertical; min-height: 80px; }
 .spacer-24 { height: 24px; }
 hr.soft { border: 0; border-top: 1px solid var(--gray-200); margin: 16px 0; }
 
+/* --- photo grid (fail modal + audit detail) --- */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+.photo-tile {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--gray-200);
+  cursor: pointer;
+}
+.photo-tile img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.photo-remove {
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.65);
+  color: white;
+  border: 0;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+}
+.req-pill {
+  display: inline-block;
+  background: var(--red);
+  color: var(--white);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* --- audit detail (history modal) --- */
+.detail-sop {
+  margin: 14px 0;
+}
+.detail-sop-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--gray-100);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--navy);
+}
+.detail-sop-header.critical { background: var(--gold-pale); color: var(--gold); }
+.detail-sop-header.critical::before { content: '★ '; }
+.detail-sop-header .count {
+  margin-left: auto;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--gray-600);
+}
+.result-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--gray-200);
+  font-size: 14px;
+}
+.result-row:last-child { border-bottom: 0; }
+.result-row .cp-id { font-weight: 600; color: var(--gray-600); min-width: 36px; font-variant-numeric: tabular-nums; }
+.result-row .cp-body { flex: 1; }
+.result-row .cp-finding { color: var(--gray-600); font-size: 13px; margin-top: 4px; }
+.verdict-pill {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  min-width: 36px;
+  text-align: center;
+}
+.verdict-pill.P  { background: var(--green-pale); color: var(--green); }
+.verdict-pill.F  { background: var(--red-pale);   color: var(--red); }
+.verdict-pill.NA { background: var(--gray-100);   color: var(--gray-600); }
+.detail-photos {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.detail-photos img {
+  width: 64px; height: 64px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--gray-200);
+}
+
+/* --- CRO performance summary --- */
+.cro-summary {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.cro-summary h3 {
+  margin: 0 0 8px;
+  font-family: 'DM Serif Display', serif;
+  font-size: 16px;
+  color: var(--navy);
+}
+.cro-rank {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--gray-200);
+  font-size: 14px;
+}
+.cro-rank:last-child { border-bottom: 0; }
+.cro-rank .badge {
+  background: var(--red-pale);
+  color: var(--red);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* --- resume banner --- */
+.resume-banner {
+  background: var(--amber-pale);
+  border: 1px solid var(--amber);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.resume-banner h3 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 18px;
+  color: var(--amber);
+  margin: 0 0 4px;
+}
+
+/* --- print --- */
+@media print {
+  @page { margin: 16mm 12mm; }
+  body { background: white; }
+  body.printing > *:not(#print-root) { display: none !important; }
+  #print-root { display: block !important; }
+  .no-print { display: none !important; }
+}
+#print-root { display: none; }
+.print-page { font-family: 'DM Sans', system-ui, sans-serif; color: #111; }
+.print-page h1 { font-family: 'DM Serif Display', serif; color: var(--navy); margin: 0 0 4px; font-size: 26px; }
+.print-page h2 { font-family: 'DM Serif Display', serif; color: var(--navy); margin: 18px 0 6px; font-size: 16px; border-bottom: 1px solid #ccc; padding-bottom: 2px; }
+.print-page .meta { color: #555; font-size: 12px; margin-bottom: 12px; }
+.print-page .pscore { font-size: 36px; font-family: 'DM Serif Display', serif; }
+.print-page table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+.print-page th, .print-page td { border: 1px solid #ccc; padding: 4px 6px; vertical-align: top; text-align: left; }
+.print-page th { background: #f0f0f0; }
+.print-page .photo-row img { max-width: 100px; max-height: 100px; margin: 2px; border: 1px solid #ccc; }
   </style>
 </head>
 <body>
@@ -382,6 +555,7 @@ hr.soft { border: 0; border-top: 1px solid var(--gray-200); margin: 16px 0; }
 
   <div id="toast" class="toast" hidden></div>
   <div id="modal-root"></div>
+  <div id="print-root"></div>
 
   <script>
 // Auto-generated from assets/seed/. Do not edit by hand.
@@ -1130,7 +1304,6 @@ const SOPS = [
 /* Saagar Audit — single-page vanilla JS app.
    No framework, no build step. The whole UI is rendered by string templates
    into the three tab sections. State lives in localStorage under one key. */
-
 'use strict';
 
 // ---------------------------------------------------------------------------
@@ -1182,6 +1355,41 @@ function toast(msg) {
   el.hidden = false;
   clearTimeout(toast._t);
   toast._t = setTimeout(() => { el.hidden = true; }, 1800);
+}
+
+// ---------------------------------------------------------------------------
+// Image compression — keeps localStorage footprint small.
+// ---------------------------------------------------------------------------
+
+function compressImage(file, maxDim = 1024, quality = 0.72) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('FileReader failed'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Image decode failed'));
+      img.onload = () => {
+        const longest = Math.max(img.width, img.height);
+        const scale = longest > maxDim ? maxDim / longest : 1;
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Approximate size of a base64 data URL in KB.
+function dataUrlSizeKb(dataUrl) {
+  const b64 = (dataUrl.split(',')[1] || '');
+  return Math.round((b64.length * 0.75) / 1024);
 }
 
 // ---------------------------------------------------------------------------
@@ -1250,10 +1458,19 @@ function markCheckpoint(checkpointId, result, opts = {}) {
     result,
     finding: opts.finding || '',
     cro_id: opts.croId || null,
+    photos: opts.photos || [],
     at: new Date().toISOString(),
   };
   Store.save(state);
 }
+
+// Working photo draft, used by the fail modal between opening and saving.
+const FailDraft = {
+  photos: [],
+  reset() { FailDraft.photos = []; },
+  add(dataUrl) { FailDraft.photos.push(dataUrl); },
+  removeAt(i) { FailDraft.photos.splice(i, 1); },
+};
 
 function nextUnmarkedIndex(audit) {
   for (let i = 0; i < CHECKPOINTS.length; i++) {
@@ -1347,8 +1564,15 @@ function renderInProgressAudit(a) {
   const live = scoreAudit(a.results);
   const pct = Math.round(((idx) / CHECKPOINTS.length) * 100);
   const allowsNa = cp.allows_na;
+  const isFreshSession = !sessionStorage.getItem('audit_session_' + a.id);
+  if (idx > 0 && isFreshSession) sessionStorage.setItem('audit_session_' + a.id, '1');
 
   return `
+    ${idx > 0 && isFreshSession ? `
+      <div class="resume-banner">
+        <h3>Resuming audit</h3>
+        <p class="muted" style="margin:0">Picked up at checkpoint ${idx + 1} of ${CHECKPOINTS.length}. ${live.p} pass, ${live.f} fail, ${live.na} N/A so far.</p>
+      </div>` : ''}
     <div class="progress"><span style="width:${pct}%"></span></div>
     <div class="cp-meta">
       <span class="sop-chip ${sop.critical ? 'critical' : ''}">${escapeHtml(sop.name)}</span>
@@ -1399,13 +1623,40 @@ function renderHistoryTab(state) {
   if (submitted.length === 0) {
     return `<div class="card"><h2>No submitted audits yet</h2><p class="muted">Once you submit a daily audit it'll appear here.</p></div>`;
   }
-  return submitted.map(a => {
+
+  // CRO performance summary — count FAILs attributed per CRO in last 30 days
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const croById = Object.fromEntries(state.cros.map(c => [c.id, c]));
+  const croFailCounts = {};
+  submitted.filter(a => a.date >= cutoff).forEach(a => {
+    Object.values(a.results).forEach(r => {
+      if (r.result === 'F' && r.cro_id) {
+        croFailCounts[r.cro_id] = (croFailCounts[r.cro_id] || 0) + 1;
+      }
+    });
+  });
+  const ranked = Object.entries(croFailCounts)
+    .filter(([id]) => croById[id])
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  const croSummaryHtml = ranked.length > 0 ? `
+    <div class="cro-summary">
+      <h3>CROs with most fails (last 30 days)</h3>
+      ${ranked.map(([id, n]) => `
+        <div class="cro-rank">
+          <span>${escapeHtml(croById[id].name)} <span class="muted" style="font-size:12px">· ${escapeHtml(croById[id].counter)}</span></span>
+          <span class="badge">${n} fail${n > 1 ? 's' : ''}</span>
+        </div>`).join('')}
+    </div>` : '';
+
+  return croSummaryHtml + submitted.map(a => {
     const s = a.score;
     return `
       <div class="hist-row" data-action="open-history" data-id="${a.id}">
         <div>
           <strong>${escapeHtml(fmtDate(a.date))}</strong>
-          <div class="tiny">${s.p} P &middot; ${s.f} F &middot; ${s.na} N/A</div>
+          <div class="tiny">${s.p} P &middot; ${s.f} F &middot; ${s.na} N/A &middot; by ${escapeHtml(a.auditor_name || '—')}</div>
         </div>
         <div class="pct ${s.band}">${s.pct.toFixed(1)}%</div>
       </div>`;
@@ -1464,6 +1715,7 @@ function closeModal() {
 }
 
 function failModal(checkpoint, cros) {
+  FailDraft.reset();
   const required = checkpoint.photo_required_on_fail;
   const croOptions = ['<option value="">— not attributed —</option>']
     .concat(cros.map(c => `<option value="${c.id}">${escapeHtml(c.name)} · ${escapeHtml(c.counter)}</option>`))
@@ -1479,12 +1731,37 @@ function failModal(checkpoint, cros) {
       <span>CRO involved (optional)</span>
       <select id="failCro">${croOptions}</select>
     </label>
-    ${required ? `<p class="muted" style="color:var(--red)">Note: this checkpoint is a Cash/Inventory critical (★). In production a photo will be required here. Photo capture lands in the next release.</p>` : ''}
+    <div class="field">
+      <span style="display:block;font-size:13px;color:var(--gray-600);margin-bottom:6px">
+        Photo evidence ${required ? '<span class="req-pill">REQUIRED</span>' : '<span class="muted" style="font-size:11px">(optional)</span>'}
+      </span>
+      <div id="failPhotoGrid" class="photo-grid"></div>
+      <input id="failPhotoInput" type="file" accept="image/*" capture="environment" hidden>
+      <button class="btn btn-ghost" type="button" data-action="add-fail-photo" style="margin-top:8px">
+        📷 Take photo
+      </button>
+    </div>
     <div class="row">
       <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
       <button class="btn btn-primary" data-action="modal-save-fail">Save &amp; next</button>
     </div>
   `);
+  renderFailPhotoGrid();
+}
+
+function renderFailPhotoGrid() {
+  const root = document.getElementById('failPhotoGrid');
+  if (!root) return;
+  if (FailDraft.photos.length === 0) {
+    root.innerHTML = '<p class="muted" style="font-size:13px;margin:0">No photos yet.</p>';
+    return;
+  }
+  root.innerHTML = FailDraft.photos.map((url, i) => `
+    <div class="photo-tile">
+      <img src="${url}" alt="Photo ${i + 1}">
+      <button class="photo-remove" data-action="remove-fail-photo" data-index="${i}" title="Remove">×</button>
+    </div>
+  `).join('');
 }
 
 function naModal(checkpoint) {
@@ -1525,25 +1802,118 @@ function addCroModal() {
 
 function historyDetailModal(a) {
   const s = a.score;
-  const fails = Object.entries(a.results)
-    .filter(([, r]) => r.result === 'F')
-    .map(([cpId, r]) => {
-      const cp = CHECKPOINTS.find(x => x.id === cpId);
-      return `<li><strong>${escapeHtml(cpId)}</strong> — ${escapeHtml(cp ? cp.text : '')}<br><span class="muted">${escapeHtml(r.finding || '(no finding text)')}</span></li>`;
+  const state = Store.load();
+  const croById = Object.fromEntries(state.cros.map(c => [c.id, c]));
+
+  // Group results by SOP in display order
+  const sopGroups = SOPS.slice().sort((x, y) => x.number - y.number).map(sop => {
+    const cps = CHECKPOINTS.filter(c => c.sop_id === sop.id);
+    return { sop, cps };
+  });
+
+  const groupsHtml = sopGroups.map(({ sop, cps }) => {
+    const rowsHtml = cps.map(cp => {
+      const r = a.results[cp.id] || { result: 'NA', finding: '(not marked)', photos: [] };
+      const v = r.result;
+      const cro = r.cro_id ? croById[r.cro_id] : null;
+      const photos = (r.photos || []);
+      const photoHtml = photos.length
+        ? `<div class="detail-photos">${photos.map(p => `<img src="${p}" alt="">`).join('')}</div>`
+        : '';
+      const detailHtml = (v === 'F' || v === 'NA') && r.finding
+        ? `<div class="cp-finding">${escapeHtml(r.finding)}${cro ? ` · <em>${escapeHtml(cro.name)}</em>` : ''}</div>${photoHtml}`
+        : '';
+      return `
+        <div class="result-row">
+          <span class="cp-id">${escapeHtml(cp.id)}</span>
+          <div class="cp-body">
+            <div>${escapeHtml(cp.text)}</div>
+            ${detailHtml}
+          </div>
+          <span class="verdict-pill ${v}">${v}</span>
+        </div>`;
     }).join('');
+    const failCount = cps.filter(cp => (a.results[cp.id] || {}).result === 'F').length;
+    return `
+      <div class="detail-sop">
+        <div class="detail-sop-header ${sop.critical ? 'critical' : ''}">
+          ${escapeHtml(sop.name)}
+          <span class="count">${failCount > 0 ? `${failCount} fail${failCount > 1 ? 's' : ''}` : 'all pass'}</span>
+        </div>
+        ${rowsHtml}
+      </div>`;
+  }).join('');
+
   openModal(`
     <h3>${escapeHtml(fmtDate(a.date))}</h3>
-    <p class="muted">Submitted ${escapeHtml(new Date(a.submitted_at).toLocaleString('en-IN'))}</p>
+    <p class="muted">Submitted ${escapeHtml(new Date(a.submitted_at).toLocaleString('en-IN'))} by ${escapeHtml(a.auditor_name || '—')}</p>
     <div class="score-card" style="padding:12px">
       <div class="score-pct ${s.band}" style="font-size:48px">${s.pct.toFixed(1)}%</div>
       <div class="score-band ${s.band}">${bandLabel(s.band)}</div>
-      <p class="muted">${s.p} P &middot; ${s.f} F &middot; ${s.na} N/A</p>
+      <p class="muted">${s.raw} of ${s.max} weighted &middot; ${s.p} P &middot; ${s.f} F &middot; ${s.na} N/A</p>
     </div>
-    ${fails ? `<h3 style="margin-top:16px">Findings (${a.score.f})</h3><ul>${fails}</ul>` : '<p class="muted">No failures — clean audit.</p>'}
     <div class="row">
+      <button class="btn btn-secondary" data-action="print-audit" data-id="${escapeHtml(a.id)}">📄 Print / Save as PDF</button>
       <button class="btn btn-ghost" data-action="modal-cancel">Close</button>
     </div>
+    ${groupsHtml}
   `);
+}
+
+// ---------------------------------------------------------------------------
+// Print / PDF — builds a self-contained printable view, calls window.print()
+// ---------------------------------------------------------------------------
+
+function printAudit(auditId) {
+  const state = Store.load();
+  const a = audit(auditId, state);
+  if (!a) return;
+  const croById = Object.fromEntries(state.cros.map(c => [c.id, c]));
+  const s = a.score;
+
+  const sopSections = SOPS.slice().sort((x, y) => x.number - y.number).map(sop => {
+    const cps = CHECKPOINTS.filter(c => c.sop_id === sop.id);
+    const rows = cps.map(cp => {
+      const r = a.results[cp.id] || {};
+      const cro = r.cro_id ? croById[r.cro_id] : null;
+      const photos = r.photos || [];
+      return `<tr>
+        <td>${escapeHtml(cp.id)}</td>
+        <td>${escapeHtml(cp.text)}</td>
+        <td><strong>${escapeHtml(r.result || '—')}</strong></td>
+        <td>${escapeHtml(r.finding || '')}${cro ? `<br><em>${escapeHtml(cro.name)}</em>` : ''}${
+          photos.length ? `<div class="photo-row">${photos.map(p => `<img src="${p}" alt="">`).join('')}</div>` : ''
+        }</td>
+      </tr>`;
+    }).join('');
+    return `<h2>${sop.critical ? '★ ' : ''}${escapeHtml(sop.name)}</h2>
+      <table><thead><tr><th style="width:50px">CP</th><th>Checkpoint</th><th style="width:36px">Result</th><th>Finding / Evidence</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+  }).join('');
+
+  document.getElementById('print-root').innerHTML = `
+    <div class="print-page">
+      <h1>Saagar Audit — Daily Compliance Report</h1>
+      <div class="meta">
+        ${escapeHtml(fmtDate(a.date))} &middot; Auditor: ${escapeHtml(a.auditor_name || '—')} &middot;
+        Submitted ${escapeHtml(new Date(a.submitted_at).toLocaleString('en-IN'))}
+      </div>
+      <div class="pscore" style="color:${
+        s.band === 'excellent' || s.band === 'good' ? '#166534'
+        : s.band === 'fair' ? '#b45309' : '#b91c1c'
+      }">${s.pct.toFixed(1)}% &middot; ${bandLabel(s.band)}</div>
+      <div class="meta">${s.raw} of ${s.max} weighted points &middot; ${s.p} Pass &middot; ${s.f} Fail &middot; ${s.na} N/A</div>
+      ${sopSections}
+    </div>
+  `;
+  document.body.classList.add('printing');
+  const cleanup = () => {
+    document.body.classList.remove('printing');
+    document.getElementById('print-root').innerHTML = '';
+    window.removeEventListener('afterprint', cleanup);
+  };
+  window.addEventListener('afterprint', cleanup);
+  setTimeout(() => window.print(), 100);
 }
 
 // ---------------------------------------------------------------------------
@@ -1750,6 +2120,33 @@ document.addEventListener('click', (e) => {
     if (verdict === 'NA') { naModal(cp); return; }
   }
 
+  if (action === 'add-fail-photo') {
+    const input = document.getElementById('failPhotoInput');
+    if (!input) return;
+    input.value = ''; // reset so picking the same file twice still triggers change
+    input.onchange = async (ev) => {
+      const file = ev.target.files && ev.target.files[0];
+      if (!file) return;
+      try {
+        const dataUrl = await compressImage(file);
+        FailDraft.add(dataUrl);
+        renderFailPhotoGrid();
+        toast(`Photo added (${dataUrlSizeKb(dataUrl)} KB)`);
+      } catch (err) {
+        console.error(err);
+        toast('Could not read photo');
+      }
+    };
+    input.click();
+    return;
+  }
+  if (action === 'remove-fail-photo') {
+    const i = parseInt(a.dataset.index, 10);
+    FailDraft.removeAt(i);
+    renderFailPhotoGrid();
+    return;
+  }
+
   if (action === 'modal-save-fail') {
     const finding = document.getElementById('failFinding').value.trim();
     if (finding.length < 5) { toast('Describe what you found (5+ characters)'); return; }
@@ -1758,7 +2155,12 @@ document.addEventListener('click', (e) => {
     const audit = currentAudit(state);
     const idx = nextUnmarkedIndex(audit);
     const cp = CHECKPOINTS[idx];
-    markCheckpoint(cp.id, 'F', { finding, croId });
+    if (cp.photo_required_on_fail && FailDraft.photos.length === 0) {
+      toast('Photo evidence is required for Cash & Inventory fails.');
+      return;
+    }
+    markCheckpoint(cp.id, 'F', { finding, croId, photos: FailDraft.photos.slice() });
+    FailDraft.reset();
     closeModal();
     render();
     return;
@@ -1800,6 +2202,10 @@ document.addEventListener('click', (e) => {
     if (found) historyDetailModal(found);
     return;
   }
+  if (action === 'print-audit') {
+    printAudit(a.dataset.id);
+    return;
+  }
   if (action === 'export-csv')     { exportCsv(); return; }
   if (action === 'backup-drive')   { backupToDrive(); return; }
   if (action === 'restore-backup') { restoreFromBackup(); return; }
@@ -1823,7 +2229,6 @@ function switchTab(name) {
 // ---------------------------------------------------------------------------
 
 render();
-
   </script>
 </body>
 </html>
