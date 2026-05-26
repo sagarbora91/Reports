@@ -301,13 +301,22 @@ function renderSettingsTab(state) {
       <div class="spacer-12"></div>
       <button class="btn btn-secondary" data-action="add-cro">+ Add CRO</button>
     </div>
+
     <div class="card">
-      <h2>Data</h2>
-      <p class="muted">${state.audits.length} audit(s) stored on this device. Nothing leaves your phone.</p>
-      <button class="btn btn-ghost" data-action="export-csv">Export all to CSV</button>
+      <h2>Backup &amp; restore</h2>
+      <p class="muted">${state.audits.length} audit(s) stored on this device. Back up to Google Drive (or any app) anytime — you'll be able to restore from the file later.</p>
+      <button class="btn btn-primary" data-action="backup-drive">Back up to Google Drive</button>
       <div class="spacer-12"></div>
-      <button class="btn btn-ghost" data-action="clear-data" style="color:var(--red);border-color:var(--red)">Erase all data</button>
+      <button class="btn btn-ghost" data-action="restore-backup">Restore from backup file</button>
+      <div class="spacer-12"></div>
+      <button class="btn btn-ghost" data-action="export-csv">Export all audits to CSV</button>
     </div>
+
+    <div class="card">
+      <h2>Danger zone</h2>
+      <button class="btn btn-ghost" data-action="clear-data" style="color:var(--red);border-color:var(--red)">Erase all data on this device</button>
+    </div>
+
     <p class="tiny" style="text-align:center">Saagar Audit &middot; v0.1.0</p>
   `;
 }
@@ -406,6 +415,102 @@ function historyDetailModal(a) {
       <button class="btn btn-ghost" data-action="modal-cancel">Close</button>
     </div>
   `);
+}
+
+// ---------------------------------------------------------------------------
+// Backup & restore
+// ---------------------------------------------------------------------------
+
+function backupFilename() {
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  return `saagar_audit_backup_${stamp}.json`;
+}
+
+async function backupToDrive() {
+  const state = Store.load();
+  const payload = {
+    _format: 'saagar_audit_v1',
+    _exported_at: new Date().toISOString(),
+    _app_version: '0.1.0',
+    ...state,
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const filename = backupFilename();
+  const blob = new Blob([json], { type: 'application/json' });
+  const file = new File([blob], filename, { type: 'application/json' });
+
+  // Preferred path on Android: native share sheet — Drive shows up alongside
+  // WhatsApp, Gmail, Files, etc. User picks Drive.
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: 'Saagar Audit backup',
+        text: `${state.audits.length} audit(s), ${state.cros.length} CRO(s)`,
+      });
+      toast('Backup shared');
+      return;
+    }
+  } catch (e) {
+    // User cancelled the share sheet — silent.
+    if (e && e.name === 'AbortError') return;
+    console.warn('share failed, falling back to download', e);
+  }
+
+  // Fallback: trigger a regular download. On Android, downloaded files land
+  // in /Download/ and the user can manually upload from the Drive app.
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Backup downloaded — upload to Drive from your file manager');
+}
+
+function restoreFromBackup() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json,.json';
+  input.style.display = 'none';
+  input.addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (data._format && data._format !== 'saagar_audit_v1') {
+        toast(`Unknown backup format: ${data._format}`);
+        return;
+      }
+      if (!Array.isArray(data.audits) || !Array.isArray(data.cros)) {
+        toast("This file isn't a Saagar Audit backup.");
+        return;
+      }
+      const msg = `Restore ${data.audits.length} audit(s) and ${data.cros.length} CRO(s)?\n\n` +
+        `This REPLACES your current data on this phone.`;
+      if (!confirm(msg)) return;
+      const restored = {
+        audits: data.audits,
+        cros: data.cros,
+        current_audit_id: data.current_audit_id || null,
+        auditor_name: data.auditor_name || '',
+      };
+      Store.save(restored);
+      render();
+      switchTab('history');
+      toast('Backup restored');
+    } catch (err) {
+      console.error(err);
+      toast('Could not read the file. Pick a saagar_audit_backup_*.json file.');
+    }
+  });
+  document.body.appendChild(input);
+  input.click();
+  // Cleanup after a tick.
+  setTimeout(() => { try { document.body.removeChild(input); } catch (_) {} }, 1000);
 }
 
 // ---------------------------------------------------------------------------
@@ -566,7 +671,9 @@ document.addEventListener('click', (e) => {
     if (found) historyDetailModal(found);
     return;
   }
-  if (action === 'export-csv') { exportCsv(); return; }
+  if (action === 'export-csv')     { exportCsv(); return; }
+  if (action === 'backup-drive')   { backupToDrive(); return; }
+  if (action === 'restore-backup') { restoreFromBackup(); return; }
   if (action === 'clear-data') {
     if (!confirm('Erase all audits and CROs from this device? This cannot be undone.')) return;
     localStorage.removeItem(STORE_KEY);
