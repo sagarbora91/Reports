@@ -8,7 +8,355 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <style>
+/* Saagar Traders retail design system — same palette + fonts as the
+   existing HTML grooming audit tool. */
+
+:root {
+  --navy:        #0d2340;
+  --navy-mid:    #1a3a5c;
+  --navy-light:  #264d7a;
+  --gold:        #b8922a;
+  --gold-light:  #d4a843;
+  --gold-pale:   #fdf6e3;
+  --cream:       #faf8f3;
+  --white:       #ffffff;
+
+  --red:         #b91c1c;
+  --red-pale:    #fef2f2;
+  --amber:       #b45309;
+  --amber-pale:  #fffbeb;
+  --green:       #166534;
+  --green-pale:  #f0fdf4;
+  --green-mid:   #bbf7d0;
+
+  --gray-100:    #f4f4f5;
+  --gray-200:    #e4e4e7;
+  --gray-300:    #d4d4d8;
+  --gray-400:    #a1a1aa;
+  --gray-600:    #52525b;
+  --gray-800:    #27272a;
+
+  --shadow:      0 2px 12px rgba(13,35,64,0.08);
+  --radius:      10px;
+
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  background: var(--cream);
+  color: var(--gray-800);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: contain;
+}
+
+button { font-family: inherit; }
+input, textarea, select {
+  font-family: inherit;
+  font-size: 16px; /* prevent iOS zoom-on-focus */
+}
+
+/* --- top bar --- */
+.topbar {
+  background: var(--navy);
+  color: var(--white);
+  padding: calc(var(--safe-top) + 12px) 16px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand-serif {
+  font-family: 'DM Serif Display', serif;
+  font-size: 26px;
+  color: var(--gold-light);
+  letter-spacing: 0.3px;
+}
+.brand-sans {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--white);
+  opacity: 0.85;
+}
+.iconbtn {
+  background: transparent;
+  border: 0;
+  color: var(--white);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+.iconbtn:active { background: rgba(255,255,255,0.1); }
+
+/* --- tabs --- */
+.tabs {
+  background: var(--navy-mid);
+  display: flex;
+  border-bottom: 1px solid var(--navy-light);
+  position: sticky;
+  top: 56px;
+  z-index: 9;
+}
+.tab {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  color: rgba(255,255,255,0.7);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 14px 0;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+}
+.tab.active {
+  color: var(--gold-light);
+  border-bottom-color: var(--gold-light);
+}
+
+/* --- content --- */
+main { padding: 16px 16px calc(var(--safe-bottom) + 24px); max-width: 720px; margin: 0 auto; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* --- cards --- */
+.card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.card h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 20px;
+  color: var(--navy);
+  margin: 0 0 8px;
+}
+.card p { margin: 4px 0; color: var(--gray-600); }
+.muted { color: var(--gray-600); font-size: 14px; }
+.tiny  { color: var(--gray-400); font-size: 12px; letter-spacing: 1px; }
+
+/* --- buttons --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  border: 0;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.05s;
+}
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--navy); color: var(--white); }
+.btn-secondary { background: var(--gold-pale); color: var(--navy); border: 1px solid var(--gold); }
+.btn-ghost { background: transparent; color: var(--navy); border: 1px solid var(--gray-300); }
+.btn-pass { background: var(--green); color: var(--white); padding: 22px; font-size: 22px; letter-spacing: 3px; font-family: 'DM Serif Display', serif; }
+.btn-fail { background: var(--red);   color: var(--white); padding: 22px; font-size: 22px; letter-spacing: 3px; font-family: 'DM Serif Display', serif; }
+.btn-na   { background: var(--white); color: var(--gray-800); border: 1px solid var(--gray-300); padding: 14px; font-weight: 600; letter-spacing: 2px; }
+.btn-row { display: grid; gap: 10px; }
+
+/* --- form bits --- */
+label.field {
+  display: block;
+  margin-bottom: 14px;
+}
+label.field > span {
+  display: block;
+  font-size: 13px;
+  color: var(--gray-600);
+  margin-bottom: 6px;
+}
+input[type=text], input[type=date], textarea, select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  background: var(--white);
+  color: var(--gray-800);
+}
+textarea { resize: vertical; min-height: 80px; }
+
+/* --- checkpoint screen --- */
+.progress {
+  height: 4px;
+  background: var(--gray-200);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 0 0 12px;
+}
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+  transition: width 0.2s ease-out;
+}
+.cp-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--gray-400);
+}
+.sop-chip {
+  background: var(--gray-100);
+  color: var(--navy);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.sop-chip.critical { background: var(--gold-pale); color: var(--gold); }
+.sop-chip.critical::before { content: '★ '; }
+.cp-text {
+  font-family: 'DM Serif Display', serif;
+  font-size: 26px;
+  line-height: 1.25;
+  color: var(--navy);
+  margin: 8px 0 12px;
+}
+.cp-evidence {
+  font-size: 13px;
+  color: var(--gray-600);
+  margin-bottom: 10px;
+}
+.photo-required-badge {
+  display: inline-block;
+  background: var(--red-pale);
+  color: var(--red);
+  border: 1px solid var(--red);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.minicounts {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 14px;
+}
+.minicount { text-align: center; }
+.minicount .n {
+  font-family: 'DM Serif Display', serif;
+  font-size: 20px;
+  display: block;
+}
+.minicount.p .n { color: var(--green); }
+.minicount.f .n { color: var(--red); }
+.minicount.na .n { color: var(--gray-600); }
+.minicount .lbl { font-size: 11px; color: var(--gray-600); }
+
+/* --- score display --- */
+.score-card {
+  text-align: center;
+  padding: 28px 16px;
+}
+.score-pct {
+  font-family: 'DM Serif Display', serif;
+  font-size: 72px;
+  line-height: 1;
+  margin: 8px 0;
+}
+.score-pct.excellent, .score-pct.good { color: var(--green); }
+.score-pct.fair { color: var(--amber); }
+.score-pct.poor, .score-pct.critical { color: var(--red); }
+.score-band {
+  font-size: 13px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--gray-600);
+}
+.score-band.excellent, .score-band.good { color: var(--green); }
+.score-band.fair { color: var(--amber); }
+.score-band.poor, .score-band.critical { color: var(--red); }
+
+/* --- history rows --- */
+.hist-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+}
+.hist-row strong { font-family: 'DM Serif Display', serif; font-size: 16px; color: var(--navy); }
+.hist-row .pct { font-weight: 700; }
+.hist-row .pct.excellent, .hist-row .pct.good { color: var(--green); }
+.hist-row .pct.fair { color: var(--amber); }
+.hist-row .pct.poor, .hist-row .pct.critical { color: var(--red); }
+
+/* --- modal --- */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(13,35,64,0.5);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 100;
+  padding: 0;
+}
+.modal {
+  background: var(--white);
+  border-radius: 16px 16px 0 0;
+  width: 100%; max-width: 720px;
+  padding: 20px 16px calc(var(--safe-bottom) + 20px);
+  max-height: 90vh; overflow: auto;
+}
+.modal h3 { font-family: 'DM Serif Display', serif; margin: 0 0 4px; color: var(--navy); font-size: 20px; }
+.modal .row { display: flex; gap: 10px; margin-top: 14px; }
+.modal .row > * { flex: 1; }
+
+/* --- toast --- */
+.toast {
+  position: fixed;
+  bottom: calc(var(--safe-bottom) + 24px);
+  left: 50%; transform: translateX(-50%);
+  background: var(--navy);
+  color: var(--white);
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  box-shadow: var(--shadow);
+  z-index: 200;
+}
+
+/* --- CRO list rows --- */
+.cro-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--gray-200);
+}
+.cro-row label { flex: 1; cursor: pointer; }
+.cro-row .pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--gray-100); color: var(--gray-600); margin-left: 8px; }
+
+/* helpers */
+.row-spread { display: flex; justify-content: space-between; align-items: center; }
+.error { color: var(--red); font-size: 13px; margin-top: 6px; }
+.spacer-12 { height: 12px; }
+.spacer-24 { height: 24px; }
+hr.soft { border: 0; border-top: 1px solid var(--gray-200); margin: 16px 0; }
+
+  </style>
 </head>
 <body>
 
@@ -17,7 +365,7 @@
       <span class="brand-serif">Saagar</span>
       <span class="brand-sans">AUDIT</span>
     </div>
-    <button id="logoutBtn" class="iconbtn" title="Sign out" hidden>↶</button>
+    <button id="logoutBtn" class="iconbtn" title="Sign out" hidden>&#8624;</button>
   </header>
 
   <nav class="tabs" id="tabs">
@@ -35,7 +383,1447 @@
   <div id="toast" class="toast" hidden></div>
   <div id="modal-root"></div>
 
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+  <script>
+// Auto-generated from assets/seed/. Do not edit by hand.
+const CHECKPOINTS = [
+  {
+    "id": "2.1",
+    "sop_id": "SOP2",
+    "text": "Opening photo uploaded between 10:15 and 10:45",
+    "evidence": "Sales Buddy timestamp",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 1
+  },
+  {
+    "id": "2.2",
+    "sop_id": "SOP2",
+    "text": "Closing photo uploaded between 9:00 and 9:30 PM",
+    "evidence": "Sales Buddy timestamp",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 2
+  },
+  {
+    "id": "2.3",
+    "sop_id": "SOP2",
+    "text": "GPS enabled at opening upload",
+    "evidence": "Sales Buddy location field",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 3
+  },
+  {
+    "id": "2.4",
+    "sop_id": "SOP2",
+    "text": "GPS enabled at closing upload",
+    "evidence": "Sales Buddy location field",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 4
+  },
+  {
+    "id": "2.5",
+    "sop_id": "SOP2",
+    "text": "Full storefront window visible in photo",
+    "evidence": "Photo review",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 5
+  },
+  {
+    "id": "2.6",
+    "sop_id": "SOP2",
+    "text": "Photo clear and in focus",
+    "evidence": "Photo review",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 6
+  },
+  {
+    "id": "2.7",
+    "sop_id": "SOP2",
+    "text": "Titan acknowledgement received for uploads",
+    "evidence": "Sales Buddy ack screen",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 7
+  },
+  {
+    "id": "2.8",
+    "sop_id": "SOP2",
+    "text": "No pending uploads at day end",
+    "evidence": "Sales Buddy outbox empty",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 8
+  },
+  {
+    "id": "4.1",
+    "sop_id": "SOP4",
+    "text": "Walk-in register entry for every customer (≥90% capture)",
+    "evidence": "Register vs CCTV",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 9
+  },
+  {
+    "id": "4.2",
+    "sop_id": "SOP4",
+    "text": "Phone number captured for every walk-in",
+    "evidence": "Register column",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 10
+  },
+  {
+    "id": "4.3",
+    "sop_id": "SOP4",
+    "text": "Customer interest captured",
+    "evidence": "Register column",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 11
+  },
+  {
+    "id": "4.4",
+    "sop_id": "SOP4",
+    "text": "KYC complete for every billed customer",
+    "evidence": "Invoice attachments",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 12
+  },
+  {
+    "id": "4.5",
+    "sop_id": "SOP4",
+    "text": "ID copy attached for sales ≥ ₹2 lakh",
+    "evidence": "Invoice attachments",
+    "weight": 1,
+    "allows_na": true,
+    "photo_required_on_fail": false,
+    "order": 13
+  },
+  {
+    "id": "4.6",
+    "sop_id": "SOP4",
+    "text": "DPDP consent ticked at billing",
+    "evidence": "Invoice / consent form",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 14
+  },
+  {
+    "id": "4.7",
+    "sop_id": "SOP4",
+    "text": "Customer data file backed up at EOD",
+    "evidence": "Backup log",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 15
+  },
+  {
+    "id": "4.8",
+    "sop_id": "SOP4",
+    "text": "No customer data shared verbally with anyone",
+    "evidence": "CRO observation",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 16
+  },
+  {
+    "id": "5.1",
+    "sop_id": "SOP5",
+    "text": "Glass display clean (no smudges or dust)",
+    "evidence": "Visual + smudge wipe",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 17
+  },
+  {
+    "id": "5.2",
+    "sop_id": "SOP5",
+    "text": "All display lighting functional",
+    "evidence": "Visual check",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 18
+  },
+  {
+    "id": "5.3",
+    "sop_id": "SOP5",
+    "text": "Brands placed in correct zones",
+    "evidence": "Planogram match",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 19
+  },
+  {
+    "id": "5.4",
+    "sop_id": "SOP5",
+    "text": "Price tags present and legible, match POS",
+    "evidence": "Spot-check 5 SKUs",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 20
+  },
+  {
+    "id": "5.5",
+    "sop_id": "SOP5",
+    "text": "Display density per planogram",
+    "evidence": "Planogram compare",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 21
+  },
+  {
+    "id": "5.6",
+    "sop_id": "SOP5",
+    "text": "Empty slots filled or removed",
+    "evidence": "Visual check",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 22
+  },
+  {
+    "id": "5.7",
+    "sop_id": "SOP5",
+    "text": "Premium SKUs in eye-line position",
+    "evidence": "Planogram match",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 23
+  },
+  {
+    "id": "5.8",
+    "sop_id": "SOP5",
+    "text": "Current month promo displayed",
+    "evidence": "Promo calendar",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 24
+  },
+  {
+    "id": "5.9",
+    "sop_id": "SOP5",
+    "text": "Multi-brand consistency in Helios counter",
+    "evidence": "Helios planogram",
+    "weight": 1,
+    "allows_na": true,
+    "photo_required_on_fail": false,
+    "order": 25
+  },
+  {
+    "id": "1.1",
+    "sop_id": "SOP1",
+    "text": "Uniform clean and well-fitted",
+    "evidence": "Visual check at start of shift",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 26
+  },
+  {
+    "id": "1.2",
+    "sop_id": "SOP1",
+    "text": "Name badge worn",
+    "evidence": "Visible on uniform",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 27
+  },
+  {
+    "id": "1.3",
+    "sop_id": "SOP1",
+    "text": "Hair gelled (M) / tied in bun (F)",
+    "evidence": "Visual check",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 28
+  },
+  {
+    "id": "1.4",
+    "sop_id": "SOP1",
+    "text": "Hand gloves worn at jewellery counter",
+    "evidence": "Observe at counter",
+    "weight": 1,
+    "allows_na": true,
+    "photo_required_on_fail": false,
+    "order": 29
+  },
+  {
+    "id": "1.5",
+    "sop_id": "SOP1",
+    "text": "Closed black polished shoes",
+    "evidence": "Visual check",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 30
+  },
+  {
+    "id": "1.6",
+    "sop_id": "SOP1",
+    "text": "Mobile phone in pocket, not on counter",
+    "evidence": "Spot check counter top",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 31
+  },
+  {
+    "id": "6.1",
+    "sop_id": "SOP6",
+    "text": "Opening cash = yesterday's closing + ₹5,000 float",
+    "evidence": "Opening count slip",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 32
+  },
+  {
+    "id": "6.2",
+    "sop_id": "SOP6",
+    "text": "Cash register entries up-to-date",
+    "evidence": "Register review",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 33
+  },
+  {
+    "id": "6.3",
+    "sop_id": "SOP6",
+    "text": "POS total = cash + card + UPI",
+    "evidence": "POS day-end report",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 34
+  },
+  {
+    "id": "6.4",
+    "sop_id": "SOP6",
+    "text": "GST collected matches POS report",
+    "evidence": "POS GST report",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 35
+  },
+  {
+    "id": "6.5",
+    "sop_id": "SOP6",
+    "text": "Cash variance ≤ ₹50 (or fully explained)",
+    "evidence": "Variance note",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 36
+  },
+  {
+    "id": "6.6",
+    "sop_id": "SOP6",
+    "text": "Cash > ₹50,000 deposited at bank by 9 PM",
+    "evidence": "Bank deposit slip",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 37
+  },
+  {
+    "id": "6.7",
+    "sop_id": "SOP6",
+    "text": "Stamped deposit slip filed",
+    "evidence": "Deposit slip file",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 38
+  },
+  {
+    "id": "6.8",
+    "sop_id": "SOP6",
+    "text": "Petty cash withdrawals authorized in writing",
+    "evidence": "Petty cash book",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 39
+  },
+  {
+    "id": "6.9",
+    "sop_id": "SOP6",
+    "text": "Original receipts attached for every petty entry",
+    "evidence": "Receipts file",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 40
+  },
+  {
+    "id": "6.10",
+    "sop_id": "SOP6",
+    "text": "Safe locked at all times outside cash handling",
+    "evidence": "Spot check safe",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 41
+  },
+  {
+    "id": "6.11",
+    "sop_id": "SOP6",
+    "text": "POS overrides countersigned by 2 staff",
+    "evidence": "Override log",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 42
+  },
+  {
+    "id": "6.12",
+    "sop_id": "SOP6",
+    "text": "EOD cash summary completed by 9:30 PM",
+    "evidence": "EOD summary slip",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 43
+  },
+  {
+    "id": "7.1",
+    "sop_id": "SOP7",
+    "text": "Daily cycle count on rotation tray complete",
+    "evidence": "Cycle count log",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 44
+  },
+  {
+    "id": "7.2",
+    "sop_id": "SOP7",
+    "text": "POS sales match stock deduction",
+    "evidence": "POS + stock report",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 45
+  },
+  {
+    "id": "7.3",
+    "sop_id": "SOP7",
+    "text": "Today's GRNs entered into system",
+    "evidence": "GRN log",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 46
+  },
+  {
+    "id": "7.4",
+    "sop_id": "SOP7",
+    "text": "Damaged items segregated and logged",
+    "evidence": "Damage register",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 47
+  },
+  {
+    "id": "7.5",
+    "sop_id": "SOP7",
+    "text": "Returns processed within 24 hours",
+    "evidence": "Returns log",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 48
+  },
+  {
+    "id": "7.6",
+    "sop_id": "SOP7",
+    "text": "High-value items (≥₹25,000) in secure storage",
+    "evidence": "Storage check",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 49
+  },
+  {
+    "id": "7.7",
+    "sop_id": "SOP7",
+    "text": "Service intake items in service area only",
+    "evidence": "Service area check",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 50
+  },
+  {
+    "id": "7.8",
+    "sop_id": "SOP7",
+    "text": "FIFO confirmed on 3 random spot-checks",
+    "evidence": "Spot check log",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 51
+  },
+  {
+    "id": "7.9",
+    "sop_id": "SOP7",
+    "text": "Repair-in register updated for every intake",
+    "evidence": "Repair register",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 52
+  },
+  {
+    "id": "7.10",
+    "sop_id": "SOP7",
+    "text": "EOD stock summary sent to GM by 9:30 PM",
+    "evidence": "Sent message",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 53
+  },
+  {
+    "id": "3.1",
+    "sop_id": "SOP3",
+    "text": "Yesterday's billed customers identified (100% from POS)",
+    "evidence": "POS export",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 54
+  },
+  {
+    "id": "3.2",
+    "sop_id": "SOP3",
+    "text": "NPS calls attempted (100% of yesterday's billed customers)",
+    "evidence": "Call log",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 55
+  },
+  {
+    "id": "3.3",
+    "sop_id": "SOP3",
+    "text": "Calls completed ≥70% of attempts",
+    "evidence": "Call log",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 56
+  },
+  {
+    "id": "3.4",
+    "sop_id": "SOP3",
+    "text": "Standard NPS script followed",
+    "evidence": "Call recording sample",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 57
+  },
+  {
+    "id": "3.5",
+    "sop_id": "SOP3",
+    "text": "NPS score recorded for each completed call",
+    "evidence": "Call log",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 58
+  },
+  {
+    "id": "3.6",
+    "sop_id": "SOP3",
+    "text": "Detractor (score ≤6) escalated within 24 hours",
+    "evidence": "Escalation log",
+    "weight": 1,
+    "allows_na": true,
+    "photo_required_on_fail": false,
+    "order": 59
+  },
+  {
+    "id": "3.7",
+    "sop_id": "SOP3",
+    "text": "Daily NPS summary signed by SM by 9:30 PM",
+    "evidence": "Signed summary",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 60
+  },
+  {
+    "id": "8.1",
+    "sop_id": "SOP8",
+    "text": "Service intake form signed by customer + CRO",
+    "evidence": "Form file",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 61
+  },
+  {
+    "id": "8.2",
+    "sop_id": "SOP8",
+    "text": "System Order ID generated",
+    "evidence": "Order ID slip",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 62
+  },
+  {
+    "id": "8.3",
+    "sop_id": "SOP8",
+    "text": "Customer ID copy on file (DPDP-compliant)",
+    "evidence": "ID copy file",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 63
+  },
+  {
+    "id": "8.4",
+    "sop_id": "SOP8",
+    "text": "Intake photos captured by Order ID",
+    "evidence": "Photo folder",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 64
+  },
+  {
+    "id": "8.5",
+    "sop_id": "SOP8",
+    "text": "Estimate and timeline written on form",
+    "evidence": "Form review",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 65
+  },
+  {
+    "id": "8.6",
+    "sop_id": "SOP8",
+    "text": "Watch tagged and placed on service rack",
+    "evidence": "Rack inspection",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 66
+  },
+  {
+    "id": "8.7",
+    "sop_id": "SOP8",
+    "text": "Service register updated at EOD",
+    "evidence": "Service register",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 67
+  },
+  {
+    "id": "8.8",
+    "sop_id": "SOP8",
+    "text": "Pending pickups > 24 hrs overdue → customer called",
+    "evidence": "Call log",
+    "weight": 1,
+    "allows_na": true,
+    "photo_required_on_fail": false,
+    "order": 68
+  }
+];
+
+const SOPS = [
+  {
+    "id": "SOP1",
+    "number": 1,
+    "name": "Grooming",
+    "weight": 1,
+    "critical": false
+  },
+  {
+    "id": "SOP2",
+    "number": 2,
+    "name": "Sales Buddy",
+    "weight": 1,
+    "critical": false
+  },
+  {
+    "id": "SOP3",
+    "number": 3,
+    "name": "NPS Calling",
+    "weight": 1,
+    "critical": false
+  },
+  {
+    "id": "SOP4",
+    "number": 4,
+    "name": "Customer Data",
+    "weight": 1,
+    "critical": false
+  },
+  {
+    "id": "SOP5",
+    "number": 5,
+    "name": "Display & Planogram",
+    "weight": 1,
+    "critical": false
+  },
+  {
+    "id": "SOP6",
+    "number": 6,
+    "name": "Cash Management",
+    "weight": 2,
+    "critical": true
+  },
+  {
+    "id": "SOP7",
+    "number": 7,
+    "name": "Inventory Management",
+    "weight": 2,
+    "critical": true
+  },
+  {
+    "id": "SOP8",
+    "number": 8,
+    "name": "Service Intake",
+    "weight": 1,
+    "critical": false
+  }
+];
+
+/* Saagar Audit — single-page vanilla JS app.
+   No framework, no build step. The whole UI is rendered by string templates
+   into the three tab sections. State lives in localStorage under one key. */
+
+'use strict';
+
+// ---------------------------------------------------------------------------
+// Storage
+// ---------------------------------------------------------------------------
+
+const STORE_KEY = 'saagar_audit_v1';
+
+const Store = {
+  load() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return Store.empty();
+      const s = JSON.parse(raw);
+      return Object.assign(Store.empty(), s);
+    } catch (e) {
+      console.error('localStorage corrupted, resetting', e);
+      return Store.empty();
+    }
+  },
+  save(s) { localStorage.setItem(STORE_KEY, JSON.stringify(s)); },
+  empty() { return { audits: [], cros: [], current_audit_id: null, auditor_name: '' }; },
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function uuid() {
+  return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function today() { return new Date().toISOString().slice(0, 10); }
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.hidden = false;
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { el.hidden = true; }, 1800);
+}
+
+// ---------------------------------------------------------------------------
+// Score (Spec §6.1 – §6.2)
+// ---------------------------------------------------------------------------
+
+function scoreAudit(results) {
+  let raw = 0, max = 0, p = 0, f = 0, na = 0;
+  CHECKPOINTS.forEach(cp => {
+    const r = (results[cp.id] || {}).result;
+    if (r === 'P') { raw += cp.weight; max += cp.weight; p++; }
+    else if (r === 'F') { max += cp.weight; f++; }
+    else if (r === 'NA') { na++; }
+  });
+  const pct = max > 0 ? Math.round((raw / max) * 1000) / 10 : 100;
+  let band = 'critical';
+  if (pct >= 95)      band = 'excellent';
+  else if (pct >= 90) band = 'good';
+  else if (pct >= 85) band = 'fair';
+  else if (pct >= 80) band = 'poor';
+  return { raw, max, pct, band, p, f, na, total: CHECKPOINTS.length };
+}
+
+function bandLabel(band) {
+  return { excellent: 'Excellent', good: 'Good', fair: 'Fair', poor: 'Poor', critical: 'Critical' }[band];
+}
+
+// ---------------------------------------------------------------------------
+// Audit lifecycle
+// ---------------------------------------------------------------------------
+
+function currentAudit(state) {
+  return state.audits.find(a => a.id === state.current_audit_id) || null;
+}
+
+function audit(id, state) {
+  return state.audits.find(a => a.id === id) || null;
+}
+
+function startNewAudit({ date, auditorName, croIds }) {
+  const state = Store.load();
+  // If an unsubmitted draft already exists for today, replace it.
+  state.audits = state.audits.filter(a => !(a.date === date && a.status === 'draft'));
+  const newAudit = {
+    id: uuid(),
+    date,
+    auditor_name: auditorName,
+    cros: croIds.slice(),
+    status: 'draft',
+    results: {},
+    started_at: new Date().toISOString(),
+    submitted_at: null,
+  };
+  state.audits.push(newAudit);
+  state.current_audit_id = newAudit.id;
+  state.auditor_name = auditorName;
+  Store.save(state);
+  return newAudit;
+}
+
+function markCheckpoint(checkpointId, result, opts = {}) {
+  const state = Store.load();
+  const a = currentAudit(state);
+  if (!a) return;
+  a.results[checkpointId] = {
+    result,
+    finding: opts.finding || '',
+    cro_id: opts.croId || null,
+    at: new Date().toISOString(),
+  };
+  Store.save(state);
+}
+
+function nextUnmarkedIndex(audit) {
+  for (let i = 0; i < CHECKPOINTS.length; i++) {
+    if (!audit.results[CHECKPOINTS[i].id]) return i;
+  }
+  return CHECKPOINTS.length; // all done
+}
+
+function submitAudit() {
+  const state = Store.load();
+  const a = currentAudit(state);
+  if (!a) return null;
+  const s = scoreAudit(a.results);
+  a.status = 'submitted';
+  a.submitted_at = new Date().toISOString();
+  a.score = s;
+  state.current_audit_id = null;
+  Store.save(state);
+  return a;
+}
+
+// ---------------------------------------------------------------------------
+// Rendering — tabs
+// ---------------------------------------------------------------------------
+
+function render() {
+  const state = Store.load();
+  document.getElementById('tab-audit').innerHTML = renderAuditTab(state);
+  document.getElementById('tab-history').innerHTML = renderHistoryTab(state);
+  document.getElementById('tab-settings').innerHTML = renderSettingsTab(state);
+}
+
+function renderAuditTab(state) {
+  const a = currentAudit(state);
+  if (a) return renderInProgressAudit(a);
+  return renderStartAudit(state);
+}
+
+function renderStartAudit(state) {
+  const todays = state.audits.find(x => x.date === today() && x.status === 'submitted');
+  const lastName = state.auditor_name || '';
+  const cros = state.cros;
+  return `
+    <div class="card">
+      <h2>Daily audit</h2>
+      <p class="muted">${escapeHtml(fmtDate(today()))}</p>
+      ${todays
+        ? `<div class="card" style="background:var(--green-pale);border-color:var(--green);margin-top:12px">
+            <strong>Submitted today</strong>
+            <p>${todays.score.pct.toFixed(1)}% &middot; ${bandLabel(todays.score.band)}</p>
+          </div>`
+        : ''}
+      <div class="spacer-12"></div>
+      <label class="field">
+        <span>Your name (auditor)</span>
+        <input type="text" id="auditorName" value="${escapeHtml(lastName)}" placeholder="e.g. Sagar" autocomplete="name">
+      </label>
+      <label class="field">
+        <span>Audit date</span>
+        <input type="date" id="auditDate" value="${today()}" max="${today()}">
+      </label>
+      <div class="field">
+        <div class="row-spread">
+          <span style="font-size:13px;color:var(--gray-600)">CROs on duty</span>
+          <button class="iconbtn" style="color:var(--navy);font-size:14px" data-action="add-cro">+ Add CRO</button>
+        </div>
+        ${cros.length === 0
+          ? '<p class="muted">No CROs yet. Tap "+ Add CRO" above to add your floor staff.</p>'
+          : cros.map(c => `
+            <div class="cro-row">
+              <label>
+                <input type="checkbox" class="cro-check" value="${escapeHtml(c.id)}">
+                ${escapeHtml(c.name)}
+                <span class="pill">${escapeHtml(c.counter)}</span>
+              </label>
+            </div>`).join('')}
+      </div>
+      <div id="startError" class="error" hidden></div>
+      <button class="btn btn-primary" data-action="start-audit">Start daily audit</button>
+    </div>
+    <p class="tiny" style="text-align:center;margin-top:16px">68 checkpoints &middot; ~30 to 45 minutes &middot; target 90% Good or above</p>
+  `;
+}
+
+function renderInProgressAudit(a) {
+  const idx = nextUnmarkedIndex(a);
+  if (idx >= CHECKPOINTS.length) return renderReviewAudit(a);
+
+  const cp = CHECKPOINTS[idx];
+  const sop = SOPS.find(s => s.id === cp.sop_id);
+  const live = scoreAudit(a.results);
+  const pct = Math.round(((idx) / CHECKPOINTS.length) * 100);
+  const allowsNa = cp.allows_na;
+
+  return `
+    <div class="progress"><span style="width:${pct}%"></span></div>
+    <div class="cp-meta">
+      <span class="sop-chip ${sop.critical ? 'critical' : ''}">${escapeHtml(sop.name)}</span>
+      <span>CP ${escapeHtml(cp.id)}</span>
+      <span style="margin-left:auto">${idx + 1} of ${CHECKPOINTS.length}</span>
+    </div>
+    <div class="card">
+      <div class="cp-text">${escapeHtml(cp.text)}</div>
+      ${cp.evidence ? `<div class="cp-evidence">Evidence: ${escapeHtml(cp.evidence)}</div>` : ''}
+      ${cp.photo_required_on_fail
+        ? `<div class="photo-required-badge">Photo required if FAIL</div>`
+        : ''}
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-pass" data-action="mark" data-verdict="P">PASS</button>
+      <button class="btn btn-fail" data-action="mark" data-verdict="F">FAIL</button>
+      ${allowsNa ? `<button class="btn btn-na" data-action="mark" data-verdict="NA">N / A</button>` : ''}
+    </div>
+    <div class="minicounts">
+      <div class="minicount p"><span class="n">${live.p}</span><span class="lbl">PASS</span></div>
+      <div class="minicount f"><span class="n">${live.f}</span><span class="lbl">FAIL</span></div>
+      <div class="minicount na"><span class="n">${live.na}</span><span class="lbl">N/A</span></div>
+    </div>
+    <div class="spacer-24"></div>
+    <button class="btn btn-ghost" data-action="cancel-audit">Cancel audit</button>
+  `;
+}
+
+function renderReviewAudit(a) {
+  const s = scoreAudit(a.results);
+  return `
+    <div class="card score-card">
+      <p class="tiny">DRAFT &middot; review before submit</p>
+      <div class="score-pct ${s.band}">${s.pct.toFixed(1)}%</div>
+      <div class="score-band ${s.band}">${bandLabel(s.band)}</div>
+      <p class="muted">${s.raw} of ${s.max} weighted points &middot; ${s.p} pass &middot; ${s.f} fail &middot; ${s.na} N/A</p>
+    </div>
+    <button class="btn btn-primary" data-action="submit-audit">Submit audit</button>
+    <div class="spacer-12"></div>
+    <button class="btn btn-ghost" data-action="cancel-audit">Discard draft</button>
+  `;
+}
+
+function renderHistoryTab(state) {
+  const submitted = state.audits
+    .filter(a => a.status === 'submitted')
+    .sort((a, b) => b.date.localeCompare(a.date));
+  if (submitted.length === 0) {
+    return `<div class="card"><h2>No submitted audits yet</h2><p class="muted">Once you submit a daily audit it'll appear here.</p></div>`;
+  }
+  return submitted.map(a => {
+    const s = a.score;
+    return `
+      <div class="hist-row" data-action="open-history" data-id="${a.id}">
+        <div>
+          <strong>${escapeHtml(fmtDate(a.date))}</strong>
+          <div class="tiny">${s.p} P &middot; ${s.f} F &middot; ${s.na} N/A</div>
+        </div>
+        <div class="pct ${s.band}">${s.pct.toFixed(1)}%</div>
+      </div>`;
+  }).join('') + `
+    <div class="spacer-12"></div>
+    <button class="btn btn-ghost" data-action="export-csv">Export all to CSV</button>
+  `;
+}
+
+function renderSettingsTab(state) {
+  return `
+    <div class="card">
+      <h2>CROs</h2>
+      <p class="muted">Staff who appear in the "CROs on duty" picker and the FAIL detail dropdown.</p>
+      ${state.cros.length === 0
+        ? '<p class="muted">No CROs yet.</p>'
+        : state.cros.map(c => `
+          <div class="cro-row">
+            <span>${escapeHtml(c.name)}<span class="pill">${escapeHtml(c.counter)}</span></span>
+            <button class="iconbtn" style="color:var(--red)" data-action="remove-cro" data-id="${c.id}">Remove</button>
+          </div>`).join('')}
+      <div class="spacer-12"></div>
+      <button class="btn btn-secondary" data-action="add-cro">+ Add CRO</button>
+    </div>
+
+    <div class="card">
+      <h2>Backup &amp; restore</h2>
+      <p class="muted">${state.audits.length} audit(s) stored on this device. Back up to Google Drive (or any app) anytime — you'll be able to restore from the file later.</p>
+      <button class="btn btn-primary" data-action="backup-drive">Back up to Google Drive</button>
+      <div class="spacer-12"></div>
+      <button class="btn btn-ghost" data-action="restore-backup">Restore from backup file</button>
+      <div class="spacer-12"></div>
+      <button class="btn btn-ghost" data-action="export-csv">Export all audits to CSV</button>
+    </div>
+
+    <div class="card">
+      <h2>Danger zone</h2>
+      <button class="btn btn-ghost" data-action="clear-data" style="color:var(--red);border-color:var(--red)">Erase all data on this device</button>
+    </div>
+
+    <p class="tiny" style="text-align:center">Saagar Audit &middot; v0.1.0</p>
+  `;
+}
+
+// ---------------------------------------------------------------------------
+// Modals
+// ---------------------------------------------------------------------------
+
+function openModal(html) {
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-backdrop" data-modal-backdrop><div class="modal" data-modal>${html}</div></div>`;
+}
+
+function closeModal() {
+  document.getElementById('modal-root').innerHTML = '';
+}
+
+function failModal(checkpoint, cros) {
+  const required = checkpoint.photo_required_on_fail;
+  const croOptions = ['<option value="">— not attributed —</option>']
+    .concat(cros.map(c => `<option value="${c.id}">${escapeHtml(c.name)} · ${escapeHtml(c.counter)}</option>`))
+    .join('');
+  openModal(`
+    <h3>FAIL — CP ${escapeHtml(checkpoint.id)}</h3>
+    <p class="muted">${escapeHtml(checkpoint.text)}</p>
+    <label class="field">
+      <span>What did you find? <span style="color:var(--red)">*</span></span>
+      <textarea id="failFinding" maxlength="200" placeholder="e.g. CRO Suresh had no name badge at opening"></textarea>
+    </label>
+    <label class="field">
+      <span>CRO involved (optional)</span>
+      <select id="failCro">${croOptions}</select>
+    </label>
+    ${required ? `<p class="muted" style="color:var(--red)">Note: this checkpoint is a Cash/Inventory critical (★). In production a photo will be required here. Photo capture lands in the next release.</p>` : ''}
+    <div class="row">
+      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="modal-save-fail">Save &amp; next</button>
+    </div>
+  `);
+}
+
+function naModal(checkpoint) {
+  openModal(`
+    <h3>N/A — CP ${escapeHtml(checkpoint.id)}</h3>
+    <p class="muted">${escapeHtml(checkpoint.text)}</p>
+    <label class="field">
+      <span>Why is this not applicable today?</span>
+      <textarea id="naReason" maxlength="200" placeholder="e.g. counter closed today, no high-value sales"></textarea>
+    </label>
+    <div class="row">
+      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="modal-save-na">Mark N/A</button>
+    </div>
+  `);
+}
+
+function addCroModal() {
+  openModal(`
+    <h3>Add CRO</h3>
+    <label class="field">
+      <span>Name</span>
+      <input type="text" id="croName" placeholder="e.g. Suresh">
+    </label>
+    <label class="field">
+      <span>Counter</span>
+      <select id="croCounter">
+        <option value="Titan">Titan World</option>
+        <option value="Helios">Helios</option>
+      </select>
+    </label>
+    <div class="row">
+      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="modal-save-cro">Add</button>
+    </div>
+  `);
+}
+
+function historyDetailModal(a) {
+  const s = a.score;
+  const fails = Object.entries(a.results)
+    .filter(([, r]) => r.result === 'F')
+    .map(([cpId, r]) => {
+      const cp = CHECKPOINTS.find(x => x.id === cpId);
+      return `<li><strong>${escapeHtml(cpId)}</strong> — ${escapeHtml(cp ? cp.text : '')}<br><span class="muted">${escapeHtml(r.finding || '(no finding text)')}</span></li>`;
+    }).join('');
+  openModal(`
+    <h3>${escapeHtml(fmtDate(a.date))}</h3>
+    <p class="muted">Submitted ${escapeHtml(new Date(a.submitted_at).toLocaleString('en-IN'))}</p>
+    <div class="score-card" style="padding:12px">
+      <div class="score-pct ${s.band}" style="font-size:48px">${s.pct.toFixed(1)}%</div>
+      <div class="score-band ${s.band}">${bandLabel(s.band)}</div>
+      <p class="muted">${s.p} P &middot; ${s.f} F &middot; ${s.na} N/A</p>
+    </div>
+    ${fails ? `<h3 style="margin-top:16px">Findings (${a.score.f})</h3><ul>${fails}</ul>` : '<p class="muted">No failures — clean audit.</p>'}
+    <div class="row">
+      <button class="btn btn-ghost" data-action="modal-cancel">Close</button>
+    </div>
+  `);
+}
+
+// ---------------------------------------------------------------------------
+// Backup & restore
+// ---------------------------------------------------------------------------
+
+function backupFilename() {
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  return `saagar_audit_backup_${stamp}.json`;
+}
+
+async function backupToDrive() {
+  const state = Store.load();
+  const payload = {
+    _format: 'saagar_audit_v1',
+    _exported_at: new Date().toISOString(),
+    _app_version: '0.1.0',
+    ...state,
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const filename = backupFilename();
+  const blob = new Blob([json], { type: 'application/json' });
+  const file = new File([blob], filename, { type: 'application/json' });
+
+  // Preferred path on Android: native share sheet — Drive shows up alongside
+  // WhatsApp, Gmail, Files, etc. User picks Drive.
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: 'Saagar Audit backup',
+        text: `${state.audits.length} audit(s), ${state.cros.length} CRO(s)`,
+      });
+      toast('Backup shared');
+      return;
+    }
+  } catch (e) {
+    // User cancelled the share sheet — silent.
+    if (e && e.name === 'AbortError') return;
+    console.warn('share failed, falling back to download', e);
+  }
+
+  // Fallback: trigger a regular download. On Android, downloaded files land
+  // in /Download/ and the user can manually upload from the Drive app.
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Backup downloaded — upload to Drive from your file manager');
+}
+
+function restoreFromBackup() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json,.json';
+  input.style.display = 'none';
+  input.addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (data._format && data._format !== 'saagar_audit_v1') {
+        toast(`Unknown backup format: ${data._format}`);
+        return;
+      }
+      if (!Array.isArray(data.audits) || !Array.isArray(data.cros)) {
+        toast("This file isn't a Saagar Audit backup.");
+        return;
+      }
+      const msg = `Restore ${data.audits.length} audit(s) and ${data.cros.length} CRO(s)?\n\n` +
+        `This REPLACES your current data on this phone.`;
+      if (!confirm(msg)) return;
+      const restored = {
+        audits: data.audits,
+        cros: data.cros,
+        current_audit_id: data.current_audit_id || null,
+        auditor_name: data.auditor_name || '',
+      };
+      Store.save(restored);
+      render();
+      switchTab('history');
+      toast('Backup restored');
+    } catch (err) {
+      console.error(err);
+      toast('Could not read the file. Pick a saagar_audit_backup_*.json file.');
+    }
+  });
+  document.body.appendChild(input);
+  input.click();
+  // Cleanup after a tick.
+  setTimeout(() => { try { document.body.removeChild(input); } catch (_) {} }, 1000);
+}
+
+// ---------------------------------------------------------------------------
+// CSV export
+// ---------------------------------------------------------------------------
+
+function exportCsv() {
+  const state = Store.load();
+  const submitted = state.audits.filter(a => a.status === 'submitted');
+  if (submitted.length === 0) { toast('No submitted audits yet'); return; }
+  const rows = [['date', 'auditor', 'compliance_pct', 'band', 'raw', 'max', 'pass', 'fail', 'na', 'checkpoint_id', 'result', 'finding', 'cro_id']];
+  submitted.forEach(a => {
+    Object.entries(a.results).forEach(([cpId, r]) => {
+      rows.push([
+        a.date,
+        a.auditor_name || '',
+        a.score.pct.toFixed(1),
+        a.score.band,
+        a.score.raw,
+        a.score.max,
+        a.score.p,
+        a.score.f,
+        a.score.na,
+        cpId,
+        r.result,
+        r.finding || '',
+        r.cro_id || '',
+      ]);
+    });
+  });
+  const csv = rows.map(r => r.map(v => {
+    const s = String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `saagar_audit_${today()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------------------
+// Event handlers
+// ---------------------------------------------------------------------------
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-tab]');
+  if (t) { switchTab(t.dataset.tab); return; }
+
+  const a = e.target.closest('[data-action]');
+  if (!a) return;
+  const action = a.dataset.action;
+
+  if (action === 'modal-cancel' || action === 'modal-backdrop') { closeModal(); return; }
+  if (e.target.matches('[data-modal-backdrop]')) { closeModal(); return; }
+
+  if (action === 'add-cro')     { addCroModal(); return; }
+  if (action === 'modal-save-cro') {
+    const name = document.getElementById('croName').value.trim();
+    const counter = document.getElementById('croCounter').value;
+    if (name.length < 2) { toast('Name too short'); return; }
+    const state = Store.load();
+    state.cros.push({ id: uuid(), name, counter });
+    Store.save(state);
+    closeModal();
+    render();
+    return;
+  }
+  if (action === 'remove-cro') {
+    if (!confirm('Remove this CRO?')) return;
+    const id = a.dataset.id;
+    const state = Store.load();
+    state.cros = state.cros.filter(c => c.id !== id);
+    Store.save(state);
+    render();
+    return;
+  }
+
+  if (action === 'start-audit') {
+    const name = document.getElementById('auditorName').value.trim();
+    const date = document.getElementById('auditDate').value;
+    const croIds = Array.from(document.querySelectorAll('.cro-check:checked')).map(el => el.value);
+    const err = document.getElementById('startError');
+    err.hidden = true;
+    if (name.length < 2) { err.textContent = 'Enter your name.'; err.hidden = false; return; }
+    if (!date)           { err.textContent = 'Pick a date.'; err.hidden = false; return; }
+    if (croIds.length === 0) { err.textContent = 'Select at least one CRO on duty.'; err.hidden = false; return; }
+    startNewAudit({ date, auditorName: name, croIds });
+    render();
+    return;
+  }
+
+  if (action === 'mark') {
+    const verdict = a.dataset.verdict;
+    const state = Store.load();
+    const audit = currentAudit(state);
+    if (!audit) return;
+    const idx = nextUnmarkedIndex(audit);
+    const cp = CHECKPOINTS[idx];
+    if (!cp) return;
+
+    if (verdict === 'P')  { markCheckpoint(cp.id, 'P'); render(); return; }
+    if (verdict === 'F')  { failModal(cp, state.cros.filter(c => audit.cros.includes(c.id))); return; }
+    if (verdict === 'NA') { naModal(cp); return; }
+  }
+
+  if (action === 'modal-save-fail') {
+    const finding = document.getElementById('failFinding').value.trim();
+    if (finding.length < 5) { toast('Describe what you found (5+ characters)'); return; }
+    const croId = document.getElementById('failCro').value || null;
+    const state = Store.load();
+    const audit = currentAudit(state);
+    const idx = nextUnmarkedIndex(audit);
+    const cp = CHECKPOINTS[idx];
+    markCheckpoint(cp.id, 'F', { finding, croId });
+    closeModal();
+    render();
+    return;
+  }
+  if (action === 'modal-save-na') {
+    const reason = document.getElementById('naReason').value.trim();
+    if (reason.length < 3) { toast('Add a short reason'); return; }
+    const state = Store.load();
+    const audit = currentAudit(state);
+    const idx = nextUnmarkedIndex(audit);
+    const cp = CHECKPOINTS[idx];
+    markCheckpoint(cp.id, 'NA', { finding: reason });
+    closeModal();
+    render();
+    return;
+  }
+
+  if (action === 'submit-audit') {
+    const submitted = submitAudit();
+    if (submitted) {
+      toast(`Audit submitted: ${submitted.score.pct.toFixed(1)}% ${bandLabel(submitted.score.band)}`);
+    }
+    render();
+    return;
+  }
+  if (action === 'cancel-audit') {
+    if (!confirm('Discard this draft? Your marks will be lost.')) return;
+    const state = Store.load();
+    state.audits = state.audits.filter(x => x.id !== state.current_audit_id);
+    state.current_audit_id = null;
+    Store.save(state);
+    render();
+    return;
+  }
+
+  if (action === 'open-history') {
+    const state = Store.load();
+    const found = audit(a.dataset.id, state);
+    if (found) historyDetailModal(found);
+    return;
+  }
+  if (action === 'export-csv')     { exportCsv(); return; }
+  if (action === 'backup-drive')   { backupToDrive(); return; }
+  if (action === 'restore-backup') { restoreFromBackup(); return; }
+  if (action === 'clear-data') {
+    if (!confirm('Erase all audits and CROs from this device? This cannot be undone.')) return;
+    localStorage.removeItem(STORE_KEY);
+    render();
+    switchTab('audit');
+    toast('All data erased');
+    return;
+  }
+});
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + name));
+}
+
+// ---------------------------------------------------------------------------
+// Boot
+// ---------------------------------------------------------------------------
+
+render();
+
+  </script>
 </body>
 </html>
