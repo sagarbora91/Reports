@@ -31,110 +31,6 @@
   }
 
   // ---------------------------------------------------------------------
-  // Tabs / shell HTML
-  //
-  // Renders the same topbar + 4-tab nav on every page. Each tab is an
-  // <a href> to its target HTML so back/forward and deep links Just Work.
-  // ---------------------------------------------------------------------
-
-  const TABS = [
-    { id: 'audit',         label: 'Audit',        href: 'index.html#audit' },
-    { id: 'non-purchase',  label: 'Non-Purchase', href: 'non-purchase.html' },
-    { id: 'history',       label: 'History',      href: 'index.html#history' },
-    { id: 'settings',      label: 'Settings',     href: 'index.html#settings' },
-  ];
-
-  function shellHTML(activeId) {
-    const tabs = TABS.map(t => `
-      <a class="shell-tab ${t.id === activeId ? 'active' : ''}"
-         href="${t.href}"
-         data-shell-tab="${t.id}">${t.label}</a>
-    `).join('');
-
-    return `
-      <header class="shell-topbar">
-        <div class="shell-brand">
-          <span class="shell-brand-serif">Saagar</span>
-          <span class="shell-brand-sans">AUDIT</span>
-        </div>
-      </header>
-      <nav class="shell-tabs" role="tablist">${tabs}</nav>
-    `;
-  }
-
-  const SHELL_CSS = `
-    .shell-topbar {
-      background: linear-gradient(135deg, #0b1f3a, #071529);
-      color: #ffffff;
-      padding: 14px 18px calc(14px + env(safe-area-inset-top)) 18px;
-      padding-top: max(14px, env(safe-area-inset-top));
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    }
-    .shell-brand { display: flex; align-items: baseline; gap: 8px; }
-    .shell-brand-serif {
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 22px;
-      font-weight: bold;
-      color: #e0b85d;
-      letter-spacing: 0.5px;
-    }
-    .shell-brand-sans {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      font-size: 13px;
-      letter-spacing: 4px;
-      color: #ffffff;
-      opacity: 0.9;
-    }
-    .shell-tabs {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      background: #132b4c;
-      border-bottom: 1px solid #1c3a66;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-    .shell-tab {
-      padding: 12px 6px;
-      text-align: center;
-      color: #c3d0e3;
-      text-decoration: none;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.2px;
-      border-bottom: 3px solid transparent;
-      transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-    }
-    .shell-tab:hover { color: #ffffff; background: rgba(255,255,255,0.04); }
-    .shell-tab.active {
-      color: #e0b85d;
-      border-bottom-color: #c99a2e;
-      background: rgba(224,184,93,0.06);
-    }
-    @media (max-width: 380px) {
-      .shell-tab { font-size: 12px; padding: 11px 4px; }
-    }
-  `;
-
-  function injectShellCSS() {
-    if (document.getElementById('shell-css')) return;
-    const s = document.createElement('style');
-    s.id = 'shell-css';
-    s.textContent = SHELL_CSS;
-    document.head.appendChild(s);
-  }
-
-  function mountShell(activeId, mountSelector) {
-    injectShellCSS();
-    const host = document.querySelector(mountSelector);
-    if (!host) return;
-    host.outerHTML = shellHTML(activeId);
-  }
-
-  // ---------------------------------------------------------------------
   // Unified backup / restore
   //
   // Backups now bundle BOTH the audit state and the non-purchase records
@@ -422,7 +318,6 @@
   // ---------------------------------------------------------------------
 
   window.SaagarShell = {
-    mount: mountShell,
     boot: bootNative,
     backup: backupEverything,
     restore: restoreFromFilePicker,
