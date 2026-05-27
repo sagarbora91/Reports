@@ -1734,7 +1734,27 @@ const Store = {
       return Store.empty();
     }
   },
-  save(s) { localStorage.setItem(STORE_KEY, JSON.stringify(s)); },
+  save(s) {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(s));
+    } catch (e) {
+      // Most common cause: localStorage quota (~5 MB). Hits when many photos
+      // accumulate. We surface a toast but DON'T crash the flow — caller can
+      // decide whether to retry, clear old data, etc.
+      console.error('Store.save failed:', e);
+      if (e && (e.name === 'QuotaExceededError' || /quota/i.test(e.message || ''))) {
+        try {
+          const t = document.getElementById('toast');
+          if (t) {
+            t.textContent = 'Storage full — export and clear old audits';
+            t.hidden = false;
+            setTimeout(() => { t.hidden = true; }, 4000);
+          }
+        } catch (_) {}
+      }
+      throw e;
+    }
+  },
   empty() {
     return {
       audits: [],
@@ -2124,41 +2144,51 @@ function evaluateEscalationsForAudit(audit, state) {
   // -- T4: Inventory variance > 2% weekly — needs weekly audit (Phase 2)
   // (intentional stub — uncomment when weekly audits ship)
 
-  // -- T5: Theft / security / legal keywords in any finding -------------
-  fails.forEach(f => {
-    const hit = findKeyword(f.finding, T5_KEYWORDS);
-    if (!hit) return;
+  // -- T5: Theft / security / legal keywords — one escalation per audit -
+  const t5Hits = fails
+    .map(f => ({ f, hit: findKeyword(f.finding, T5_KEYWORDS) }))
+    .filter(x => x.hit);
+  if (t5Hits.length > 0) {
+    const evidence = t5Hits
+      .map(x => `CP ${x.f.cpId}: "${x.f.finding}"`)
+      .join('  |  ');
+    const hitWords = Array.from(new Set(t5Hits.map(x => x.hit))).join(', ');
     out.push({
       trigger_number: 5,
       trigger_label: ESC_TRIGGERS[5],
       severity: 'critical',
       recipient_role: 'OWNER',
       message: composeMessage({
-        what: `Audit finding mentions a security or legal red flag ("${hit}").`,
-        evidence: `Checkpoint ${f.cpId}: "${f.finding}"`,
+        what: `Audit finding flags a security or legal red flag (keywords: ${hitWords}).`,
+        evidence,
         impact: 'Possible theft, security breach, or legal exposure. Could be loss-of-licence territory.',
         action: 'Investigate immediately. Preserve evidence — CCTV, registers, cash count. Don\'t let staff close the store before you arrive.',
       }),
     });
-  });
+  }
 
-  // -- T6: Customer complaint mentioned in any finding ------------------
-  fails.forEach(f => {
-    const hit = findKeyword(f.finding, T6_KEYWORDS);
-    if (!hit) return;
+  // -- T6: Customer complaint — one escalation per audit ----------------
+  const t6Hits = fails
+    .map(f => ({ f, hit: findKeyword(f.finding, T6_KEYWORDS) }))
+    .filter(x => x.hit);
+  if (t6Hits.length > 0) {
+    const evidence = t6Hits
+      .map(x => `CP ${x.f.cpId}: "${x.f.finding}"`)
+      .join('  |  ');
+    const hitWords = Array.from(new Set(t6Hits.map(x => x.hit))).join(', ');
     out.push({
       trigger_number: 6,
       trigger_label: ESC_TRIGGERS[6],
       severity: 'high',
       recipient_role: 'OWNER',
       message: composeMessage({
-        what: `Audit finding flags a customer complaint that needs management ("${hit}").`,
-        evidence: `Checkpoint ${f.cpId}: "${f.finding}"`,
+        what: `Audit finding flags a customer complaint that needs management (keywords: ${hitWords}).`,
+        evidence,
         impact: 'Brand reputation. Customer may escalate publicly (social media, regulator, Titan corporate).',
         action: 'Call the customer today. Brief the Owner. Document the resolution.',
       }),
     });
-  });
+  }
 
   // -- T7: Declining trend 3+ weeks — needs weekly aggregation (Phase 3)
 
@@ -3236,7 +3266,9 @@ function renderCapsTab(state, auth) {
         ${c.finding ? `<div class="cap-row-finding">${escapeHtml(c.finding)}</div>` : ''}
         <div class="cap-row-bottom">
           ${cro ? `<span class="cap-meta">CRO: ${escapeHtml(cro.name)}</span>` : ''}
-          ${responsible ? `<span class="cap-meta">Owner: ${escapeHtml(responsible.name)}</span>` : ''}
+          ${responsible
+            ? `<span class="cap-meta">Owner: ${escapeHtml(responsible.name)}${responsible.is_active === false ? ' (inactive)' : ''}</span>`
+            : (c.responsible_user_id ? `<span class="cap-meta" style="color:var(--red)">Owner: (deleted)</span>` : '')}
           ${deadlineLabel}
         </div>
       </div>`;
@@ -3289,9 +3321,12 @@ function capDetailModal(capId) {
   let actionButtons = '';
   if (c.status === 'open' || c.status === 'aged') {
     const allStepsDone = c.action_steps.length > 0 && c.action_steps.every(s => s.done);
+    const labelWhenNotReady = c.action_steps.length === 0
+      ? 'Add at least one action step first'
+      : 'Tick all action steps to mark done';
     actionButtons = `
       <button class="btn btn-primary" data-action="cap-mark-done" data-id="${escapeHtml(c.id)}" ${allStepsDone ? '' : 'disabled'}>
-        ${allStepsDone ? 'Mark all done →' : `Check ${c.action_steps.length === 0 ? 'add' : 'off'} all action steps to mark done`}
+        ${allStepsDone ? 'Mark all done →' : labelWhenNotReady}
       </button>`;
   } else if (c.status === 'done') {
     if (isVerifier) {
@@ -3463,7 +3498,16 @@ function closeModal() {
 }
 
 function failModal(checkpoint, cros) {
+  // Seed the draft with photos already attached to this checkpoint (could
+  // have been added via the per-checkpoint photo strip before the user
+  // chose FAIL). Without this, saving the FAIL would overwrite them.
   FailDraft.reset();
+  const _s = Store.load();
+  const _a = currentAudit(_s);
+  const _existing = _a && _a.results[checkpoint.id] && _a.results[checkpoint.id].photos;
+  if (Array.isArray(_existing) && _existing.length > 0) {
+    _existing.forEach(p => FailDraft.add(p));
+  }
   const required = checkpoint.photo_required_on_fail;
   const croOptions = ['<option value="">— not attributed —</option>']
     .concat(cros.map(c => `<option value="${c.id}">${escapeHtml(c.name)} · ${escapeHtml(c.counter)}</option>`))
@@ -3833,6 +3877,12 @@ function restoreFromBackup() {
       toast(res.error && res.error.length < 80 ? res.error : 'Could not read backup file');
       return;
     }
+    // Security: the restored backup may reference a different set of users.
+    // Clear the active session so the user re-authenticates with a PIN that
+    // matches the restored user table.
+    AuthSession.logout();
+    PinBuf.reset();
+
     const c = res.counts;
     const parts = [
       `${c.audits} audit(s)`,
@@ -3840,9 +3890,8 @@ function restoreFromBackup() {
       c.users ? `${c.users} user(s)` : null,
       c.caps ? `${c.caps} CAP(s)` : null,
     ].filter(Boolean);
-    const confirmMsg = `Restored ${parts.join(', ')}.`;
+    const confirmMsg = `Restored ${parts.join(', ')}. Sign in again with a restored user's PIN.`;
     render();
-    switchTab('history');
     toast(confirmMsg);
   });
 }

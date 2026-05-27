@@ -1,0 +1,240 @@
+SAAGAR TRADERS
+सागर ट्रेडर्स
+Titan World (WLMHW)  •  Helios (HEMW)  •  Latur
+Priority 1 SOP Audit
+QUICK REFERENCE CARDS
+त्वरित संदर्भ कार्ड
+6 cards  •  ~10 pages  •  v1.0
+Card 1 — Daily Audit Quick Reference
+कार्ड १ — दैनंदिन ऑडिट त्वरित संदर्भ
+68 checkpoints • 90 weighted points • Target 90%+ (81+ weighted) • 30–45 min at closing
+६८ तपासणी बिंदू • ९० वजनी गुण • लक्ष्य ९०%+ (८१+ वजनी) • बंदोबस्ताला ३०–४५ मिनिटे
+All 68 daily checkpoints
+सर्व ६८ दैनंदिन तपासणी बिंदू
+SOP 1 — Grooming
+SOP 2 — Sales Buddy
+SOP 3 — NPS Calling
+SOP 4 — Customer Data
+SOP 5 — Display
+SOP 6 — Cash ★
+SOP 7 — Inventory ★
+SOP 8 — Service Intake
+Card 2 — Weekly Audit Quick Reference
+कार्ड २ — साप्ताहिक ऑडिट त्वरित संदर्भ
+124 weighted points (68 daily-avg + 56 weekly-only) • Target 92%+ (114+ pts) • 2–3 hrs Sat/Mon
+१२४ वजनी गुण (६८ दैनंदिन सरासरी + ५६ साप्ताहिक) • लक्ष्य ९२%+ (११४+ गुण) • २–३ तास शनि/सोम
+36 weekly-only checkpoints
+३६ साप्ताहिक-केवळ तपासणी बिंदू
+Operations Weekly (10 wt)
+Cash Weekly ★ (16 wt)
+Reporting & Service Weekly (6 wt)
+Inventory Weekly ★ (24 wt)
+Card 3 — CAP Template (Printable)
+कार्ड ३ — CAP टेम्पलेट (छापायोग्य)
+Print 10 copies per month. One CAP per finding. One page only — multi-page CAPs are usually multiple CAPs disguised as one; split them.
+दर महिन्याला १० प्रती छापा. प्रत्येक निष्कर्षासाठी एक CAP. फक्त एक पान — अनेक-पानांच्या CAP सहसा एकात लपलेल्या अनेक — वेगळ्या करा.
+1. CAP ID: CAP-YYYY-Wxx-NN
+_______________________________________________________________________
+2. Date opened:
+_______________________________________________________________________
+3. Originating finding: Audit / day / week / checkpoint
+_______________________________________________________________________
+4. Problem statement: One sentence
+_______________________________________________________________________
+5. 5 Whys: Why 1 → Why 2 → Why 3 → Why 4 → Why 5
+_______________________________________________________________________
+6. Root cause: From the 5 Whys
+_______________________________________________________________________
+7. Action steps (3–5): Each step concrete, with verb
+_______________________________________________________________________
+8. Responsible (CAP Owner): Named person
+_______________________________________________________________________
+9. Deadline: Specific date — default 7 days
+_______________________________________________________________________
+10. Verification method: Which checkpoint will be re-run
+_______________________________________________________________________
+Status timeline
+स्थिती कालक्रम
+Opened: ________   Done: ________   Verified: ________   Closed: ________
+Signatures
+सह्या
+CAP Owner: __________________   Auditor (closed): __________________
+Card 4 — Rating Scale + Escalation Triggers
+कार्ड ४ — रेटिंग स्केल + एस्केलेशन ट्रिगर
+5 Compliance Bands
+५ अनुपालन पट्ट्या
+Tier Targets
+स्तर लक्ष्ये
+7 Mandatory Escalation Triggers
+७ अनिवार्य एस्केलेशन ट्रिगर
+Card 5 — Strong vs Weak Evidence
+कार्ड ५ — मजबूत वि. दुर्बल पुरावा
+Card 6 — Bilingual Glossary (Top 30)
+कार्ड ६ — द्विभाषी शब्दकोश (३० मुख्य)
+30 most-used audit terms. Full 65-term glossary in workbook Appendix A.7.
+३० सर्वात-वापरल्या जाणार्‍या ऑडिट संज्ञा. पूर्ण ६५-संज्ञा शब्दकोश पुस्तकाच्या परिशिष्ट A.७ मध्ये.
+### TABLE 0 ###
+SOP || Name | नाव || Raw | कच्चे || Wt | वजन || Total wt | एकूण
+1 || Grooming | ग्रूमिंग || 6 || 1× || 6
+2 || Sales Buddy | सेल्स बडी || 8 || 1× || 8
+3 || NPS Calling | एनपीएस कॉल || 7 || 1× || 7
+4 || Customer Data | ग्राहक डेटा || 8 || 1× || 8
+5 || Display | डिस्प्ले || 9 || 1× || 9
+6 || Cash ★ | रोख ★ || 12 || 2× || 24
+7 || Inventory ★ | स्टॉक ★ || 10 || 2× || 20
+8 || Service Intake | सर्व्हिस इनटेक || 8 || 1× || 8
+TOTAL || Daily Audit || 68 || — || 90
+### TABLE 1 ###
+ || 
+1.1 Uniform clean || 1.2 Name badge
+1.3 Hair gelled/tied || 1.4 Hand gloves on
+1.5 Closed shoes || 1.6 Phone off counter
+### TABLE 2 ###
+ || 
+2.1 Open photo 10:30±15 || 2.2 Close photo 9:15±15
+2.3 GPS on open || 2.4 GPS on close
+2.5 Full window shown || 2.6 Photo clear
+2.7 Titan ack received || 2.8 No upload pending
+### TABLE 3 ###
+ || 
+3.1 ~30 calls target || 3.2 Call log updated
+3.3 Timestamps on each || 3.4 Scores 0–10 recorded
+3.5 Wrong nos flagged || 3.6 Complaints logged
+3.7 Daily NPS summary || 
+### TABLE 4 ###
+ || 
+4.1 Walk-in count logged || 4.2 ≥85% data captured
+4.3 Refusals logged || 4.4 Phone in CRM
+4.5 Marketing consent || 4.6 DPDP compliant
+4.7 Log signed by CRO || 4.8 New signups → bill
+### TABLE 5 ###
+ || 
+5.1 Planogram match || 5.2 Pricing current FY
+5.3 Price card visible || 5.4 Trays clean
+5.5 Brand zone clear || 5.6 FIFO on 3 models
+5.7 No damaged on display || 5.8 Lights working
+5.9 Security mirror clear || 
+### TABLE 6 ###
+ || 
+6.1 Opening matches yest+float || 6.2 Register up-to-date
+6.3 POS = cash+card+UPI || 6.4 GST matches POS
+6.5 Variance ≤ ₹50 || 6.6 Bank by 9 PM if >₹50k
+6.7 Stamped deposit slip || 6.8 Petty cash authorized
+6.9 Original receipts only || 6.10 Safe locked
+6.11 Override 2 sigs || 6.12 EOD summary 9:30 PM
+### TABLE 7 ###
+ || 
+7.1 Daily cycle count || 7.2 POS = stock dedn
+7.3 GRNs in system || 7.4 Damaged segregated
+7.5 Returns in 24 hrs || 7.6 High-value secured
+7.7 Service intake safe || 7.8 FIFO 3 trays
+7.9 Repair-in register || 7.10 EOD stock 9:30 PM
+### TABLE 8 ###
+ || 
+8.1 Form 2 signatures || 8.2 Order ID generated
+8.3 ID copy/verified || 8.4 Photo per Order ID
+8.5 Estimate written || 8.6 Tagged on rack
+8.7 Service register updated || 8.8 Overdue → call <24h
+### TABLE 9 ###
+Component | घटक || Raw | कच्चे || Wt | वजन || Total | एकूण
+Daily-audit avg (7-day) | दैनंदिन सरासरी || — || — || 68
+Operations Weekly | ऑपरेशन्स || 10 || 1× || 10
+Cash Weekly ★ | रोख ★ || 8 || 2× || 16
+Reporting & Service | रिपोर्टिंग व सर्व्हिस || 6 || 1× || 6
+Inventory Weekly ★ | स्टॉक ★ || 12 || 2× || 24
+TOTAL || 36 + avg || — || 124
+### TABLE 10 ###
+ || 
+O.1 Weekly training ≥30min || O.2 POS/printer/scanner OK
+O.3 AC/lights/cameras OK || O.4 First aid valid
+O.5 Fire AMC current || O.6 Consumables stocked
+O.7 No invoice overdue >15d || O.8 Rent/utilities/dues current
+O.9 Attendance reconciled || O.10 Feedback box logged
+### TABLE 11 ###
+ || 
+CW.1 Bank reconciled || CW.2 Safe count = system
+CW.3 Deposits stamped || CW.4 Petty cash MTD
+CW.5 POS overrides traced || CW.6 GST reconciled
+CW.7 Cumulative ±₹200 || CW.8 No CRO refund >5%
+### TABLE 12 ###
+ || 
+RS.1 Titan Sales Buddy Sun EOD || RS.2 Owner sales Mon 11AM
+RS.3 Service dispatch reconciled || RS.4 Callbacks in CRM
+RS.5 Complaint closure ≥80% || RS.6 NPS trend report
+### TABLE 13 ###
+ || 
+IW.1 Full storage count (2 sigs) || IW.2 GRNs reconciled
+IW.3 Damage dispositioned || IW.4 Service intake balanced
+IW.5 No CRO refund cluster || IW.6 90+ day slow-moving
+IW.7 60+ day high-value || IW.8 Write-offs GM-signed
+IW.9 Debit notes tracked || IW.10 Brand velocity report
+IW.11 Tray rotation complete || IW.12 Stock takeout reconciled
+### TABLE 14 ###
+Band | पट्टी || Range | श्रेणी || Action | कृती
+EXCELLENT | उत्कृष्ट || 95–100% || Reward; document for replication
+GOOD | चांगले || 90–94.9% || Note fixes; no CAP needed
+FAIR | बरे || 85–89.9% || Written CAP required
+POOR | वाईट || 80–84.9% || Urgent CAP + escalate one tier
+CRITICAL | अत्यावश्यक || < 80% || Same-day escalation; full RCA
+### TABLE 15 ###
+Tier || Auditor || Target || Pts to pass
+Tier 1 daily || Store Manager || 90%+ || 81 / 90 wt
+Tier 2 weekly || GM || 92%+ || 114 / 124 wt
+Tier 3 monthly || Owner || 95%+ || qualitative
+### TABLE 16 ###
+# || Trigger | ट्रिगर || Threshold | मर्यादा || To | कोणाकडे || When | कधी
+1 || Daily Critical || < 80% || GM→Owner (if Cash/Inv) || Same night
+2 || Same checkpoint fail || 5+ days/week || GM (Pattern CAP) || Weekly audit
+3 || Cash variance || > ₹500/day || GM || Same day
+4 || Inventory variance || > 2% of stock || Owner || Same day
+5 || Theft/security/legal || Any indication || Owner || Immediate
+6 || Customer complaint || Not store-resolvable || Owner || Same day
+7 || Declining trend || 3+ wks down || Owner || Week 3 audit
+### TABLE 17 ###
+NOTE | टीप | Escalation message — 4 parts: (1) what happened in 1 sentence (2) evidence (3) operational impact (4) requested action. WhatsApp is fine; do not draft memos. Speed beats polish. | एस्केलेशन संदेश — ४ भाग: (१) काय झाले १ वाक्यात (२) पुरावा (३) कार्यवाहक परिणाम (४) मागितलेली कृती. व्हॉट्सअॅप ठीक; मेमो लिहू नका. वेग पॉलिशला हरवतो.
+### TABLE 18 ###
+STRONG (Accept) | मजबूत (स्वीकारा) || WEAK (Refuse) | दुर्बल (नाकारा)
+✓ Timestamped photo (WA / EXIF / app upload) || ✗ Verbal alone — "yes I did it"
+✓ Signed + dated register entries || ✗ "Manager confirmed" (no source)
+✓ POS / system reports (tamper-evident) || ✗ "I remember doing it"
+✓ Sales Buddy upload acknowledgement || ✗ Photo without timestamp
+✓ Physical count + matching system record || ✗ Unsigned documents
+✓ Two-signature reconciliations || ✗ Second-hand reports
+✓ Bank slip + stamped teller receipt || ✗ "Will check tomorrow"
+✓ Email/message audit trail + timestamp || ✗ Assumption — "about 30 pieces"
+### TABLE 19 ###
+WARNING | सूचना | Every audit finding must be evidenced by something in the LEFT column. Findings supported only by items on the right are reporting, not auditing. | प्रत्येक ऑडिट निष्कर्षाला डाव्या स्तंभातील कशाने तरी पुरावा हवा. फक्त उजव्या स्तंभातील आयटमने आधारित निष्कर्ष म्हणजे रिपोर्टिंग, ऑडिट नव्हे.
+### TABLE 20 ###
+English || Marathi || Meaning
+Audit || ऑडिट || Independent check
+Compliance || अनुपालन || Meeting SOP standard
+Checkpoint || तपासणी बिंदू || Single audit item
+SOP || एसओपी || Standard Operating Procedure
+Store Manager || स्टोअर मॅनेजर || Tier 1 auditor
+GM || जीएम || Tier 2 auditor
+CRO || सीआरओ || Customer Relationship Officer
+Owner || मालक || Tier 3 auditor
+Pass || पास || Meets standard
+Fail || नापास || Does not meet
+NA || लागू नाही || Genuinely does not apply
+Weighted score || वजनी गुण || Adjusted for SOP weight
+Band || पट्टी || Compliance category
+Evidence || पुरावा || Proof of finding
+Finding || निष्कर्ष || Named audit outcome
+Variance || तफावत || Expected vs actual diff
+Reconciliation || ताळमेळ || Match two record sets
+Override || ओव्हरराइड || Manual POS exception
+GRN || GRN || Goods Received Note
+Cycle count || चक्र-मोजणी || Daily tray count
+FIFO || FIFO || First In, First Out
+Service intake || सर्व्हिस इनटेक || Watch in for repair
+Order ID || ऑर्डर आयडी || Unique intake ID
+CAP || कृती योजना || Corrective Action Plan
+5 Whys || पाच का? || Root-cause technique
+Root cause || मूळ कारण || Underlying reason
+Aged CAP || जुनी CAP || CAP past deadline
+Escalation || एस्केलेशन || Move to next tier
+Pattern || पॅटर्न || Repeated finding
+Spot check || स्पॉट चेक || Targeted verification
+### TABLE 21 ###
+BEST PRACTICE | उत्तम सराव | End of Quick Reference Cards. Print, laminate Cards 4 and 5 as wall posters, and keep Cards 1, 2, 3 in the GM's audit folder. Card 6 — give each CRO a copy. | त्वरित संदर्भ कार्ड समाप्त. कार्ड ४ आणि ५ भिंत पोस्टर म्हणून छापा-लॅमिनेट करा; कार्ड १, २, ३ जीएमच्या ऑडिट फोल्डरमध्ये ठेवा. कार्ड ६ — प्रत्येक सीआरओला एक प्रत द्या.

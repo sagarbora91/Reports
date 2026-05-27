@@ -1,0 +1,148 @@
+{
+  "_source": "Saagar_P1_App_Spec_v1.docx §11.1 + Saagar_P1_Audit_Workbook_v1.docx Appendix A.4 (Table 74 and Table 75).",
+  "_translator_notes": {
+    "verbatim_from_workbook": [
+      "All five band labels (Excellent/Good/Fair/Poor/Critical → उत्कृष्ट/चांगले/बरे/वाईट/अत्यावश्यक) are verbatim from Workbook A.4 Table 74.",
+      "Action descriptions for each band combine the 'Action' and 'Who acts' columns of A.4 Table 74."
+    ],
+    "review_needed": [
+      "title_mr — composed from canonical Marathi terms in the spec (Workbook uses 'रेटिंग स्केल संदर्भ कार्ड'); reviewed against the wording used in Spec §11.1 ('रेटिंग स्केल').",
+      "tier_targets label_mr — composed from spec wording ('SM दैनंदिन लक्ष्य' style); the workbook itself does not provide short labels for these tier rows.",
+      "warning.mr — composed by combining the verbatim Marathi warning from Workbook A.4 Table 76 ('नेहमी एका दशांश स्थानासह गुण लिहा. ९०.० चांगले आहे, ८९.९ बरे आहे') with the QuickRef phrasing about the 89.9 cliff."
+    ]
+  },
+  "title_en": "Compliance rating bands",
+  "title_mr": "अनुपालन रेटिंग पट्ट्या",
+  "subtitle_en": "Source: Workbook Appendix A.4 — Rating Scale Reference Card.",
+  "subtitle_mr": "स्रोत: पुस्तिका परिशिष्ट A.४ — रेटिंग स्केल संदर्भ कार्ड.",
+  "bands": [
+    {
+      "code": "excellent",
+      "label_en": "Excellent",
+      "label_mr": "उत्कृष्ट",
+      "min_pct": 95.0,
+      "max_pct": 100.0,
+      "range_label_en": "95% – 100%",
+      "range_label_mr": "९५% – १००%",
+      "color": "#166534",
+      "action_en": "Reward and document the practice for replication.",
+      "action_mr": "[REVIEW] सरावाचे प्रतिकृतीसाठी कौतुक करा व नोंदवा.",
+      "who_acts_en": "Store Manager records best practice; GM cites in weekly report.",
+      "who_acts_mr": "[REVIEW] स्टोअर मॅनेजर सर्वोत्तम सराव नोंदवतो; जीएम साप्ताहिक अहवालात उल्लेख करते.",
+      "description_en": "Audit-grade compliance. Sustain by training new staff to current standard.",
+      "description_mr": "[REVIEW] ऑडिट-दर्जाचे अनुपालन. नवीन कर्मचाऱ्यांना सध्याच्या मानकानुसार प्रशिक्षित करून टिकवा."
+    },
+    {
+      "code": "good",
+      "label_en": "Good",
+      "label_mr": "चांगले",
+      "min_pct": 90.0,
+      "max_pct": 94.9,
+      "range_label_en": "90% – 94.9%",
+      "range_label_mr": "९०% – ९४.९%",
+      "color": "#15803D",
+      "action_en": "Note minor fixes for the next day; no CAP needed.",
+      "action_mr": "[REVIEW] दुसर्‍या दिवशीसाठी किरकोळ सुधारणा नोंदवा; CAP आवश्यक नाही.",
+      "who_acts_en": "Store Manager addresses verbally with relevant CRO.",
+      "who_acts_mr": "[REVIEW] स्टोअर मॅनेजर संबंधित सीआरओशी तोंडी बोलून सोडवतो.",
+      "description_en": "On-target performance. Address small slips before they become patterns.",
+      "description_mr": "[REVIEW] लक्ष्यानुसार कामगिरी. पॅटर्न होण्यापूर्वी लहान चुका सोडवा."
+    },
+    {
+      "code": "fair",
+      "label_en": "Fair",
+      "label_mr": "बरे",
+      "min_pct": 85.0,
+      "max_pct": 89.9,
+      "range_label_en": "85% – 89.9%",
+      "range_label_mr": "८५% – ८९.९%",
+      "color": "#B45309",
+      "action_en": "Written Corrective Action Plan required.",
+      "action_mr": "[REVIEW] लेखी कृती योजना (CAP) आवश्यक.",
+      "who_acts_en": "Store Manager opens CAP; GM reviews at weekly audit.",
+      "who_acts_mr": "[REVIEW] स्टोअर मॅनेजर CAP उघडतो; जीएम साप्ताहिक ऑडिटमध्ये पुनरावलोकन करते.",
+      "description_en": "Below target. Root-cause analysis required before the issue settles in.",
+      "description_mr": "[REVIEW] लक्ष्याखाली. समस्या स्थिरावण्यापूर्वी मूळ-कारण विश्लेषण आवश्यक."
+    },
+    {
+      "code": "poor",
+      "label_en": "Poor",
+      "label_mr": "वाईट",
+      "min_pct": 80.0,
+      "max_pct": 84.9,
+      "range_label_en": "80% – 84.9%",
+      "range_label_mr": "८०% – ८४.९%",
+      "color": "#B91C1C",
+      "action_en": "Urgent CAP plus escalate one tier up.",
+      "action_mr": "[REVIEW] तातडीचा CAP आणि एक स्तर वर एस्केलेट करा.",
+      "who_acts_en": "Store Manager opens CAP; same-day escalation to GM.",
+      "who_acts_mr": "[REVIEW] स्टोअर मॅनेजर CAP उघडतो; त्याच दिवशी जीएमकडे एस्केलेशन.",
+      "description_en": "Clearly off-target. Multiple SOPs likely affected; act tonight, not tomorrow.",
+      "description_mr": "[REVIEW] स्पष्टपणे लक्ष्याबाहेर. अनेक एसओपी प्रभावित; उद्या नव्हे, आजच कृती करा."
+    },
+    {
+      "code": "critical",
+      "label_en": "Critical",
+      "label_mr": "अत्यावश्यक",
+      "min_pct": 0.0,
+      "max_pct": 79.9,
+      "range_label_en": "Below 80%",
+      "range_label_mr": "८०% च्या खाली",
+      "color": "#B91C1C",
+      "action_en": "Same-day escalation; full root-cause analysis.",
+      "action_mr": "[REVIEW] त्याच दिवशी एस्केलेशन; पूर्ण मूळ-कारण विश्लेषण.",
+      "who_acts_en": "Escalation to Owner regardless of tier.",
+      "who_acts_mr": "[REVIEW] स्तर कोणताही असो, मालकाकडे एस्केलेशन.",
+      "description_en": "Audit programme failure if not addressed. Trigger 1 fires automatically.",
+      "description_mr": "[REVIEW] सोडवले नाही तर ऑडिट कार्यक्रम अपयश. ट्रिगर १ आपोआप सुरू होतो."
+    }
+  ],
+  "tier_targets": [
+    {
+      "tier": "daily",
+      "tier_label_en": "Tier 1 daily",
+      "tier_label_mr": "टियर १ दैनंदिन",
+      "auditor_en": "Store Manager",
+      "auditor_mr": "स्टोअर मॅनेजर",
+      "target_pct": 90,
+      "label_en": "SM daily target",
+      "label_mr": "[REVIEW] SM दैनंदिन लक्ष्य",
+      "total_points": "90 weighted",
+      "points_to_pass": "81+ weighted",
+      "points_to_pass_label_en": "81 / 90",
+      "points_to_pass_label_mr": "८१ / ९०"
+    },
+    {
+      "tier": "weekly",
+      "tier_label_en": "Tier 2 weekly",
+      "tier_label_mr": "टियर २ साप्ताहिक",
+      "auditor_en": "GM",
+      "auditor_mr": "जीएम",
+      "target_pct": 92,
+      "label_en": "GM weekly target",
+      "label_mr": "[REVIEW] जीएम साप्ताहिक लक्ष्य",
+      "total_points": "124 weighted",
+      "points_to_pass": "114+ weighted",
+      "points_to_pass_label_en": "114 / 124",
+      "points_to_pass_label_mr": "११४ / १२४"
+    },
+    {
+      "tier": "monthly",
+      "tier_label_en": "Tier 3 monthly",
+      "tier_label_mr": "टियर ३ मासिक",
+      "auditor_en": "Owner",
+      "auditor_mr": "मालक",
+      "target_pct": 95,
+      "label_en": "Owner monthly target",
+      "label_mr": "[REVIEW] मालक मासिक लक्ष्य",
+      "total_points": "Strategic — qualitative",
+      "points_to_pass": "—",
+      "points_to_pass_label_en": "Qualitative",
+      "points_to_pass_label_mr": "गुणात्मक"
+    }
+  ],
+  "warning": {
+    "en": "The 89.9% → 90.0% boundary is the most-missed cliff in the whole programme. Always score with one decimal place. \"90\" is ambiguous — is it 90.0 (Good) or 89.7 (Fair) rounded up? Never round before banding.",
+    "mr": "[REVIEW] संपूर्ण कार्यक्रमातली सर्वात-चुकवली जाणारी सीमा म्हणजे ८९.९% → ९०.०%. नेहमी एका दशांश स्थानासह गुण लिहा. \"९०\" अस्पष्ट — ९०.० (चांगले) की वर गोलाकार केलेले ८९.७ (बरे)? पट्टी ठरवण्यापूर्वी कधीही गोलाकार करू नका."
+  }
+}

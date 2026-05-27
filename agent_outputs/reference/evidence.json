@@ -1,0 +1,89 @@
+{
+  "_source": "Saagar_P1_App_Spec_v1.docx §11.3 + Saagar_P1_Audit_Workbook_v1.docx Appendix A.6 (paragraphs P3197–P3232).",
+  "_translator_notes": {
+    "verbatim_from_workbook": [
+      "All 8 strong-evidence entries (en + mr) are verbatim from Workbook A.6 list paragraphs P3199/3200, P3201/3202, P3203/3204, P3205/3206, P3207/3208, P3209/3210, P3211/3212, P3213/3214.",
+      "All 8 weak-evidence entries (en + mr) are verbatim from Workbook A.6 list paragraphs P3217/3218 through P3231/3232.",
+      "Bottom warning is verbatim from Spec §11.3 P1186/1187."
+    ],
+    "review_needed": [
+      "title_mr — composed; not verbatim from a workbook chapter title (workbook uses 'A.६ — मजबूत वि. दुर्बल पुरावा')."
+    ]
+  },
+  "title_en": "Strong vs weak evidence",
+  "title_mr": "मजबूत वि. दुर्बल पुरावा",
+  "subtitle_en": "Source: Workbook Appendix A.6. Every audit finding must rest on something from the strong column. Findings supported only by items in the weak column are reporting, not auditing.",
+  "subtitle_mr": "स्रोत: पुस्तिका परिशिष्ट A.६. प्रत्येक ऑडिट निष्कर्षाला मजबूत स्तंभातील कशाने तरी पुरावा हवा. केवळ दुर्बल स्तंभातील आयटमने आधारित निष्कर्ष म्हणजे रिपोर्टिंग, ऑडिट नव्हे.",
+  "strong": [
+    {
+      "en": "Photographs with timestamp — WhatsApp send time, EXIF metadata, or Sales Buddy upload timestamp.",
+      "mr": "वेळ-शिक्क्यासह फोटो — व्हॉट्सअॅप पाठवण्याची वेळ, EXIF मेटाडेटा, किंवा सेल्स बडी अपलोड वेळ-शिक्का."
+    },
+    {
+      "en": "Signed and dated register entries — cash, stock, attendance, complaint, returns/damage, GRN, NPS.",
+      "mr": "सही व दिनांकित रजिस्टर नोंदी — रोख, स्टॉक, हजेरी, तक्रार, परतावा/खराब, GRN, एनपीएस."
+    },
+    {
+      "en": "POS and system reports — day-end POS sales, GST, cash summary; tamper-evident.",
+      "mr": "POS आणि सिस्टम रिपोर्ट्स — दिवसअखेर POS विक्री, GST, रोख सारांश; छेडछाडीचा माग ठेवणारे."
+    },
+    {
+      "en": "Sales Buddy upload acknowledgement — photo, GPS, timestamp, and Titan app receipt.",
+      "mr": "सेल्स बडी अपलोड पावती — फोटो, GPS, वेळ-शिक्का, आणि टायटन अॅप पावती."
+    },
+    {
+      "en": "Physical count records matching system/register — count sheet with both numbers and signature.",
+      "mr": "सिस्टम/रजिस्टरशी जुळणाऱ्या प्रत्यक्ष मोजणी नोंदी — दोन्ही संख्या व सहीसह मोजणी पत्रक."
+    },
+    {
+      "en": "Two-signature reconciliations — cash, high-value service intake.",
+      "mr": "दोन-सही ताळमेळ — रोख, उच्च-मूल्य सर्व्हिस इनटेक."
+    },
+    {
+      "en": "Bank deposit slips with original teller-stamped receipts.",
+      "mr": "मूळ टेलर-शिक्क्यासह बँक ठेव स्लिप."
+    },
+    {
+      "en": "Email/messaging audit trail with timestamp — daily and weekly report submissions.",
+      "mr": "वेळ-शिक्क्यासह ईमेल/संदेश ट्रेल — दैनंदिन व साप्ताहिक अहवाल सादरीकरणे."
+    }
+  ],
+  "weak": [
+    {
+      "en": "Verbal confirmation alone — \"yes I did it\" without any document or photo.",
+      "mr": "केवळ तोंडी पुष्टी — कोणताही दस्तऐवज किंवा फोटोशिवाय \"हो, मी केले\"."
+    },
+    {
+      "en": "\"Manager confirmed\" as standalone — reporting up the chain, not evidence.",
+      "mr": "\"मॅनेजरने पुष्टी केली\" एकटा — साखळीवर रिपोर्टिंग, पुरावा नव्हे."
+    },
+    {
+      "en": "\"I remember doing it\" — memory is unreliable for repetitive daily tasks.",
+      "mr": "\"मला आठवते\" — पुनरावृत्ती दैनंदिन कामांसाठी स्मरण अविश्वसनीय."
+    },
+    {
+      "en": "Photographs without timestamp — could have been taken any time.",
+      "mr": "वेळ-शिक्क्याशिवायचे फोटो — कधीही काढले जाऊ शकतात."
+    },
+    {
+      "en": "Unsigned documents — no accountability for accuracy.",
+      "mr": "सही नसलेले दस्तऐवज — अचूकतेला कोणीही जबाबदार नाही."
+    },
+    {
+      "en": "Second-hand reports — \"the CRO told me she did it\".",
+      "mr": "दुसर्‍याकडून ऐकलेले — \"सीआरओने मला सांगितले\"."
+    },
+    {
+      "en": "\"I will check tomorrow\" — deferred verification is not verification.",
+      "mr": "\"उद्या तपासतो\" — पुढे ढकललेली पडताळणी ही पडताळणी नाही."
+    },
+    {
+      "en": "Assumptions or estimates — \"there are about 30 pieces\" is not a count.",
+      "mr": "अंदाज किंवा गृहीतके — \"साधारण ३० तुकडे आहेत\" मोजणी नाही."
+    }
+  ],
+  "warning": {
+    "en": "Every finding must rest on the left column. Findings supported only by right-column items are reporting, not auditing.",
+    "mr": "प्रत्येक निष्कर्ष डाव्या स्तंभावर विसावला पाहिजे. फक्त उजव्या स्तंभातील आयटमने आधारित निष्कर्ष म्हणजे रिपोर्टिंग, ऑडिट नव्हे."
+  }
+}

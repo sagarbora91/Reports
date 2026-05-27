@@ -1,0 +1,2546 @@
+SAAGAR TRADERS
+सागर ट्रेडर्स
+Titan World (WLMHW)  •  Helios (HEMW)  •  Latur, Maharashtra
+Priority 1 SOP Audit Mobile Application
+TECHNICAL SPECIFICATION
+& CLAUDE CODE BUILD MANUAL
+तांत्रिक तपशील आणि क्लॉड कोड बांधणी पुस्तिका
+Companion to Saagar_P1_Audit_Workbook_v1
+v1.0  •  Flutter + Firebase  •  May 2026
+Critical Reading Order
+वाचनाचा क्रम
+How the two documents relate
+दोन दस्तऐवज एकमेकांशी कसे जोडलेले
+The Workbook is the operational ground truth. It defines what the audit programme IS — which SOPs exist, what each checkpoint means, how scoring works, when to escalate, what a CAP looks like. The Workbook does not change because we are building an app; the app must conform to the Workbook, never the other way around. If anything in this Spec contradicts the Workbook, the Workbook wins.
+पुस्तिका कार्यवाहक सत्य आहे. ऑडिट कार्यक्रम काय आहे ते ती ठरवते — कोणते एसओपी आहेत, प्रत्येक तपासणी बिंदूचा अर्थ काय, स्कोअरिंग कसे होते, कधी एस्केलेट करायचे, CAP कशी दिसते. आपण अॅप बनवत आहोत म्हणून पुस्तिका बदलत नाही; अॅपने पुस्तिकेशी जुळवून घेतले पाहिजे, उलट नाही. या तपशीलात पुस्तिकेच्या विरुद्ध काही असेल — पुस्तिका जिंकते.
+This Specification is the build manual. It translates the Workbook into screens, data fields, button behaviours, score formulas in code, and explicit instructions to Claude Code. It exists because Claude Code cannot read the Workbook and infer the app — it would invent half the answers and they would be wrong. This document gives Claude Code zero room to invent. Every Workbook rule that the app must enforce is restated here as a concrete app instruction with a cross-reference back to the Workbook section that originated it.
+ही तपशील पुस्तिका बांधणी पुस्तिका आहे. पुस्तिकेला स्क्रीन, डेटा फील्ड, बटण वर्तन, कोडमधले स्कोअर सूत्र, आणि क्लॉड कोडसाठी स्पष्ट सूचना यांत अनुवादित करते. ती अस्तित्वात आहे कारण क्लॉड कोड पुस्तिका वाचून अॅप अंदाजे जाणू शकत नाही — अर्धी उत्तरे शोधेल आणि ती चुकीची असतील. हा दस्तऐवज क्लॉड कोडला शोधण्याची जागा देत नाही. अॅपने अंमलात आणायचा प्रत्येक पुस्तिका नियम इथे ठोस अॅप सूचना म्हणून पुन्हा सांगितला आहे — मूळ पुस्तिका विभागाच्या संदर्भासह.
+How to use these two files with Claude Code
+क्लॉड कोडसह हे दोन फाइल कसे वापरायचे
+Upload BOTH files to Claude Code at the start of every session: Saagar_P1_Audit_Workbook_v1.docx AND this Specification document.
+प्रत्येक सत्राच्या सुरुवातीला क्लॉड कोडमध्ये दोन्ही फाइल अपलोड करा: Saagar_P1_Audit_Workbook_v1.docx आणि ही तपशील पुस्तिका.
+Tell Claude Code: "Read the Specification first, then refer to the Workbook only when the Specification points you to a specific section."
+क्लॉड कोडला सांगा: "आधी तपशील वाचा, मग जेव्हा तपशील तुम्हाला विशिष्ट विभागाकडे निर्देश करते तेव्हाच पुस्तिकेचा संदर्भ घ्या."
+Use the Master Prompt in Section 14 of this document. Paste it verbatim at the start of each Phase. Do not paraphrase it — the wording is calibrated to give Claude Code the right boundaries.
+या दस्तऐवजाच्या विभाग १४ मधील मास्टर प्रॉम्प्ट वापरा. प्रत्येक टप्प्याच्या सुरुवातीला तो जसाच्या तसा पेस्ट करा. वाक्ये बदलू नका — क्लॉड कोडला योग्य मर्यादा देण्यासाठी शब्द कॅलिब्रेट केलेले आहेत.
+Build one Phase at a time. Do not start Phase 2 until Phase 1 is signed off using the Definition of Done in Section 16.
+एका वेळी एक टप्पा बांधा. विभाग १६ मधल्या Definition of Done वापरून टप्पा १ साइन-ऑफ होईपर्यंत टप्पा २ सुरू करू नका.
+Table of Contents
+विषयसूची
+Section 1  Purpose & How to Use This Document
+Section 2  System Architecture & Technology Stack
+Section 3  Roles, Permissions & Capabilities Matrix
+Section 4  Complete Data Model
+Section 5  Screen-by-Screen Specification
+Section 6  Score Calculation Logic
+Section 7  Escalation Rules — Decision Engine
+Section 8  Bilingual String Table
+Section 9  CAP Workflow — State Machine
+Section 10  Notifications & Alerts
+Section 11  Reference Tab Content
+Section 12  Phasing Roadmap — Week by Week
+Section 13  Test Scenarios — Per Phase
+Section 14  The Master Claude Code Prompt
+Section 15  Coding Conventions & Repository Structure
+Section 16  Definition of Done — Per Phase
+Section 17  Recovery Patterns — When Claude Code Goes Off-Track
+Section 18  Glossary — Flutter, Firebase, Git Terms
+Section 1 — Purpose & How to Use This Document
+विभाग १ — हेतू आणि हा दस्तऐवज कसा वापरायचा
+Why this document exists
+हा दस्तऐवज का अस्तित्वात आहे
+Most app projects fail because the specification is written after coding starts, or is written in fragments, or is written so loosely that the developer (human or AI) makes a hundred small assumptions that compound into bugs. The result is a six-month bug-chase where every fix breaks two things. This document exists to prevent that for the Saagar Traders audit app.
+बहुतेक अॅप प्रकल्प अपयशी होतात कारण तपशील कोडिंग सुरू झाल्यानंतर लिहिली जाते, किंवा तुकड्या-तुकड्यात लिहिली जाते, किंवा इतकी ढिली असते की डेव्हलपर (माणूस किंवा AI) शेकडो छोटी गृहीतके करतो जी बग्समध्ये जमतात. सहा महिन्यांची बग-शिकार होते जिथे प्रत्येक दुरुस्तीने दोन गोष्टी मोडतात. सागर ट्रेडर्स ऑडिट अॅपसाठी हे टाळण्यासाठी हा दस्तऐवज अस्तित्वात आहे.
+The principle: write everything down before coding starts. Every screen. Every button. Every field in every database table. Every calculation. Every error case. Every Marathi translation. Every behaviour when offline. Every cross-reference to the operational Workbook. Once written, this document does not change during the build — if Claude Code thinks a change is needed, the change comes to this document first, gets reviewed, and then gets coded. The document leads, the code follows.
+तत्व: कोडिंग सुरू होण्यापूर्वी सर्व काही लिहून ठेवा. प्रत्येक स्क्रीन. प्रत्येक बटण. प्रत्येक डेटाबेस टेबलमधले प्रत्येक क्षेत्र. प्रत्येक गणना. प्रत्येक त्रुटी प्रकरण. प्रत्येक मराठी अनुवाद. ऑफलाइन प्रत्येक वर्तन. कार्यवाहक पुस्तिकेचा प्रत्येक संदर्भ. एकदा लिहिले की हा दस्तऐवज बांधणीदरम्यान बदलत नाही — क्लॉड कोडला बदल हवा वाटला तर बदल आधी या दस्तऐवजात येतो, पुनरावलोकन होते, मग कोड होतो. दस्तऐवज नेतो, कोड अनुसरतो.
+Who this document is for
+हा दस्तऐवज कोणासाठी आहे
+Sagar (Owner) — to verify that the app the developer builds matches what you specified. To recover the project if a developer disappears mid-build.
+सागर (मालक) — डेव्हलपरने बांधलेले अॅप तुम्ही ठरवलेल्याशी जुळते का याची पडताळणी करण्यासाठी. डेव्हलपर मध्येच गायब झाला तर प्रकल्प पुनर्प्राप्त करण्यासाठी.
+Claude Code — the primary builder. Reads this document plus the Workbook and produces all source code. Should never be asked to write code without these two documents loaded.
+क्लॉड कोड — मुख्य बांधकाम करणारा. हा दस्तऐवज अधिक पुस्तिका वाचून सर्व सोर्स कोड तयार करतो. हे दोन दस्तऐवज लोड केल्याशिवाय कधीही कोड लिहायला सांगू नये.
+Any future developer — if you ever hand the project to a freelance Flutter developer, this document is what you give them. They should be able to start coding from this without a single clarification call.
+कोणताही भविष्यातील डेव्हलपर — फ्रीलान्स Flutter डेव्हलपरला प्रकल्प सोपवायचा झाला तर त्यांना हाच दस्तऐवज द्या. एकाही स्पष्टीकरण कॉलशिवाय या वरून कोडिंग सुरू करता आले पाहिजे.
+GM and Store Manager — to understand exactly what the app will do before it is built, and to flag in advance anything that does not match how they actually work.
+जीएम आणि स्टोअर मॅनेजर — अॅप बांधण्यापूर्वी ते नेमके काय करणार आहे हे समजून घेण्यासाठी, आणि ते प्रत्यक्ष कसे काम करतात त्याशी न जुळणारे काही आगाऊ झेंडे लावण्यासाठी.
+The 8 design decisions locked at the start
+सुरुवातीला पक्के केलेले ८ डिझाइन निर्णय
+These eight decisions were locked before this document was written. Every other decision in this Spec flows from them. If any of these change, the Spec must be revised before any code change is made.
+हे आठ निर्णय हा दस्तऐवज लिहिण्याआधी पक्के झाले. या तपशीलातला इतर प्रत्येक निर्णय यांतून येतो. यापैकी काही बदलले तर कोड बदलण्यापूर्वी तपशील सुधारली पाहिजे.
+Section 2 — System Architecture & Technology Stack
+विभाग २ — सिस्टम आर्किटेक्चर आणि तंत्रज्ञान
+Architecture in one paragraph
+एका परिच्छेदात आर्किटेक्चर
+A Flutter Android application reads and writes to a local SQLite database on each device. Whenever the device has internet, the local database syncs bidirectionally with Firebase Firestore (a cloud database). All three users (Store Manager, GM, Owner) share the same Firestore project. The app works fully offline; data captured offline syncs the next time the device sees the internet. Photos are stored in Firebase Storage (cloud) and cached locally on the device. There is no custom server, no DevOps, no monthly hosting cost.
+Flutter Android अॅप्लिकेशन प्रत्येक डिव्हाइसवर लोकल SQLite डेटाबेसमधून वाचतो आणि लिहितो. डिव्हाइसला इंटरनेट असेल तेव्हा लोकल डेटाबेस Firebase Firestore (क्लाउड डेटाबेस) सोबत द्विदिश समक्रमित होतो. तिन्ही वापरकर्ते (स्टोअर मॅनेजर, जीएम, मालक) तोच Firestore प्रकल्प वापरतात. अॅप पूर्णतः ऑफलाइन काम करते; ऑफलाइन घेतलेला डेटा डिव्हाइसला इंटरनेट दिसताच समक्रमित होतो. फोटो Firebase Storage (क्लाउड) मध्ये साठवले जातात आणि डिव्हाइसवर कॅशे केले जातात. कस्टम सर्व्हर नाही, DevOps नाही, मासिक होस्टिंग खर्च नाही.
+Technology stack — locked
+तंत्रज्ञान स्टॅक — पक्के
+Offline behaviour — the contract
+ऑफलाइन वर्तन — करार
+The app must be fully usable when offline. Specifically:
+ऑफलाइन असताना अॅप पूर्णतः वापरण्यायोग्य असले पाहिजे. विशेषतः:
+User can log in offline (PIN check is local against last-known device PIN hash).
+वापरकर्ता ऑफलाइन लॉग इन करू शकतो (PIN तपासणी डिव्हाइसवरच्या शेवटच्या-ज्ञात PIN हॅशशी लोकल होते).
+User can run a full daily audit offline; data saves to local SQLite.
+वापरकर्ता ऑफलाइन पूर्ण दैनंदिन ऑडिट चालवू शकतो; डेटा लोकल SQLite मध्ये जतन होतो.
+User can attach photos offline; photos save locally, queued for upload on next connection.
+वापरकर्ता ऑफलाइन फोटो जोडू शकतो; फोटो लोकल जतन होतात, पुढच्या कनेक्शनवर अपलोडसाठी रांगेत.
+User can create CAPs offline; CAPs save locally, sync on next connection.
+वापरकर्ता ऑफलाइन CAP तयार करू शकतो; CAP लोकल जतन होतात, पुढच्या कनेक्शनवर समक्रमित.
+User can view PAST audits (those already synced to device) offline. Audits created on OTHER devices that have not yet synced to this device are not visible offline.
+वापरकर्ता मागच्या ऑडिट पाहू शकतो (आधीच डिव्हाइसवर समक्रमित झालेल्या) ऑफलाइन. इतर डिव्हाइसवर तयार झालेल्या आणि अजून या डिव्हाइसवर समक्रमित न झालेल्या ऑडिट ऑफलाइन दिसत नाहीत.
+When the device reconnects to the internet, sync runs automatically in the background. A small status icon at the top of the screen shows sync state: green dot (synced), amber dot (syncing), red dot (sync failed).
+डिव्हाइस इंटरनेटला पुन्हा जोडले की समक्रमण पार्श्वभूमीत आपोआप चालते. स्क्रीनच्या वर एक छोटा स्थिती चिन्ह समक्रमण स्थिती दाखवतो: हिरवा ठिपका (समक्रमित), पिवळा (समक्रमण होत आहे), लाल (समक्रमण अयशस्वी).
+Conflict resolution — when two devices edit the same thing
+संघर्ष निरसन — दोन डिव्हाइस एकच गोष्ट संपादित करतात तेव्हा
+It is rare but possible: GM marks a CAP as Verified on her tablet offline, Store Manager marks the same CAP as Done on his phone offline. Both sync later. Rule: last-write-wins by Firestore server timestamp, BUT every write also appends an entry to a CAP audit_log table with the device ID, user ID, and timestamp. So even if a write is overwritten, the history shows both writes and who made each. The app must never silently lose data; it must always show the history.
+क्वचित पण शक्य: जीएम तिच्या टॅबलेटवर CAP Verified म्हणून ऑफलाइन खूण करते, स्टोअर मॅनेजर त्याच्या फोनवर तीच CAP Done म्हणून ऑफलाइन खूण करतो. दोघे नंतर समक्रमित होतात. नियम: Firestore सर्व्हर वेळ-शिक्क्यानुसार शेवटचे-लिहिणे-जिंकते, पण प्रत्येक लेखन CAP audit_log टेबलमध्ये डिव्हाइस आयडी, वापरकर्ता आयडी, आणि वेळ-शिक्क्यासह नोंद जोडते. म्हणून लेखन ओव्हरराइट झाले तरी इतिहास दोन्ही लेखने आणि कोणी केली ते दाखवतो. अॅपने डेटा शांतपणे कधीही गमावू नये; इतिहास नेहमी दाखवला पाहिजे.
+Cost projection over 12 months
+१२ महिन्यांचा खर्च अंदाज
+Section 3 — Roles, Permissions & Capabilities Matrix
+विभाग ३ — भूमिका, परवानग्या आणि क्षमता मॅट्रिक्स
+The four roles
+चार भूमिका
+3.1 — Store Manager (SM)
+३.१ — स्टोअर मॅनेजर
+The Store Manager is the primary day-to-day user. The app exists first for the SM. SM logs into the app every evening, runs the daily audit, creates CAPs for Fails, and submits the audit to the GM. The SM also marks Done on CAPs assigned to him as they are completed.
+स्टोअर मॅनेजर हा प्राथमिक दैनंदिन वापरकर्ता. अॅप पहिल्यांदा SM साठीच अस्तित्वात आहे. SM दर संध्याकाळी अॅपमध्ये लॉग इन करतो, दैनंदिन ऑडिट चालवतो, नापासांसाठी CAP तयार करतो, आणि ऑडिट जीएमला सादर करतो. SM त्याला नेमलेल्या CAP पूर्ण झाल्यावर Done म्हणूनही खूण करतो.
+3.2 — General Manager (GM)
+३.२ — जनरल मॅनेजर
+The GM is the verifier. The GM logs in twice a week (typically Saturday afternoon and Monday morning). On Saturday/Monday, the GM runs the weekly audit — reviews the seven daily audits from the past week, conducts spot checks, scores the weekly-only checkpoints, and submits the weekly report to the Owner. The GM also verifies CAPs that the SM has marked Done.
+जीएम पडताळणी करणारा. जीएम आठवड्यातून दोनदा लॉग इन करते (साधारणपणे शनिवारी दुपारी आणि सोमवारी सकाळी). शनि/सोमवारी जीएम साप्ताहिक ऑडिट चालवते — मागच्या आठवड्याची सात दैनंदिन ऑडिट पुनरावलोकन करते, स्पॉट चेक करते, साप्ताहिक-केवळ तपासणी बिंदू स्कोअर करते, आणि साप्ताहिक अहवाल मालकाला सादर करते. SM ने Done म्हणून खूण केलेल्या CAP जीएम पडताळते.
+3.3 — Owner (Sagar)
+३.३ — मालक (सागर)
+The Owner is the strategic user. The Owner logs in approximately weekly — Sunday morning is the typical time. The Owner reads the weekly report submitted by the GM, conducts a monthly audit on the first Sunday of each month, reviews trend dashboards, and responds to escalations. The Owner has full read-and-write access to everything in the system.
+मालक हा सामरिक वापरकर्ता. मालक साधारणपणे साप्ताहिक लॉग इन करतो — रविवारी सकाळी सामान्य वेळ. मालक जीएमने सादर केलेला साप्ताहिक अहवाल वाचतो, दर महिन्याच्या पहिल्या रविवारी मासिक ऑडिट करतो, कल डॅशबोर्ड पुनरावलोकन करतो, आणि एस्केलेशनला प्रतिसाद देतो. मालकाला सिस्टममधल्या सर्व गोष्टींना पूर्ण वाचन-लेखन प्रवेश आहे.
+3.4 — CRO (Not a logged-in user)
+३.४ — सीआरओ (लॉग-इन वापरकर्ता नाही)
+CROs do not log into the app. CRO names exist in the system as a dropdown list maintained by the Store Manager (Settings → Manage CROs). When an audit Fail is logged that involves a specific CRO, the SM selects the CRO from the dropdown. The CRO never sees the app; if the CRO needs to know about a Fail, the SM tells the CRO in person.
+सीआरओ अॅपमध्ये लॉग इन करत नाहीत. सीआरओ नावे स्टोअर मॅनेजरने सांभाळलेल्या ड्रॉपडाउन यादी म्हणून सिस्टममध्ये अस्तित्वात आहेत (सेटिंग्ज → सीआरओ व्यवस्थापन). विशिष्ट सीआरओचा समावेश असलेला ऑडिट नापास नोंदवला की SM ड्रॉपडाउनमधून सीआरओ निवडतो. सीआरओ अॅप कधीही पाहत नाही; नापासाबद्दल सीआरओला सांगायचे झाले तर SM सीआरओला प्रत्यक्ष सांगतो.
+Capabilities matrix
+क्षमता मॅट्रिक्स
+The table below is the authoritative source for what each role can do. If Claude Code asks "can the GM delete a CAP?" — look at this table. If the action is not listed as YES for that role, the answer is NO.
+खालचा तक्ता प्रत्येक भूमिका काय करू शकते याचा अधिकृत स्रोत आहे. क्लॉड कोडने विचारले "जीएम CAP हटवू शकते का?" — हा तक्ता पाहा. त्या भूमिकेसाठी कृती YES नसेल — उत्तर NO.
+Audit immutability rule
+ऑडिट अपरिवर्तनीयता नियम
+Once a daily, weekly, or monthly audit is submitted, it cannot be edited. Not by the auditor, not by the GM, not by the Owner. This is a deliberate rule taken directly from Workbook Section 1.3 — an editable audit is not an audit. If a mistake is discovered after submission, the correct response is to file a new audit referencing the old one and explaining the correction, never to edit the old audit. The Owner alone has the power to HIDE an audit (mark it as superseded), but even hidden audits remain in the database and in the audit_log.
+दैनंदिन, साप्ताहिक, किंवा मासिक ऑडिट सादर झाल्यावर ती संपादित करता येत नाही. ऑडिटरने नाही, जीएमने नाही, मालकाने नाही. हा पुस्तिकेच्या विभाग १.३ मधून थेट घेतलेला जाणीवपूर्वक नियम — संपादनयोग्य ऑडिट ऑडिट नाही. सादरीकरणानंतर चूक सापडली तर योग्य प्रतिसाद म्हणजे जुन्याचा संदर्भ देणारी आणि सुधारणा स्पष्ट करणारी नवीन ऑडिट दाखल करणे, जुनी ऑडिट कधीही संपादित न करणे. फक्त मालकाला ऑडिट लपवण्याची शक्ती (अधिक्रमित म्हणून खूण करणे), पण लपवलेल्या ऑडिटही डेटाबेस आणि audit_log मध्ये राहतात.
+Section 4 — Complete Data Model
+विभाग ४ — संपूर्ण डेटा मॉडेल
+How to read this section
+हा विभाग कसा वाचायचा
+The data model is the foundation. Every screen reads or writes data; if the data model is wrong, every screen built on top of it will be wrong. Each table below has: a name, a one-line purpose, every field with its type and constraints, the relationships to other tables, and worked example rows. Field types use SQLite types for the local DB; Firestore stores the same data as documents in collections of the same names.
+डेटा मॉडेल हे पाया आहे. प्रत्येक स्क्रीन डेटा वाचतो किंवा लिहितो; डेटा मॉडेल चुकीचे असेल तर त्यावर बांधलेला प्रत्येक स्क्रीन चुकीचा असेल. खालच्या प्रत्येक टेबलला आहे: नाव, एका-ओळीचा हेतू, प्रत्येक क्षेत्र त्याच्या प्रकार व मर्यादांसह, इतर टेबलांशी संबंध, आणि उदाहरण ओळी. क्षेत्र प्रकार लोकल DB साठी SQLite प्रकार वापरतात; Firestore त्याच नावांच्या कलेक्शनमध्ये दस्तऐवज म्हणून तोच डेटा साठवतो.
+Entity-relationship overview
+घटक-संबंध आढावा
+There are 14 tables. They cluster into four groups: identity (users, devices), structure (sops, checkpoints, cros), operations (audits, audit_results, photos, caps, cap_actions, cap_log), and reporting (reports, escalations, audit_log). The diagram below describes their relationships in plain text — when implementing in code, you may draw it visually.
+१४ टेबल आहेत. ते चार गटांत येतात: ओळख (वापरकर्ते, डिव्हाइसेस), रचना (एसओपी, तपासणी बिंदू, सीआरओ), कार्यवाही (ऑडिट, ऑडिट निकाल, फोटो, CAPs, CAP कृती, CAP लॉग), आणि अहवाल (अहवाल, एस्केलेशन, ऑडिट लॉग). खालचे आकृती साध्या मजकुरात त्यांचे संबंध वर्णन करते — कोडमध्ये अंमलात आणताना तुम्ही ते दृश्यपणे काढू शकता.
+Relationship summary
+संबंध सारांश
+users 1 → many audits (an SM has many daily audits)
+वापरकर्ते १ → अनेक ऑडिट (एका SM ला अनेक दैनंदिन ऑडिट)
+audits 1 → many audit_results (each audit has 68 results for daily, 124 for weekly)
+ऑडिट १ → अनेक ऑडिट निकाल (प्रत्येक दैनंदिन ऑडिटला ६८ निकाल, साप्ताहिकला १२४)
+audit_results 1 → many photos (a Fail can have multiple photo evidence)
+ऑडिट निकाल १ → अनेक फोटो (एका नापासाला अनेक फोटो पुरावे असू शकतात)
+audit_results 1 → 0 or 1 cap (a Fail produces exactly one CAP)
+ऑडिट निकाल १ → ० किंवा १ CAP (एक नापास नेमकी एक CAP तयार करतो)
+caps 1 → many cap_actions (a CAP has 3-5 action steps)
+CAP १ → अनेक CAP कृती (एका CAP ला ३-५ कृती पावले)
+caps 1 → many cap_log entries (every status change appends to log)
+CAP १ → अनेक CAP लॉग नोंदी (प्रत्येक स्थिती बदल लॉगला जोडतो)
+audits 1 → 0 or 1 report (a weekly or monthly audit produces a single report document)
+ऑडिट १ → ० किंवा १ अहवाल (एक साप्ताहिक किंवा मासिक ऑडिट एक अहवाल दस्तऐवज तयार करते)
+audits or caps → 0 or many escalations (escalations cite the source)
+ऑडिट किंवा CAP → ० किंवा अनेक एस्केलेशन (एस्केलेशन स्रोत उद्धृत करते)
+ANY write → 1 audit_log entry (every database write is logged for traceability)
+कोणतेही लेखन → १ audit_log नोंद (शोधनीयतेसाठी प्रत्येक डेटाबेस लेखन लॉग केले जाते)
+Table 4.1 — users
+तक्ता ४.१ — वापरकर्ते
+One row per app login. Three rows total: Store Manager, GM, Owner.
+प्रत्येक अॅप लॉगिनसाठी एक ओळ. एकूण तीन ओळी: स्टोअर मॅनेजर, जीएम, मालक.
+Example rows
+उदाहरण ओळी
+id: "u_owner_001"  name: "Sagar"  role: "OWNER"  pin_hash: "$2b$10$..."  language_pref: "en"  phone: "+91XXXXXXXXXX"  is_active: 1
+id: "u_gm_001"     name: "Anita Joshi"  role: "GM"   pin_hash: "$2b$10$..."  language_pref: "en"  phone: "+91XXXXXXXXXX"  is_active: 1
+id: "u_sm_001"     name: "Rahul Deshmukh"  role: "SM"  pin_hash: "$2b$10$..."  language_pref: "mr"  phone: "+91XXXXXXXXXX"  is_active: 1
+Table 4.2 — devices
+तक्ता ४.२ — डिव्हाइसेस
+One row per physical device that has logged in. Useful for conflict resolution and "who edited what from where".
+लॉग इन केलेल्या प्रत्येक प्रत्यक्ष डिव्हाइससाठी एक ओळ. संघर्ष निरसन आणि "कोणी कुठून संपादित केले" साठी उपयुक्त.
+Table 4.3 — sops
+तक्ता ४.३ — एसओपी
+The 8 Priority 1 SOPs. Seeded once at app install; can be modified only by Owner via JSON edit (Section 4.15 below).
+८ प्राधान्य १ एसओपी. अॅप इन्स्टॉल झाल्यावर एकदा सीड केले जातात; फक्त मालक JSON संपादनाद्वारे (विभाग ४.१५ खाली) बदलू शकतो.
+All 8 SOPs as seed data
+सर्व ८ एसओपी सीड डेटा म्हणून
+Table 4.4 — checkpoints
+तक्ता ४.४ — तपासणी बिंदू
+The individual checkpoint definitions. Daily has 68 checkpoints; weekly has an additional 36; monthly has its own set (defined in Phase 3). Seeded at install from a JSON file shipped with the app. Total expected: 68 daily + 36 weekly = 104 checkpoints at end of Phase 2.
+वैयक्तिक तपासणी बिंदू व्याख्या. दैनंदिनला ६८; साप्ताहिकला अतिरिक्त ३६; मासिकला स्वतःचा संच (टप्पा ३ मध्ये परिभाषित). अॅपसोबत आलेल्या JSON फाइलमधून इन्स्टॉलवर सीड केले जातात. एकूण अपेक्षित: ६८ दैनंदिन + ३६ साप्ताहिक = टप्पा २ अखेरीस १०४ तपासणी बिंदू.
+Sample checkpoint rows
+नमुना तपासणी बिंदू ओळी
+id: "1.1"   sop_id: "SOP1"  frequency: "daily"  sequence: 1   text_en: "Uniform clean and pressed"  weight: 1  allows_na: 1  requires_photo_on_fail: 0
+id: "6.5"   sop_id: "SOP6"  frequency: "daily"  sequence: 5   text_en: "Closing cash variance within ±₹50 (or explained)"  weight: 2  allows_na: 0  requires_photo_on_fail: 1
+id: "7.1"   sop_id: "SOP7"  frequency: "daily"  sequence: 1   text_en: "Daily cycle count for rotation tray"  weight: 2  allows_na: 0  requires_photo_on_fail: 1
+id: "CW.7"  sop_id: "SOP6"  frequency: "weekly" sequence: 7   text_en: "Cumulative weekly variance within ±₹200"  weight: 2  allows_na: 0  requires_photo_on_fail: 1
+id: "IW.1"  sop_id: "SOP7"  frequency: "weekly" sequence: 1   text_en: "Full storage area count — two signatures"  weight: 2  allows_na: 0  requires_photo_on_fail: 1
+Table 4.5 — cros
+तक्ता ४.५ — सीआरओ
+The CRO dropdown list. Maintained by SM/GM/Owner via Settings → Manage CROs. CROs do not log into the app; they are just selectable references in audits and CAPs.
+सीआरओ ड्रॉपडाउन यादी. सेटिंग्ज → सीआरओ व्यवस्थापन द्वारे SM/GM/मालक सांभाळतो. सीआरओ अॅपमध्ये लॉग इन करत नाहीत; ते ऑडिट आणि CAP मध्ये फक्त निवडण्यायोग्य संदर्भ आहेत.
+Table 4.6 — audits
+तक्ता ४.६ — ऑडिट
+The single most important table. One row per submitted audit — daily, weekly, or monthly. Once submitted, the row becomes immutable (see Section 3 — Audit immutability rule).
+एकमेव सर्वात महत्त्वाचा तक्ता. प्रत्येक सादर केलेल्या ऑडिटसाठी एक ओळ — दैनंदिन, साप्ताहिक, किंवा मासिक. सादर झाल्यानंतर ओळ अपरिवर्तनीय होते (विभाग ३ — ऑडिट अपरिवर्तनीयता नियम पाहा).
+Example daily audit row
+उदाहरण दैनंदिन ऑडिट ओळ
+id: "a_20260527_sm"  audit_type: "daily"  audit_date: "2026-05-27"  year: 2026  auditor_id: "u_sm_001"
+status: "submitted"  raw_score: 82.0  max_score: 90.0  compliance_pct: 91.1  band: "good"
+fail_count: 5  pass_count: 60  na_count: 3  submitted_at: "2026-05-27T21:28:14+05:30"
+Table 4.7 — audit_results
+तक्ता ४.७ — ऑडिट निकाल
+The per-checkpoint result of an audit. A daily audit produces 68 rows here (one per checkpoint). A weekly audit produces up to 104 (68 daily-equivalent + 36 weekly-only).
+ऑडिटचा प्रति-तपासणी बिंदू निकाल. एक दैनंदिन ऑडिट इथे ६८ ओळी तयार करते (प्रत्येक तपासणी बिंदूसाठी एक). एक साप्ताहिक ऑडिट १०४ पर्यंत तयार करते (६८ दैनंदिन-समकक्ष + ३६ साप्ताहिक-केवळ).
+Scoring rule for weighted_points
+weighted_points साठी स्कोअरिंग नियम
+if result = "P":   weighted_points = checkpoint.weight  (1 or 2)
+if result = "F":   weighted_points = 0
+if result = "NA":  weighted_points = NULL  (excluded from both numerator and denominator)
+Table 4.8 — photos
+तक्ता ४.८ — फोटो
+Every photo attached as evidence. Linked to audit_results (for Fails) or to caps (for CAP progress evidence) or to caps verification.
+पुरावा म्हणून जोडलेला प्रत्येक फोटो. ऑडिट निकालांशी (नापासांसाठी) किंवा CAPs शी (CAP प्रगती पुराव्यासाठी) किंवा CAPs पडताळणीशी जोडलेला.
+Table 4.9 — caps (Corrective Action Plans)
+तक्ता ४.९ — caps (कृती योजना)
+One CAP per Fail (or per Pattern when multiple Fails of the same checkpoint cluster). Maps directly to the CAP template in Workbook Appendix A.3.
+प्रत्येक नापासासाठी एक CAP (किंवा एकाच तपासणी बिंदूचे अनेक नापास एकत्र असतील तर प्रति पॅटर्न). पुस्तिकेच्या परिशिष्ट A.३ मधल्या CAP टेम्पलेटशी थेट जुळते.
+Table 4.10 — cap_actions
+तक्ता ४.१० — CAP कृती
+The 3 to 5 numbered action steps inside a CAP. Each is its own row so it can be marked done independently.
+एका CAP मधली ३ ते ५ क्रमांकित कृती पावले. प्रत्येकाची स्वतःची ओळ जेणेकरून ते स्वतंत्रपणे पूर्ण म्हणून खूण करता येतील.
+Table 4.11 — cap_log
+तक्ता ४.११ — CAP लॉग
+Every status change to a CAP appends a row here. This is what makes the CAP history visible and conflict-resolvable.
+CAP च्या प्रत्येक स्थिती बदलाने इथे एक ओळ जोडली जाते. यामुळेच CAP इतिहास दृश्य आणि संघर्ष-निरसनयोग्य होतो.
+Table 4.12 — reports
+तक्ता ४.१२ — अहवाल
+Generated weekly and monthly reports. Each report is a structured document that the user can view in-app and export as PDF.
+तयार झालेले साप्ताहिक आणि मासिक अहवाल. प्रत्येक अहवाल हा एक संरचित दस्तऐवज जो वापरकर्ता अॅपमध्ये पाहू शकतो आणि PDF म्हणून निर्यात करू शकतो.
+Table 4.13 — escalations
+तक्ता ४.१३ — एस्केलेशन
+An escalation event. Triggered automatically when any of the 7 mandatory triggers fires (see Section 7). Also can be manually created by SM or GM in exceptional cases.
+एक एस्केलेशन घटना. ७ अनिवार्य ट्रिगरपैकी कोणताही सुरू झाल्यावर आपोआप चालू (विभाग ७ पाहा). अपवादात्मक प्रकरणांमध्ये SM किंवा GM ने हाताने तयार केलेलीही.
+Table 4.14 — audit_log (system audit trail)
+तक्ता ४.१४ — audit_log (सिस्टम ऑडिट ट्रेल)
+Not to be confused with the "audits" table. This is a system-level log of every database write (insert/update/delete attempt). Used for debugging, conflict resolution, and forensic review.
+"audits" तक्त्याशी गोंधळून जाऊ नका. हा प्रत्येक डेटाबेस लेखनाचा (insert/update/delete प्रयत्न) सिस्टम-स्तरीय लॉग आहे. डीबगिंग, संघर्ष निरसन, आणि न्यायवैद्यक पुनरावलोकनासाठी वापरला जातो.
+Section 4.15 — Seed data & schema migrations
+विभाग ४.१५ — सीड डेटा आणि स्कीमा माइग्रेशन
+On first app install
+अॅप पहिल्या इन्स्टॉलवर
+App creates the SQLite database with all 14 tables (schema from Section 4).
+अॅप १४ तक्त्यांसह SQLite डेटाबेस तयार करते (विभाग ४ मधले स्कीमा).
+App reads assets/seed/sops.json — populates the sops table (8 rows).
+अॅप assets/seed/sops.json वाचते — sops तक्ता भरते (८ ओळी).
+App reads assets/seed/checkpoints.json — populates the checkpoints table (104 rows in Phase 1+2; +monthly in Phase 3).
+अॅप assets/seed/checkpoints.json वाचते — checkpoints तक्ता भरते (टप्पा १+२ मध्ये १०४ ओळी; टप्पा ३ मध्ये +मासिक).
+App shows the "first time setup" screen — Owner creates the first user (themselves) with role=OWNER. The Owner then creates GM and SM users.
+अॅप "पहिल्यांदा सेटअप" स्क्रीन दाखवते — मालक role=OWNER सह पहिला वापरकर्ता (स्वतः) तयार करतो. मग मालक GM आणि SM वापरकर्ते तयार करतो.
+Owner adds initial CRO names via Settings → Manage CROs.
+मालक सेटिंग्ज → सीआरओ व्यवस्थापन द्वारे प्रारंभिक सीआरओ नावे जोडतो.
+App ready for daily operations.
+अॅप दैनंदिन कार्यांसाठी तयार.
+Schema migrations between app versions
+अॅप आवृत्त्यांमधील स्कीमा माइग्रेशन
+Use sqflite_migration_plan package. Every schema change ships as a numbered migration script (assets/migrations/v2.sql, v3.sql, etc.). On app upgrade, the app detects current schema version and runs migrations in sequence. Each migration is idempotent — running it twice has the same effect as running it once.
+sqflite_migration_plan पॅकेज वापरा. प्रत्येक स्कीमा बदल क्रमांकित माइग्रेशन स्क्रिप्ट म्हणून पाठवला जातो (assets/migrations/v2.sql, v3.sql, इ.). अॅप अपग्रेडवर अॅप सध्याची स्कीमा आवृत्ती ओळखते आणि क्रमाने माइग्रेशन चालवते. प्रत्येक माइग्रेशन आइडेम्पोटेंट — दोनदा चालवण्याचा परिणाम एकदा चालवण्याइतकाच.
+Backup & restore
+बॅकअप आणि पुनर्संचयन
+Phase 1: Local SQLite is backed up to the device's Android backup system automatically. Owner can also tap Settings → Export → Backup to JSON, which writes a complete data dump to Downloads folder for manual archival. Phase 2 adds: scheduled daily Firestore export to Firebase Storage cold tier — kept for 1 year minimum.
+टप्पा १: लोकल SQLite आपोआप डिव्हाइसच्या Android बॅकअप सिस्टममध्ये बॅकअप होतो. मालक सेटिंग्ज → निर्यात → JSON बॅकअप वर टॅप करूनही पूर्ण डेटा डंप Downloads फोल्डरमध्ये लिहू शकतो — स्वतः संग्रहित करण्यासाठी. टप्पा २ जोडतो: नियोजित दैनंदिन Firestore निर्यात Firebase Storage कोल्ड टियरमध्ये — किमान १ वर्षासाठी ठेवले.
+Section 5 — Screen-by-Screen Specification
+विभाग ५ — स्क्रीन-दर-स्क्रीन तपशील
+How to read this section
+हा विभाग कसा वाचायचा
+Each screen below is documented with: a screen number, the purpose, who sees it, the layout (described top-to-bottom), every interactive element with its behaviour, the data it reads and writes, what happens on each button tap, the error states, the offline behaviour, and the cross-reference to the Workbook. Claude Code should build screens in the order numbered here.
+खाली प्रत्येक स्क्रीन याच्यासह नोंदवलेला आहे: स्क्रीन क्रमांक, हेतू, कोण पाहतो, मांडणी (वर-खाली वर्णन केलेली), प्रत्येक इंटरॲक्टिव्ह घटक त्याच्या वर्तनासह, तो वाचणारा आणि लिहिणारा डेटा, प्रत्येक बटण टॅपवर काय होते, त्रुटी स्थिती, ऑफलाइन वर्तन, आणि पुस्तिकेचा संदर्भ. क्लॉड कोडने इथे क्रमांकित केलेल्या क्रमाने स्क्रीन बांधावेत.
+Screen catalogue (Phase 1)
+स्क्रीन कॅटलॉग (टप्पा १)
+Screen S1 — Splash / Loading
+स्क्रीन S1 — स्प्लॅश / लोडिंग
+Purpose: Show the brand for 1–2 seconds while the app initializes (loads DB, checks sync state, checks login state).
+हेतू: अॅप सुरू होत असताना (DB लोड, समक्रमण स्थिती तपासणे, लॉगिन स्थिती तपासणे) १-२ सेकंदांसाठी ब्रँड दाखवा.
+Layout (top to bottom)
+मांडणी
+Saagar Traders logo, centered.
+मध्यभागी सागर ट्रेडर्स लोगो.
+"Priority 1 SOP Audit" tagline below logo.
+लोगोखाली "प्राधान्य १ एसओपी ऑडिट".
+Indeterminate progress indicator at bottom.
+तळाशी अनिश्चित प्रगती सूचक.
+Behaviour
+वर्तन
+If first launch ever (no users in DB) → navigate to S2 (Language Selection).
+कधीही प्रथम लॉन्च (DB मध्ये वापरकर्ते नाहीत) → S2 (भाषा निवड) कडे जा.
+Else if no active session → navigate to S4 (Login).
+अन्यथा सक्रिय सत्र नसेल → S4 (लॉगिन) कडे जा.
+Else (session active and not expired) → navigate to S5 (Home).
+अन्यथा (सत्र सक्रिय आणि कालबाह्य नाही) → S5 (होम) कडे जा.
+Data read/write
+डेटा वाचन/लेखन
+Read: users.count, current session token (stored in secure storage).
+वाचन: users.count, सध्याचा सत्र टोकन (सुरक्षित संचयनात साठवलेला).
+Workbook reference
+पुस्तिका संदर्भ
+None.
+काही नाही.
+Screen S4 — Login
+स्क्रीन S4 — लॉगिन
+Purpose: Authenticate the user via name dropdown + 4-digit PIN.
+हेतू: नाव ड्रॉपडाउन + ४-अंकी PIN द्वारे वापरकर्त्याची पडताळणी.
+Layout (top to bottom)
+मांडणी
+App logo (top center, smaller than splash).
+अॅप लोगो (वर मध्यभागी, स्प्लॅशपेक्षा लहान).
+Title: "Welcome / स्वागत" depending on user's last language pref (default English on cold device).
+शीर्षक: वापरकर्त्याच्या शेवटच्या भाषा प्राधान्यानुसार "Welcome / स्वागत" (थंड डिव्हाइसवर डीफॉल्ट इंग्रजी).
+Name dropdown — populated from users WHERE is_active=1, sorted by role (Owner first, GM second, SMs last). Selected name persists across launches.
+नाव ड्रॉपडाउन — users WHERE is_active=1 मधून भरले जाते, भूमिकेनुसार क्रमवारी (मालक प्रथम, GM दुसरा, SM शेवटी). निवडलेले नाव लॉन्चमध्ये टिकते.
+4 PIN input boxes (large, tap-friendly).
+४ PIN इनपुट बॉक्स (मोठे, टॅप-अनुकूल).
+Number pad (custom, in-app — do not use OS keyboard; PIN security).
+नंबर पॅड (कस्टम, अॅपमध्ये — OS कीबोर्ड वापरू नका; PIN सुरक्षा).
+"Forgot PIN?" link below PIN.
+PIN खाली "PIN विसरलात?" दुवा.
+Language toggle (EN | MR) at top-right corner.
+वर-उजव्या कोपऱ्यात भाषा टॉगल (EN | MR).
+Behaviour
+वर्तन
+User selects name → PIN boxes get focus.
+वापरकर्ता नाव निवडतो → PIN बॉक्सना फोकस मिळतो.
+User enters 4 digits → auto-submit on 4th digit.
+वापरकर्ता ४ अंक टाकतो → ४थ्या अंकावर आपोआप सादर.
+PIN hash is computed via bcrypt and compared to users.pin_hash for selected user.
+PIN हॅश bcrypt द्वारे मोजला जातो आणि निवडलेल्या वापरकर्त्याच्या users.pin_hash शी तुलना केली जाते.
+On match: update users.last_login_at, create session token (8-hour TTL), navigate to S5 (Home).
+जुळल्यावर: users.last_login_at अद्यतनित करा, सत्र टोकन तयार करा (८-तासांचा TTL), S5 (होम) कडे जा.
+On mismatch: shake animation on PIN boxes, clear PIN, error toast "Wrong PIN / चुकीचा PIN". After 5 wrong attempts in 60 seconds, lock for 60 seconds with countdown.
+जुळले नाही तर: PIN बॉक्सवर शेक अॅनिमेशन, PIN साफ, त्रुटी टोस्ट "चुकीचा PIN". ६० सेकंदांत ५ चुकीच्या प्रयत्नांनंतर, काउंटडाउनसह ६० सेकंद लॉक.
+"Forgot PIN" link → shows message: "Contact Sagar (Owner) to reset your PIN. Owner can reset from Settings → Manage Users."
+"PIN विसरलात" दुवा → संदेश दाखवा: "तुमचा PIN रीसेट करण्यासाठी सागर (मालक) यांच्याशी संपर्क साधा. मालक सेटिंग्ज → वापरकर्ता व्यवस्थापन वरून रीसेट करू शकतो."
+Offline behaviour
+ऑफलाइन वर्तन
+Works fully offline. PIN check is local against the cached pin_hash from the last sync.
+पूर्णतः ऑफलाइन चालते. PIN तपासणी शेवटच्या समक्रमणातून कॅशे केलेल्या pin_hash शी लोकल.
+Edge cases
+एज प्रकरणे
+No active users in DB → show "Setup required" screen routing to S3.
+DB मध्ये सक्रिय वापरकर्ते नाहीत → "सेटअप आवश्यक" स्क्रीन S3 कडे राउटिंगसह दाखवा.
+User exists but is_active=0 → name does not appear in dropdown.
+वापरकर्ता अस्तित्वात पण is_active=0 → नाव ड्रॉपडाउनमध्ये दिसत नाही.
+Screen S5 — Home / Dashboard
+स्क्रीन S5 — होम / डॅशबोर्ड
+Purpose: Single launchpad for all user actions. Different sections shown based on role.
+हेतू: सर्व वापरकर्ता क्रियांसाठी एकमेव लॉन्चपॅड. भूमिकेनुसार वेगवेगळे विभाग दाखवले जातात.
+Layout (top to bottom)
+मांडणी
+Top bar: user's name + role badge (left), sync state dot (right), language toggle (far right).
+वरचा बार: वापरकर्त्याचे नाव + भूमिका बॅज (डावीकडे), समक्रमण स्थिती ठिपका (उजवीकडे), भाषा टॉगल (अगदी उजवीकडे).
+Greeting card: "Good evening, [name]" or appropriate time-of-day greeting.
+अभिवादन कार्ड: "शुभ संध्याकाळ, [नाव]" किंवा वेळेनुसार योग्य अभिवादन.
+Quick-stat row (3 cards): "Open CAPs assigned to me", "Pending audits", "Latest compliance %" — only those relevant to the user's role.
+जलद-आकडे ओळ (३ कार्ड): "मला नेमलेल्या उघड्या CAPs", "प्रलंबित ऑडिट", "शेवटची अनुपालन %" — फक्त वापरकर्त्याच्या भूमिकेशी संबंधित.
+Primary action card (large, gold) — varies by role
+प्राथमिक कृती कार्ड (मोठे, सोनेरी) — भूमिकेनुसार बदलते
+SM: "Start Today's Daily Audit" → S6. If already submitted today, shows "View Today's Audit" → S13.
+SM: "आजची दैनंदिन ऑडिट सुरू करा" → S6. आज आधीच सादर झाली असेल, तर "आजची ऑडिट पाहा" → S13.
+GM: Saturdays/Mondays: "Start Weekly Audit" (Phase 2) → S-weekly. Other days: "Verify Daily Audits" → audit history filtered to unverified.
+GM: शनि/सोम: "साप्ताहिक ऑडिट सुरू करा" (टप्पा २) → S-weekly. इतर दिवस: "दैनंदिन ऑडिट पडताळा" → ऑडिट इतिहास अपडतडवळलेल्यांना फिल्टर.
+Owner: Sundays: "Read This Week's Report" → S21. First Sunday of month: "Start Monthly Audit" (Phase 3). Other days: "Trend Dashboard" (Phase 3).
+मालक: रवि: "या आठवड्याचा अहवाल वाचा" → S21. महिन्याचा पहिला रवि: "मासिक ऑडिट सुरू करा" (टप्पा ३). इतर दिवस: "कल डॅशबोर्ड" (टप्पा ३).
+Bottom navigation tabs (sticky)
+तळ नेव्हिगेशन टॅब (चिकट)
+Home (this screen).
+होम (हा स्क्रीन).
+Audits (S12 — audit history).
+ऑडिट (S12 — ऑडिट इतिहास).
+CAPs (S14 — CAP list).
+CAPs (S14 — CAP यादी).
+Reference (S22 — reference tab index).
+संदर्भ (S22 — संदर्भ टॅब अनुक्रमणिका).
+Settings (S27).
+सेटिंग्ज (S27).
+Data read/write
+डेटा वाचन/लेखन
+Read: caps WHERE responsible_user_id = me AND status IN ('open','aged'), audits WHERE auditor_id = me ORDER BY submitted_at DESC LIMIT 1
+वाचन: caps WHERE responsible_user_id = me AND status IN ('open','aged'), audits WHERE auditor_id = me ORDER BY submitted_at DESC LIMIT 1
+Write: none.
+लेखन: काही नाही.
+Screen S6 — Start Daily Audit
+स्क्रीन S6 — दैनंदिन ऑडिट सुरू करा
+Purpose: Confirm audit date, capture pre-audit info, then proceed to checkpoint screens.
+हेतू: ऑडिट तारीख पक्की करा, पूर्व-ऑडिट माहिती कॅप्चर करा, मग तपासणी बिंदू स्क्रीनकडे जा.
+Layout
+मांडणी
+Audit date field — defaults to today; user can change to past date if backfilling missed audit. Cannot be future date.
+ऑडिट तारीख फील्ड — आज डीफॉल्ट; गहाळ ऑडिट बॅकफिल करत असेल तर वापरकर्ता पूर्वीच्या तारखेला बदलू शकतो. भविष्यातील तारीख नाही.
+CROs on duty multi-select — choose from active CRO list. At least one must be selected.
+ड्युटीवरील सीआरओ बहु-निवड — सक्रिय सीआरओ यादीतून निवडा. किमान एक निवडले पाहिजे.
+Optional pre-audit notes — free text, 200 chars max.
+ऐच्छिक पूर्व-ऑडिट नोंदी — मुक्त मजकूर, २०० वर्ण कमाल.
+Big "Start Audit" button at bottom.
+तळाशी मोठे "ऑडिट सुरू करा" बटण.
+Behaviour on Start Audit tap
+ऑडिट सुरू करा टॅपवर वर्तन
+Check if an audit with audit_type='daily' AND audit_date=this date already exists by this auditor. If yes, show dialog: "An audit already exists for this date. Open it?" with View/Cancel buttons.
+या तारखेसाठी audit_type='daily' AND audit_date=ही तारीख असलेली ऑडिट या ऑडिटरकडून आधीच अस्तित्वात आहे का तपासा. हो असेल, तर डायलॉग दाखवा: "या तारखेसाठी ऑडिट आधीच अस्तित्वात आहे. उघडायची?" View/Cancel बटणांसह.
+If no: INSERT new row into audits with status='draft', draft_started_at=now, all counts=0.
+नसेल तर: status='draft', draft_started_at=now, सर्व counts=0 सह audits मध्ये नवीन ओळ INSERT.
+Navigate to S7 (Checkpoint Screen).
+S7 (तपासणी बिंदू स्क्रीन) कडे जा.
+Workbook reference
+पुस्तिका संदर्भ
+Workbook Day 2, Section 2.10 — Time blocks. The app implements the same block sequence visually in S7.
+पुस्तिका दिवस २, विभाग २.१० — वेळ खंड. अॅप S7 मध्ये त्याच खंड क्रमाची दृश्यपणे अंमलबजावणी करते.
+Screen S7 — Daily Audit — Checkpoint Screen
+स्क्रीन S7 — दैनंदिन ऑडिट — तपासणी बिंदू स्क्रीन
+Purpose: Walk the SM through all 68 daily checkpoints, one at a time. This is the screen the SM uses most.
+हेतू: SM ला सर्व ६८ दैनंदिन तपासणी बिंदूंमधून एका वेळी एक चालवा. SM सर्वात जास्त वापरतो तो हाच स्क्रीन.
+Layout (top to bottom)
+मांडणी
+Top progress bar — "Checkpoint 12 of 68 / तपासणी बिंदू ६८ पैकी १२".
+वर प्रगती बार — "तपासणी बिंदू ६८ पैकी १२".
+SOP context — small chip showing current SOP number and name (e.g. "SOP 6 — Cash ★" with critical icon).
+एसओपी संदर्भ — सध्याचा एसओपी क्रमांक आणि नाव दर्शवणारा छोटा चिप (उदा. "SOP 6 — रोख ★" अत्यावश्यक चिन्हासह).
+Checkpoint number + text (large, readable). E.g. "6.5 — Closing cash variance within ±₹50 (or explained)". Toggle button shows MR translation.
+तपासणी बिंदू क्रमांक + मजकूर (मोठा, वाचनीय). उदा. "6.5 — बंद रोख तफावत ±₹५० च्या आत (किंवा स्पष्टीकरणासह)". टॉगल बटण MR अनुवाद दाखवते.
+Evidence reminder — small italic text "Evidence: cash register entry + countersignature".
+पुरावा स्मरण — छोटा इटॅलिक मजकूर "पुरावा: रोख रजिस्टर नोंद + काऊंटर सही".
+Three big buttons: PASS (green), FAIL (red), NA (gray). Single tap selects.
+तीन मोठी बटणे: पास (हिरवा), नापास (लाल), NA (राखाडी). एक टॅप निवडते.
+If checkpoint.allows_na = 0, the NA button is grayed and tap shows toast "This checkpoint cannot be NA / हा बिंदू NA असू शकत नाही".
+checkpoint.allows_na = 0 असेल, NA बटण राखाडी आणि टॅपवर टोस्ट "हा बिंदू NA असू शकत नाही".
+Bottom: "Previous" arrow and "Next" arrow. Next is disabled until result is selected.
+तळ: "मागे" बाण आणि "पुढे" बाण. निकाल निवडल्याशिवाय पुढे अक्षम.
+Behaviour on PASS tap
+पास टॅपवर वर्तन
+INSERT row in audit_results: result='P', weighted_points=checkpoint.weight.
+audit_results मध्ये ओळ INSERT: result='P', weighted_points=checkpoint.weight.
+Auto-advance to next checkpoint after 200ms (gives haptic feedback time).
+२०० ms नंतर पुढच्या तपासणी बिंदूला आपोआप पुढे (हॅप्टिक फीडबॅक वेळ देते).
+Behaviour on FAIL tap
+नापास टॅपवर वर्तन
+Navigate to S8 (Fail Detail) — does NOT auto-advance. Fail requires a finding text and possibly a photo.
+S8 (नापास तपशील) कडे जा — आपोआप पुढे जात नाही. नापासाला निष्कर्ष मजकूर आणि शक्यतो फोटो लागतो.
+Behaviour on NA tap
+NA टॅपवर वर्तन
+Show modal: "Why NA? (one line required) / NA का? (एक ओळ आवश्यक)". On submit, INSERT audit_results with result='NA', weighted_points=NULL, finding_text=NA reason. Auto-advance.
+मोडल दाखवा: "NA का? (एक ओळ आवश्यक)". सादरीकरणावर, audit_results INSERT result='NA', weighted_points=NULL, finding_text=NA कारण. आपोआप पुढे.
+Save behaviour
+जतन वर्तन
+Every tap writes immediately to local SQLite. No "save" button needed. If app crashes mid-audit, on next open the SM resumes from where left off (draft is in DB).
+प्रत्येक टॅप लगेच लोकल SQLite वर लिहितो. "जतन" बटण आवश्यक नाही. अॅप मध्येच क्रॅश झाले, तर पुढच्या उघडण्यावर SM जिथे सोडले तिथून सुरू ठेवतो (DB मध्ये ड्राफ्ट).
+Order of checkpoints
+तपासणी बिंदूंचा क्रम
+Follow the time-block sequence from Workbook Day 2 Section 2.10: SOP 2 → SOP 4 → SOP 5 → SOP 1 → SOP 6 → SOP 7 → SOP 3 → SOP 8. NOT numeric order. Configurable in checkpoints.display_order field.
+पुस्तिका दिवस २ विभाग २.१० मधल्या वेळ-खंड क्रमाचे पालन करा: SOP 2 → SOP 4 → SOP 5 → SOP 1 → SOP 6 → SOP 7 → SOP 3 → SOP 8. संख्यात्मक क्रम नव्हे. checkpoints.display_order फील्डमध्ये कॉन्फिगर करण्यायोग्य.
+Workbook reference
+पुस्तिका संदर्भ
+Workbook Day 2 Section 2.9 (the 8 SOPs) and Section 2.10 (the 9 time blocks).
+पुस्तिका दिवस २ विभाग २.९ (८ एसओपी) आणि विभाग २.१० (९ वेळ खंड).
+Screen S8 — Daily Audit — Fail Detail
+स्क्रीन S8 — दैनंदिन ऑडिट — नापास तपशील
+Purpose: Capture the finding text and optionally a photo for a Fail. Photo is mandatory if checkpoint.requires_photo_on_fail = 1.
+हेतू: निष्कर्ष मजकूर आणि नापासासाठी ऐच्छिक फोटो कॅप्चर करा. checkpoint.requires_photo_on_fail = 1 असेल फोटो अनिवार्य.
+Layout
+मांडणी
+Checkpoint context at top (same as S7).
+वर तपासणी बिंदू संदर्भ (S7 सारखाच).
+"Finding (one sentence) / निष्कर्ष (एक वाक्य)" text input — max 200 chars, required.
+"निष्कर्ष (एक वाक्य)" मजकूर इनपुट — कमाल २०० वर्ण, आवश्यक.
+CRO involved (optional) — dropdown of active CROs.
+समाविष्ट सीआरओ (ऐच्छिक) — सक्रिय सीआरओचा ड्रॉपडाउन.
+Photo section: if requires_photo_on_fail=1, header is red "Photo required". Else "Photo (optional)". Shows photo thumbnails (up to 5). "+ Add Photo" button opens S9.
+फोटो विभाग: requires_photo_on_fail=1 असेल, हेडर लाल "फोटो आवश्यक". अन्यथा "फोटो (ऐच्छिक)". फोटो थंबनेल दाखवते (कमाल ५). "+ फोटो जोडा" बटण S9 उघडते.
+"Save and Continue / जतन आणि पुढे" button — disabled until required fields filled.
+"जतन आणि पुढे" बटण — आवश्यक फील्ड भरल्याशिवाय अक्षम.
+Behaviour on Save
+जतनवर वर्तन
+INSERT audit_results row: result='F', weighted_points=0, finding_text, cro_id.
+audit_results ओळ INSERT: result='F', weighted_points=0, finding_text, cro_id.
+INSERT photos rows for each attached photo, linked to this audit_result.
+जोडलेल्या प्रत्येक फोटोसाठी photos ओळी INSERT, या audit_result शी जोडलेल्या.
+Navigate back to S7 for next checkpoint.
+पुढच्या तपासणी बिंदूसाठी S7 कडे परत.
+CAP creation is deferred to the Review screen (S10) so SM is not interrupted mid-audit.
+CAP तयार करणे पुनरावलोकन स्क्रीन (S10) पर्यंत पुढे ढकलले जाते जेणेकरून SM ला ऑडिट मध्ये अडथळा नाही.
+Workbook reference
+पुस्तिका संदर्भ
+Workbook Day 2 Section 2.11 — "When you find a Fail, write the finding immediately in two sentences". App enforces this with the required field.
+पुस्तिका दिवस २ विभाग २.११ — "नापास सापडले की लगेच दोन वाक्यांत निष्कर्ष लिहा". अॅप आवश्यक फील्डद्वारे याची अंमलबजावणी करते.
+Screen S9 — Daily Audit — Photo Capture
+स्क्रीन S9 — दैनंदिन ऑडिट — फोटो कॅप्चर
+Purpose: Capture or pick a photo as evidence. Camera-first; gallery is secondary.
+हेतू: पुरावा म्हणून फोटो कॅप्चर किंवा निवडा. कॅमेरा-प्रथम; गॅलरी दुय्यम.
+Layout
+मांडणी
+Camera preview takes most of the screen.
+स्क्रीनचा बहुतेक भाग कॅमेरा प्रीव्ह्यू.
+Shutter button at bottom center.
+तळ मध्यभागी शटर बटण.
+Toggle flash icon top-right.
+वर-उजवीकडे फ्लॅश चिन्ह टॉगल.
+Switch front/back camera icon top-left.
+वर-डावीकडे पुढे/मागे कॅमेरा स्विच चिन्ह.
+Gallery icon bottom-left — opens device gallery picker.
+तळ-डावीकडे गॅलरी चिन्ह — डिव्हाइस गॅलरी पिकर उघडते.
+"Cancel" button top-right.
+वर-उजवीकडे "रद्द" बटण.
+Behaviour
+वर्तन
+On shutter tap: capture photo, show preview with "Use" and "Retake" buttons.
+शटर टॅपवर: फोटो कॅप्चर, "वापरा" आणि "पुन्हा घ्या" बटणांसह प्रीव्ह्यू दाखवा.
+On Use: compress to max 1280px long edge, JPEG quality 80%, save to app's documents folder with UUID name. Generate 150px thumbnail. Return to caller screen (S8 or CAP-related).
+वापरावर: कमाल १२८० पिक्सेल लांब बाजू, JPEG गुणवत्ता ८०% पर्यंत संकुचित करा, UUID नावासह अॅपच्या documents फोल्डरमध्ये जतन करा. १५० पिक्सेल थंबनेल तयार करा. कॉलर स्क्रीनकडे (S8 किंवा CAP-संबंधित) परत.
+EXIF location is read if available and stored in photos.captured_lat/lng.
+उपलब्ध असल्यास EXIF स्थान वाचले जाते आणि photos.captured_lat/lng मध्ये साठवले जाते.
+Permissions
+परवानग्या
+On first use, request camera permission. If denied, show fallback: "Camera denied. You can pick from gallery or skip the photo."
+पहिल्या वापरावर, कॅमेरा परवानगी मागा. नकार असेल, फॉलबॅक दाखवा: "कॅमेरा नाकारला. तुम्ही गॅलरीतून निवडू शकता किंवा फोटो वगळू शकता."
+Storage permission requested only on Android <10. On Android 11+, scoped storage handles it.
+Android <१० वरच स्टोरेज परवानगी मागितली. Android ११+ वर scoped storage हाताळते.
+Screen S10 — Daily Audit — Review & Submit
+स्क्रीन S10 — दैनंदिन ऑडिट — पुनरावलोकन व सादरीकरण
+Purpose: Show the SM a full preview of the audit, calculate the score, list all Fails for CAP creation, and submit.
+हेतू: SM ला ऑडिटचे पूर्ण प्रीव्ह्यू दाखवा, गुण मोजा, CAP तयार करण्यासाठी सर्व नापासांची यादी द्या, आणि सादर करा.
+Layout
+मांडणी
+Header: "Daily Audit — [date]".
+हेडर: "दैनंदिन ऑडिट — [तारीख]".
+Score card (large, prominent): compliance percentage, band, raw_score / max_score. Color-coded by band.
+गुण कार्ड (मोठे, ठळक): अनुपालन टक्केवारी, पट्टी, raw_score / max_score. पट्टीनुसार रंग-कोडित.
+Breakdown by SOP: small table showing each SOP's pass/fail/NA counts and weighted score.
+एसओपीनुसार विभागणी: प्रत्येक एसओपीच्या pass/fail/NA counts आणि वजनी गुण दाखवणारा छोटा तक्ता.
+Fails list: each Fail with checkpoint number, finding text, photo thumbnails, and a "Create CAP" button (or "CAP Created" badge if already created).
+नापास यादी: प्रत्येक नापास तपासणी बिंदू क्रमांक, निष्कर्ष मजकूर, फोटो थंबनेल, आणि "CAP तयार करा" बटण (किंवा आधीच तयार असेल "CAP तयार" बॅज) सह.
+Optional notes — free text up to 500 chars.
+ऐच्छिक नोंदी — मुक्त मजकूर ५०० वर्णांपर्यंत.
+Big "Submit Audit / ऑडिट सादर करा" button at bottom.
+तळाशी मोठे "ऑडिट सादर करा" बटण.
+"Save Draft / ड्राफ्ट जतन करा" link at bottom.
+तळाशी "ड्राफ्ट जतन करा" दुवा.
+Behaviour on Submit tap
+सादर करा टॅपवर वर्तन
+Validate: every Fail with requires_photo_on_fail=1 has at least 1 photo. If not, show modal listing the offending Fails, blocking submission.
+पडताळा: requires_photo_on_fail=1 असलेल्या प्रत्येक नापासाला किमान १ फोटो आहे. नसेल, अपराधी नापासांची यादी देणारा मोडल दाखवा, सादरीकरण ब्लॉक करा.
+Validate: every Fail must have a CAP either created or skipped explicitly via the "Defer CAP creation" option (default on, but warning shown).
+पडताळा: प्रत्येक नापासाला CAP एकतर तयार आहे किंवा "CAP तयार करणे पुढे ढकला" पर्यायाद्वारे (डीफॉल्ट चालू, पण इशारा) स्पष्टपणे वगळलेला आहे.
+Compute final scores (Section 6 formulas) and write to audits row.
+अंतिम गुण मोजा (विभाग ६ सूत्रे) आणि audits ओळीवर लिहा.
+UPDATE audits: status='submitted', submitted_at=now, raw_score, max_score, compliance_pct, band, fail_count, pass_count, na_count.
+audits UPDATE: status='submitted', submitted_at=now, raw_score, max_score, compliance_pct, band, fail_count, pass_count, na_count.
+Run escalation engine (Section 7) on this audit — auto-create any escalations triggered.
+या ऑडिटवर एस्केलेशन इंजिन चालवा (विभाग ७) — सुरू झालेले कोणतेही एस्केलेशन आपोआप तयार करा.
+Queue sync to Firestore.
+Firestore ला समक्रमणासाठी रांगेत.
+Navigate to S11 (Submitted Confirmation).
+S11 (सादरीकरण पुष्टी) कडे जा.
+Screen S11 — Daily Audit — Submitted Confirmation
+स्क्रीन S11 — दैनंदिन ऑडिट — सादरीकरण पुष्टी
+Purpose: Celebrate the completion, show final score, offer next actions.
+हेतू: पूर्णतेचा आनंद, अंतिम गुण, पुढच्या क्रिया.
+Layout
+मांडणी
+Large checkmark icon at top, animated.
+वर मोठे चेकमार्क चिन्ह, अॅनिमेटेड.
+"Submitted at [time]".
+"[वेळी] सादर."
+Final compliance %, band, in color.
+अंतिम अनुपालन %, पट्टी, रंगात.
+"Sent to GM" status (if synced) or "Will sync when online" (if offline).
+"GM ला पाठवले" स्थिती (समक्रमित असेल) किंवा "ऑनलाइन झाल्यावर समक्रमित होईल" (ऑफलाइन असेल).
+Three buttons: "View Audit" → S13, "Open CAPs" → S14, "Home" → S5.
+तीन बटणे: "ऑडिट पाहा" → S13, "CAPs उघडा" → S14, "होम" → S5.
+Behaviour on confirmation
+पुष्टीवर वर्तन
+If band is FAIR or below, show banner suggesting CAPs to open immediately.
+पट्टी बरे किंवा खाली असेल, लगेच उघडायच्या CAPs सुचवणारा बॅनर दाखवा.
+If band is POOR or CRITICAL, show banner that an escalation has been auto-created and sent.
+पट्टी वाईट किंवा क्रिटिकल असेल, एस्केलेशन आपोआप तयार आणि पाठवले गेले आहे असा बॅनर दाखवा.
+Screen S14 — CAP List
+स्क्रीन S14 — CAP यादी
+Purpose: List all CAPs visible to the user. SM sees own + assigned. GM and Owner see all.
+हेतू: वापरकर्त्याला दिसणाऱ्या सर्व CAPs ची यादी. SM स्वतःचे + नेमलेले पाहतो. GM आणि मालक सर्व पाहतात.
+Layout
+मांडणी
+Top: filter chips — "All", "Open", "Done (pending verify)", "Aged ⚠", "Closed".
+वर: फिल्टर चिप्स — "सर्व", "उघडे", "पूर्ण (पडताळणी प्रलंबित)", "जुनी ⚠", "बंद".
+Search box.
+शोध पेटी.
+List of CAPs sorted by deadline ascending (aged first, then nearest deadline).
+मुदतीनुसार चढत्या क्रमाने CAPs ची यादी (जुन्या प्रथम, मग सर्वात जवळची मुदत).
+Each list item shows: CAP ID, problem statement (truncated), responsible user, deadline (color-coded: red if past, amber if today/tomorrow, green if 3+ days away), status badge.
+प्रत्येक यादी आयटम दाखवते: CAP आयडी, समस्या विधान (कापलेले), जबाबदार वापरकर्ता, मुदत (रंग-कोडित: लाल मागे, पिवळा आज/उद्या, हिरवा ३+ दिवस दूर), स्थिती बॅज.
+FAB (floating action button) bottom-right: "+ New CAP".
+FAB (फ्लोटिंग अॅक्शन बटण) तळ-उजवीकडे: "+ नवीन CAP".
+Behaviour
+वर्तन
+Tap on list item → S16 (CAP Detail).
+यादी आयटमवर टॅप → S16 (CAP तपशील).
+Tap on FAB → S15 (CAP Create).
+FAB वर टॅप → S15 (CAP तयार करा).
+Auto-refresh every time the user enters this screen — query refreshes from local DB.
+वापरकर्ता या स्क्रीनवर येताच प्रत्येक वेळी आपोआप ताजे — लोकल DB मधून क्वेरी ताजी.
+Screen S15 — CAP Create
+स्क्रीन S15 — CAP तयार करा
+Purpose: Walk the user through creating a new CAP using the 10-field template from Workbook Appendix A.3.
+हेतू: पुस्तिकेच्या परिशिष्ट A.३ मधले १०-फील्ड टेम्पलेट वापरून वापरकर्त्याला नवीन CAP तयार करण्यात मदत.
+Layout (vertical scroll, all fields visible)
+मांडणी (वर्टिकल स्क्रोल, सर्व फील्ड दिसतात)
+CAP ID — auto-generated, read-only (e.g. "CAP-2026-W22-03").
+CAP आयडी — आपोआप तयार, फक्त-वाचन (उदा. "CAP-2026-W22-03").
+Originating finding — auto-populated if launched from a Fail; editable otherwise.
+मूळ निष्कर्ष — नापासातून सुरू केले असेल आपोआप भरलेले; अन्यथा संपादनयोग्य.
+Problem statement (1 sentence) — required text input.
+समस्या विधान (१ वाक्य) — आवश्यक मजकूर इनपुट.
+5 Whys — 5 separate text inputs, labeled Why 1 to Why 5. Why 1 required; Why 2-5 strongly recommended but not enforced.
+पाच का? — ५ वेगळे मजकूर इनपुट, का? १ ते का? ५ लेबल. का? १ आवश्यक; का? २-५ जोरदार शिफारस पण सक्ती नाही.
+Root cause (1-2 sentences) — required text input.
+मूळ कारण (१-२ वाक्ये) — आवश्यक मजकूर इनपुट.
+Action steps — dynamic list, 3 to 5 items, each a one-line text input. Add/remove rows.
+कृती पावले — डायनॅमिक यादी, ३ ते ५ आयटम, प्रत्येक एक-ओळ मजकूर इनपुट. ओळी जोडा/काढा.
+Responsible (CAP Owner) — dropdown of users (SM, GM, Owner only; CROs not selectable).
+जबाबदार (CAP मालक) — वापरकर्त्यांचा ड्रॉपडाउन (फक्त SM, GM, मालक; सीआरओ निवडण्यायोग्य नाहीत).
+Deadline — date picker, default origin_audit.audit_date + 7 days.
+मुदत — तारीख निवडक, डीफॉल्ट origin_audit.audit_date + ७ दिवस.
+Verification method — dropdown of checkpoints (typically the same one that originally failed).
+पडताळणी पद्धत — तपासणी बिंदूंचा ड्रॉपडाउन (सहसा मूळ नापास झालेलाच).
+"Create CAP / CAP तयार करा" button at bottom — disabled until required fields filled.
+तळाशी "CAP तयार करा" बटण — आवश्यक फील्ड भरल्याशिवाय अक्षम.
+Behaviour on Create tap
+तयार करा टॅपवर वर्तन
+Generate next CAP ID using format CAP-{year}-W{ISO_week}-{nn} where nn is the next sequence for that week.
+CAP-{year}-W{ISO_week}-{nn} स्वरूप वापरून पुढची CAP आयडी तयार करा, जिथे nn त्या आठवड्याची पुढची संख्या.
+INSERT caps row with all fields and status='open', opened_at=now.
+सर्व फील्ड आणि status='open', opened_at=now सह caps ओळ INSERT.
+INSERT cap_actions rows for each step.
+प्रत्येक पावलासाठी cap_actions ओळी INSERT.
+INSERT cap_log entry: event='created', from_status=NULL, to_status='open'.
+cap_log नोंद INSERT: event='created', from_status=NULL, to_status='open'.
+Push notification to responsible user (if not the creator) — "New CAP assigned: [problem statement]".
+जबाबदार वापरकर्त्याला पुश सूचना (निर्मात्या नसेल तर) — "नवीन CAP नेमली: [समस्या विधान]".
+Navigate to S16 (CAP Detail) showing the newly created CAP.
+नव्याने तयार झालेली CAP दाखवणाऱ्या S16 (CAP तपशील) कडे जा.
+Workbook reference
+पुस्तिका संदर्भ
+Workbook Day 4 Section 4.4 (CAP template) and Section 4.2 (5 Whys). App enforces both.
+पुस्तिका दिवस ४ विभाग ४.४ (CAP टेम्पलेट) आणि विभाग ४.२ (५ का?). अॅप दोघांची अंमलबजावणी करते.
+Screen S12 — Audit History
+स्क्रीन S12 — ऑडिट इतिहास
+List of audits visible to the user (SM sees own; GM and Owner see all).
+वापरकर्त्याला दिसणाऱ्या ऑडिटची यादी (SM स्वतःचे पाहतो; GM आणि मालक सर्व).
+Filter chips: All, Daily, Weekly (Phase 2), Monthly (Phase 3), Unverified, By date range.
+फिल्टर चिप्स: सर्व, दैनंदिन, साप्ताहिक (टप्पा २), मासिक (टप्पा ३), अपडताळलेले, तारीख श्रेणीनुसार.
+Each item: date, type, auditor, compliance %, band (color), fail count, status.
+प्रत्येक आयटम: तारीख, प्रकार, ऑडिटर, अनुपालन %, पट्टी (रंग), नापास संख्या, स्थिती.
+Tap → S13 (Audit Detail).
+टॅप → S13 (ऑडिट तपशील).
+Sort by date desc (most recent first). Show 30 per page, infinite scroll.
+तारखेनुसार उतरत्या क्रमाने (सर्वात अलीकडचे प्रथम). दर पानाला ३० दाखवा, अनंत स्क्रोल.
+Screen S13 — Audit Detail
+स्क्रीन S13 — ऑडिट तपशील
+Read-only view of a submitted audit. Identical layout to S10 (Review) but no edit, no submit.
+सादर केलेल्या ऑडिटचे फक्त-वाचन दृश्य. S10 (पुनरावलोकन) सारखीच मांडणी पण संपादन नाही, सादरीकरण नाही.
+Header shows audit type, date, auditor, submission time.
+हेडर ऑडिट प्रकार, तारीख, ऑडिटर, सादरीकरण वेळ दाखवते.
+Score card.
+गुण कार्ड.
+SOP breakdown table.
+एसओपी विभागणी तक्ता.
+All Pass/Fail/NA results expandable per SOP.
+एसओपीनुसार सर्व Pass/Fail/NA निकाल विस्तारणारे.
+All Fails with finding text, photos (tap to view full), and linked CAP.
+सर्व नापास निष्कर्ष मजकूर, फोटो (पूर्ण पाहण्यासाठी टॅप), आणि जोडलेल्या CAP सह.
+GM/Owner sees additional "Verify" button if audit is unverified (Phase 2+).
+GM/मालकाला ऑडिट अपडताळलेली असेल अतिरिक्त "पडताळा" बटण दिसते (टप्पा २+).
+"Export PDF / PDF निर्यात" button at bottom — generates audit PDF, opens share sheet.
+तळाशी "PDF निर्यात" बटण — ऑडिट PDF तयार करते, शेअर शीट उघडते.
+"Share to WhatsApp" button (Phase 1) — opens WhatsApp with PDF attached.
+"WhatsApp ला शेअर" बटण (टप्पा १) — PDF जोडून WhatsApp उघडते.
+Screen S16 — CAP Detail
+स्क्रीन S16 — CAP तपशील
+Full CAP view with all 10 fields, action checklist, log timeline, and role-appropriate action buttons.
+सर्व १० फील्ड, कृती चेकलिस्ट, लॉग टाइमलाइन, आणि भूमिकेला योग्य कृती बटणांसह पूर्ण CAP दृश्य.
+Status badge prominent at top: Open / Done / Verified / Closed / Aged / Reopened.
+वर ठळक स्थिती बॅज: उघडे / पूर्ण / पडताळलेले / बंद / जुने / पुन्हा उघडलेले.
+Deadline countdown: "3 days left" / "Overdue by 2 days".
+मुदत काउंटडाउन: "३ दिवस उरले" / "२ दिवस मुदत संपली".
+All 10 fields displayed read-only except where the current user can act.
+सर्व १० फील्ड फक्त-वाचन दिसतात — सध्याचा वापरकर्ता कृती करू शकतो तिथे वगळून.
+Action steps: checklist with checkboxes; checkable only by responsible user.
+कृती पावले: चेकबॉक्ससह चेकलिस्ट; फक्त जबाबदार वापरकर्त्याकडून तपासण्यायोग्य.
+Timeline section at bottom: every cap_log entry as a row with timestamp, actor, event.
+तळाशी टाइमलाइन विभाग: प्रत्येक cap_log नोंद वेळ-शिक्का, अभिनेता, घटना सह ओळ म्हणून.
+Action buttons (visible by role and state):
+कृती बटणे (भूमिका आणि स्थितीनुसार दिसतात):
+• Responsible user, status=open, all actions done → "Mark CAP Done" → S17.
+• जबाबदार वापरकर्ता, status=open, सर्व कृती पूर्ण → "CAP पूर्ण म्हणून खूण करा" → S17.
+• GM/Owner, status=done → "Verify CAP" → S18.
+• GM/मालक, status=done → "CAP पडताळा" → S18.
+• GM/Owner, status=verified → "Close CAP" → S19.
+• GM/मालक, status=verified → "CAP बंद करा" → S19.
+• Anyone, status=open and deadline approaching → "Request Extension" (GM/Owner approves).
+• कोणीही, status=open आणि मुदत जवळ → "मुदतवाढ विनंती" (GM/मालक मंजूर).
+• Owner, any closed CAP → "Reopen CAP".
+• मालक, कोणतीही बंद CAP → "CAP पुन्हा उघडा".
+Screen S17 — CAP — Mark Done
+स्क्रीन S17 — CAP — पूर्ण म्हणून खूण
+Quick modal. Confirms all action steps are checked. Asks for optional "done notes". Optional photo of completion evidence.
+जलद मोडल. सर्व कृती पावले तपासली आहेत याची पुष्टी. ऐच्छिक "पूर्ण नोंदी" मागते. पूर्णता पुराव्याचा ऐच्छिक फोटो.
+On confirm: UPDATE caps.status='done', done_at=now, done_by=current user. INSERT cap_log: event='marked_done'.
+पुष्टीवर: caps.status='done', done_at=now, done_by=सध्याचा वापरकर्ता UPDATE. cap_log INSERT: event='marked_done'.
+Push notification to GM: "CAP [id] marked done by [SM] — awaiting verification."
+GM ला पुश सूचना: "CAP [id] [SM] ने पूर्ण म्हणून खूण केली — पडताळणीची वाट."
+Screen S18 — CAP — Verify
+स्क्रीन S18 — CAP — पडताळणी
+GM/Owner re-runs the verification_method checkpoint and confirms it now passes. Mandatory photo if requires_photo_on_fail=1 on that checkpoint.
+GM/मालक verification_method तपासणी बिंदू पुन्हा चालवतो आणि आता पास झाला याची पुष्टी करतो. त्या तपासणी बिंदूवर requires_photo_on_fail=1 असेल अनिवार्य फोटो.
+If verification passes: UPDATE caps.status='verified', verified_at=now, verified_by. cap_log: 'verified'.
+पडताळणी पास झाली: caps.status='verified', verified_at=now, verified_by UPDATE. cap_log: 'verified'.
+If verification fails: prompt to either extend the CAP or re-open at Plan phase (see Workbook Day 4 Section 4.3).
+पडताळणी अयशस्वी: एकतर CAP वाढवा किंवा योजना टप्प्यावर पुन्हा उघडा (पुस्तिका दिवस ४ विभाग ४.३ पाहा).
+Screen S19 — CAP — Close
+स्क्रीन S19 — CAP — बंद करा
+Final close after verification. Quick confirmation dialog. Updates status to 'closed', closed_at=now, closed_by.
+पडताळणीनंतर अंतिम बंद. जलद पुष्टी डायलॉग. status 'closed' अद्यतनित, closed_at=now, closed_by.
+Screen S20 — Reports List
+स्क्रीन S20 — अहवाल यादी
+Phase 2+ feature. List of weekly reports. Phase 3 adds monthly reports.
+टप्पा २+ फीचर. साप्ताहिक अहवालांची यादी. टप्पा ३ मासिक अहवाल जोडतो.
+Filter by type, year, month. Each item shows: week ending date, compliance %, band, headline.
+प्रकार, वर्ष, महिन्यानुसार फिल्टर. प्रत्येक आयटम दाखवते: आठवडा संपण्याची तारीख, अनुपालन %, पट्टी, शीर्षक.
+Owner-only: green dot if read by Owner, gray dot if unread.
+फक्त-मालक: मालकाने वाचले असेल हिरवा ठिपका, अवाचलेले असेल राखाडी ठिपका.
+Screen S21 — Report Detail
+स्क्रीन S21 — अहवाल तपशील
+Read-view of a weekly/monthly report. Matches the structure in Workbook Day 3 Section 3.6 exactly.
+साप्ताहिक/मासिक अहवालाचे वाचन दृश्य. पुस्तिकेच्या दिवस ३ विभाग ३.६ मधल्या रचनेशी अचूक जुळते.
+Sections: headline, compliance table, trend block, findings, patterns, CAPs, escalations, signature.
+विभाग: शीर्षक, अनुपालन तक्ता, कल खंड, निष्कर्ष, पॅटर्न, CAPs, एस्केलेशन, सही.
+PDF export button at bottom.
+तळाशी PDF निर्यात बटण.
+"Mark as Read" updates reports.read_by_owner_at if user is Owner.
+वापरकर्ता मालक असेल "वाचले म्हणून खूण" reports.read_by_owner_at अद्यतनित.
+Screen S22 — Reference Tab — Index
+स्क्रीन S22 — संदर्भ टॅब — अनुक्रमणिका
+Simple list of reference content sections, each linking to its own screen.
+संदर्भ सामग्री विभागांची साधी यादी, प्रत्येक स्वतःच्या स्क्रीनला लिंक.
+4 cards: Rating Scale (S23), Escalation Triggers (S24), Strong vs Weak Evidence (S25), Bilingual Glossary (S26).
+४ कार्ड: रेटिंग स्केल (S23), एस्केलेशन ट्रिगर (S24), मजबूत वि. दुर्बल पुरावा (S25), द्विभाषी शब्दकोश (S26).
+Screen S23 — Reference — Rating Scale
+स्क्रीन S23 — संदर्भ — रेटिंग स्केल
+Renders the 5-band table from Workbook Appendix A.4.
+पुस्तिका परिशिष्ट A.४ मधला ५-पट्टी तक्ता रेंडर करते.
+Tier-specific targets table.
+स्तर-विशिष्ट लक्ष्य तक्ता.
+Screen S24 — Reference — Escalation Triggers
+स्क्रीन S24 — संदर्भ — एस्केलेशन ट्रिगर
+Renders the 7-trigger table from Workbook Appendix A.5.
+पुस्तिका परिशिष्ट A.५ मधला ७-ट्रिगर तक्ता रेंडर करते.
+Escalation message format (4 parts).
+एस्केलेशन संदेश स्वरूप (४ भाग).
+Screen S25 — Reference — Evidence
+स्क्रीन S25 — संदर्भ — पुरावा
+Strong vs Weak evidence two-column table from Workbook Appendix A.6.
+पुस्तिका परिशिष्ट A.६ मधला मजबूत वि. दुर्बल दोन-स्तंभ तक्ता.
+Screen S26 — Reference — Glossary
+स्क्रीन S26 — संदर्भ — शब्दकोश
+Searchable table of 65 EN-MR-Meaning rows from Workbook Appendix A.7.
+पुस्तिका परिशिष्ट A.७ मधल्या ६५ EN-MR-अर्थ ओळींचा शोधण्यायोग्य तक्ता.
+Live search filter on top.
+वर लाइव्ह सर्च फिल्टर.
+Screen S27 — Settings
+स्क्रीन S27 — सेटिंग्ज
+List of settings sections, role-filtered: Manage CROs (all roles), Manage Users (Owner only), Change PIN, Language, Backup & Export, About.
+सेटिंग्ज विभागांची यादी, भूमिकेनुसार फिल्टर: सीआरओ व्यवस्थापन (सर्व), वापरकर्ता व्यवस्थापन (फक्त मालक), PIN बदला, भाषा, बॅकअप व निर्यात, बद्दल.
+Screen S28 — Settings — Manage CROs
+स्क्रीन S28 — सेटिंग्ज — सीआरओ व्यवस्थापन
+Table of CROs with edit/delete actions. "+ Add CRO" button.
+संपादन/हटवण्याच्या कृतींसह सीआरओचा तक्ता. "+ सीआरओ जोडा" बटण.
+Form fields: name, counter, shift, is_active toggle.
+फॉर्म फील्ड: नाव, काउंटर, शिफ्ट, is_active टॉगल.
+Deactivating a CRO retains them in history but removes from dropdowns.
+सीआरओ निष्क्रिय केल्याने त्यांना इतिहासात ठेवते पण ड्रॉपडाउनमधून काढते.
+Screen S29 — Settings — Manage Users (Owner only)
+स्क्रीन S29 — सेटिंग्ज — वापरकर्ता व्यवस्थापन (फक्त मालक)
+Table of users with role badge. Owner can: add new SM/GM, deactivate users, reset PINs.
+भूमिका बॅजसह वापरकर्त्यांचा तक्ता. मालक करू शकतो: नवीन SM/GM जोडणे, वापरकर्ते निष्क्रिय करणे, PIN रीसेट करणे.
+Cannot delete users (audit trail integrity). Only deactivate.
+वापरकर्ते हटवू शकत नाही (ऑडिट ट्रेल अखंडता). फक्त निष्क्रिय.
+Cannot have more than 1 Owner.
+१ पेक्षा जास्त मालक असू शकत नाही.
+Screen S30 — Settings — Change PIN
+स्क्रीन S30 — सेटिंग्ज — PIN बदला
+3 fields: current PIN, new PIN, confirm new PIN. All bcrypt-hashed on submit.
+३ फील्ड: सध्याचा PIN, नवीन PIN, नवीन PIN पुष्टी. सादरीकरणावर सर्व bcrypt-हॅश्ड.
+Screen S31 — Settings — Language
+स्क्रीन S31 — सेटिंग्ज — भाषा
+Toggle: English / मराठी. UPDATE users.language_pref. App restarts to apply.
+टॉगल: इंग्रजी / मराठी. users.language_pref UPDATE. अंमलात आणण्यासाठी अॅप पुन्हा सुरू.
+Screen S32 — Settings — Backup & Export
+स्क्रीन S32 — सेटिंग्ज — बॅकअप व निर्यात
+Export entire database as JSON to Downloads folder. Useful for manual backups before app upgrade.
+संपूर्ण डेटाबेस Downloads फोल्डरमध्ये JSON म्हणून निर्यात करा. अॅप अपग्रेडपूर्वी मॅन्युअल बॅकअपसाठी उपयुक्त.
+Owner-only: View Firestore sync status, manual force-sync trigger.
+फक्त-मालक: Firestore समक्रमण स्थिती पाहा, मॅन्युअल फोर्स-समक्रमण ट्रिगर.
+"About" sub-screen: app version, contact info, link to this Specification document.
+"बद्दल" उप-स्क्रीन: अॅप आवृत्ती, संपर्क माहिती, या तपशील दस्तऐवजाचा दुवा.
+Section 6 — Score Calculation Logic
+विभाग ६ — गुण मोजणी तर्क
+Why this section exists
+हा विभाग का
+This is the most error-prone area in any audit app. Get the math wrong by even 0.1 points and the audit programme loses credibility — auditors will see a Pass when the workbook says Fail, or a Fair band when the math gave Good. This section spells out every calculation Claude Code must implement, with worked examples that the app must reproduce exactly. The simulated audits in Workbook Day 5 Sections 5.1 and 5.2 serve as the canonical test cases — if your code produces a different answer from the workbook, your code is wrong, not the workbook.
+कोणत्याही ऑडिट अॅपमधले सर्वात त्रुटी-प्रवण क्षेत्र हे आहे. गणित ०.१ गुणानेही चुकले — ऑडिट कार्यक्रमाची विश्वासार्हता जाते — पुस्तिका नापास म्हणते तेव्हा ऑडिटर पास पाहतात, किंवा गणिताने चांगले दिले तरी बरे पट्टी. हा विभाग क्लॉड कोडने अंमलात आणायची प्रत्येक गणना स्पष्ट करतो, अॅपने अचूक पुनरुत्पादन करायच्या उदाहरणांसह. पुस्तिका दिवस ५ विभाग ५.१ आणि ५.२ मधल्या अनुकरण ऑडिट अधिकृत चाचणी प्रकरणे — तुमचा कोड पुस्तिकेपेक्षा वेगळे उत्तर देत असेल, तुमचा कोड चुकीचा, पुस्तिका नाही.
+6.1 — Daily audit score formula
+६.१ — दैनंदिन ऑडिट गुण सूत्र
+// Pseudocode — implement exactly this
+computeDailyScore(audit_id):
+results = SELECT * FROM audit_results WHERE audit_id = audit_id
+raw_score = 0
+max_score = 0
+pass_count = 0; fail_count = 0; na_count = 0
+for each r in results:
+cp = SELECT * FROM checkpoints WHERE id = r.checkpoint_id
+if r.result == 'P':
+raw_score  += cp.weight
+max_score  += cp.weight
+pass_count += 1
+elif r.result == 'F':
+raw_score  += 0
+max_score  += cp.weight
+fail_count += 1
+elif r.result == 'NA':
+// NA excluded from BOTH numerator and denominator
+na_count   += 1
+// do not touch raw_score or max_score
+compliance_pct = round(raw_score / max_score * 100, 1)  // 1 decimal
+band           = bandFromCompliance(compliance_pct)
+UPDATE audits SET raw_score, max_score, compliance_pct, band,
+pass_count, fail_count, na_count WHERE id = audit_id
+6.2 — Compliance band function
+६.२ — अनुपालन पट्टी कार्य
+bandFromCompliance(pct):
+if pct >= 95.0:   return 'excellent'
+if pct >= 90.0:   return 'good'
+if pct >= 85.0:   return 'fair'
+if pct >= 80.0:   return 'poor'
+return 'critical'
+6.3 — Worked example: Workbook Day 5 Section 5.1
+६.३ — उदाहरण: पुस्तिका दिवस ५ विभाग ५.१
+The simulated daily audit in the Workbook produced 90.0% (Good, just barely). The app MUST reproduce this exactly. If you give the app the same 12 observations and 56 implied passes, it must compute 81 / 90 = 90.0% Good. Test this every time score logic changes.
+पुस्तिकेतल्या अनुकरण दैनंदिन ऑडिटने ९०.०% (काठावर चांगले) दिले. अॅपने हे अचूक पुनरुत्पादन करावे. अॅपला त्याच १२ निरीक्षणे आणि ५६ गृहीत पास दिल्यास, ते ८१ / ९० = ९०.०% चांगले मोजले पाहिजे. गुण तर्क बदलला की दर वेळी हे तपासा.
+compliance_pct = round(81 / 90 * 100, 1) = 90.0
+band = 'good'  // 90.0 >= 90.0
+6.4 — Daily audit with NAs
+६.४ — NA सह दैनंदिन ऑडिट
+Example: 5 checkpoints marked NA, all weighted 2 (e.g. it was a Cash holiday — no GRN, no service intake, no high-value movement). Sum of NA weights = 10. So max_score is 90 − 10 = 80, not 90.
+उदाहरण: ५ तपासणी बिंदू NA, सर्व वजन २ (उदा. रोख सुट्टी — GRN नाही, सर्व्हिस इनटेक नाही, उच्च-मूल्य हालचाल नाही). NA वजनांची बेरीज = १०. म्हणून max_score ९० नसून ९० − १० = ८०.
+// Suppose results: 58 P (weighted), 5 F (weighted), 5 NA (weighted)
+// Pass weighted points: 58 × avg(weight) = let's say 70
+// Fail weighted points: 5 × avg(weight) = let's say 10
+// raw_score = 70  (only passes count toward numerator)
+// max_score = 70 + 10 = 80  (NAs excluded from denominator)
+// compliance_pct = 70/80 * 100 = 87.5  ->  band = 'fair'
+6.5 — Weekly audit score formula (Phase 2)
+६.५ — साप्ताहिक ऑडिट गुण सूत्र (टप्पा २)
+computeWeeklyScore(weekly_audit_id):
+// 1. Daily-audit-average contribution (out of 68)
+week_dates = 7 dates of the week being audited
+daily_pcts = []
+for each date in week_dates:
+daily = SELECT * FROM audits WHERE audit_type='daily' AND audit_date=date
+if daily exists AND status='submitted':
+daily_pcts.push(daily.compliance_pct)
+else:
+daily_pcts.push(0.0)  // missing day = 0%
+avg_daily = sum(daily_pcts) / 7
+daily_contribution = round(avg_daily / 100 * 68, 1)
+// 2. Weekly-only checkpoints (max 56 weighted)
+weekly_results = SELECT * FROM audit_results WHERE audit_id = weekly_audit_id
+weekly_raw = sum of weighted_points where result='P'
+weekly_max = sum of cp.weight where result IN ('P', 'F')  // NA excluded
+// 3. Combine
+total_raw = daily_contribution + weekly_raw
+total_max = 68 + weekly_max  // 124 if no weekly NAs
+compliance_pct = round(total_raw / total_max * 100, 1)
+6.6 — Worked example: Workbook Day 5 Section 5.2
+६.६ — उदाहरण: पुस्तिका दिवस ५ विभाग ५.२
+Daily percentages: 92.2, 91.1, 90.0, 88.8, 93.3, 89.7, 91.4. Sum = 636.5. Average = 90.93%. Daily contribution = 90.93 × 0.68 = 61.8 (rounded to 1 decimal).
+दैनंदिन टक्केवारी: ९२.२, ९१.१, ९०.०, ८८.८, ९३.३, ८९.७, ९१.४. बेरीज = ६३६.५. सरासरी = ९०.९३%. दैनंदिन योगदान = ९०.९३ × ०.६८ = ६१.८ (एक दशांशात गोलाकार).
+Weekly-only: Operations 7/10, Cash 10/16, R&S 4/6, Inventory 22/24. Sum: 43/56. Total: 61.8 + 43 = 104.8 / 124 = 84.5%. Band: Poor.
+साप्ताहिक-केवळ: ऑपरेशन्स ७/१०, रोख १०/१६, R&S ४/६, स्टॉक २२/२४. बेरीज: ४३/५६. एकूण: ६१.८ + ४३ = १०४.८ / १२४ = ८४.५%. पट्टी: वाईट.
+6.7 — Cumulative weekly cash variance check (CW.7)
+६.७ — एकत्रित साप्ताहिक रोख तफावत तपासणी (CW.७)
+computeCumulativeWeeklyVariance(week_dates):
+variances = []  // signed: + over, - short
+for each date in week_dates:
+daily = SELECT * FROM audits WHERE audit_type='daily' AND audit_date=date
+// Stored as separate field on audit (parsed from cash result finding text
+//   OR captured explicitly during S7 cash checkpoint)
+if daily:
+variances.push(daily.cash_variance_rupees)
+cumulative = sum(variances)
+return |cumulative|  // absolute value for comparison
+CW.7 result:
+if |cumulative| <= 200: Pass
+else: Fail (with cumulative value shown in finding)
+To support CW.7, the cash checkpoint 6.5 in the daily audit captures an additional field cash_variance_rupees (positive if over, negative if short). This is stored on the audit row directly. The weekly audit reads these 7 numbers and sums.
+CW.७ साठी, दैनंदिन ऑडिटमधला रोख तपासणी बिंदू ६.५ एक अतिरिक्त फील्ड cash_variance_rupees पकडतो (जास्त असेल पॉझिटिव्ह, कमी असेल निगेटिव्ह). हा थेट audit ओळीवर साठवला जातो. साप्ताहिक ऑडिट या ७ संख्या वाचते आणि बेरीज करते.
+Section 7 — Escalation Rules — Decision Engine
+विभाग ७ — एस्केलेशन नियम — निर्णय इंजिन
+Where the engine runs
+इंजिन कुठे चालते
+After every audit submission (S10 → submit), and after certain CAP state changes, the escalation engine evaluates the seven mandatory triggers from Workbook Day 4 Section 4.6. For every trigger that fires, an entry is inserted into the escalations table, an in-app notification is shown to the target user, and (for urgent triggers) WhatsApp is opened with a pre-filled message.
+प्रत्येक ऑडिट सादरीकरणानंतर (S10 → सादर), आणि काही CAP स्थिती बदलांनंतर, एस्केलेशन इंजिन पुस्तिका दिवस ४ विभाग ४.६ मधले ७ अनिवार्य ट्रिगर मूल्यांकन करते. सुरू होणाऱ्या प्रत्येक ट्रिगरसाठी, escalations तक्त्यात नोंद INSERT होते, लक्ष्य वापरकर्त्याला अॅप-अंतर्गत सूचना दाखवली जाते, आणि (तातडीच्या ट्रिगरसाठी) पूर्व-भरलेल्या संदेशासह WhatsApp उघडले जाते.
+The 7 triggers as code logic
+७ ट्रिगर कोड तर्क म्हणून
+runEscalationEngine(audit_id):
+a = SELECT * FROM audits WHERE id = audit_id
+// Trigger 1: Daily Critical band (< 80%)
+if a.audit_type == 'daily' AND a.band == 'critical':
+cash_cause = any 6.x checkpoint failed
+inv_cause  = any 7.x checkpoint failed
+raise(trigger=1, to=GM, urgency='same_night',
+via='whatsapp' if (cash_cause OR inv_cause) else 'in_app')
+if cash_cause OR inv_cause:
+raise(trigger=1, to=Owner, urgency='same_night', via='whatsapp')
+// Trigger 2: Same checkpoint failing 5+ days in a week
+// (evaluated only when weekly audit is submitted)
+if a.audit_type == 'weekly':
+for each cp where same checkpoint failed >= 5 of last 7 daily audits:
+raise(trigger=2, to=GM, urgency='next_audit', via='in_app')
+// Trigger 3: Cash variance > ₹500 single day
+if a.audit_type == 'daily' AND abs(a.cash_variance_rupees) > 500:
+raise(trigger=3, to=GM, urgency='same_day', via='whatsapp')
+// Check yesterday — if also > 500, escalate to Owner
+yest = SELECT FROM audits WHERE audit_date=a.audit_date-1day
+if yest AND abs(yest.cash_variance_rupees) > 500:
+raise(trigger=3, to=Owner, urgency='immediate', via='whatsapp')
+// Trigger 4: Inventory variance > 2% of stock value
+if a.audit_type == 'weekly' AND a.inventory_variance_pct > 2.0:
+raise(trigger=4, to=Owner, urgency='same_day', via='whatsapp')
+// Trigger 5: Theft / security / legal — manual flag from finding
+for each result in audit_results:
+if result.flag_security_concern == 1:
+raise(trigger=5, to=Owner, urgency='immediate', via='whatsapp')
+// Trigger 6: Customer complaint not store-resolvable — manual
+// (raised from CAP detail or audit notes by user action, not auto)
+// Trigger 7: Declining trend 3+ consecutive weeks
+if a.audit_type == 'weekly':
+last4 = SELECT compliance_pct FROM audits WHERE audit_type='weekly'
+ORDER BY audit_date DESC LIMIT 4
+if len(last4) >= 3 AND last4[0] < last4[1] < last4[2]:
+raise(trigger=7, to=Owner, urgency='same_day', via='in_app')
+7.1 — The raise() function — what it does
+७.१ — raise() कार्य — काय करते
+raise(trigger, to, urgency, via):
+msg = buildEscalationMessage(trigger, audit, urgency)  // see 7.2
+// 1. Insert escalation row
+INSERT INTO escalations (trigger_number, raised_to_user_id,
+urgency, what_happened, evidence, impact, requested_action,
+raised_at, status='open', source_audit_id, source_cap_id)
+// 2. Show in-app notification
+showLocalNotification(to, msg.summary)
+// 3. If via='whatsapp', open WhatsApp deep link
+if via == 'whatsapp':
+url = 'https://wa.me/' + to.phone + '?text=' + urlencode(msg.full)
+launchExternalUrl(url)
+7.2 — Escalation message format (4 parts, per Workbook A.5)
+७.२ — एस्केलेशन संदेश स्वरूप (४ भाग, पुस्तिका A.५ नुसार)
+buildEscalationMessage(trigger, audit, urgency):
+return {
+summary: '[' + urgency.upper() + '] Trigger ' + trigger + ' — ' + audit.audit_date,
+full: ('
+ESCALATION — ' + trigger_label_en[trigger] + '
+1. What happened: ' + msg.what_en + '
+2. Evidence: ' + msg.evidence_en + '
+3. Impact: ' + msg.impact_en + '
+4. Requested action: ' + msg.action_en + '
+—
+Saagar Traders audit app — auto-generated
+Date: ' + audit.audit_date + ' • Tier: ' + audit.audit_type
+')
+}
+Section 8 — Bilingual String Table
+विभाग ८ — द्विभाषी मजकूर तक्ता
+How strings are organized in Flutter
+Flutter मध्ये मजकूर कसा संघटित
+Use flutter_localizations + the intl package. Two files: assets/translations/app_en.arb and assets/translations/app_mr.arb. Each ARB file is JSON. Every user-facing string in the entire app exists in both files keyed by the same identifier. Code references strings as AppLocalizations.of(context).key — never hardcode user-facing text. The language is selected at login (S31) and stored in users.language_pref. App restart applies the change.
+flutter_localizations + intl पॅकेज वापरा. दोन फाइल्स: assets/translations/app_en.arb आणि assets/translations/app_mr.arb. प्रत्येक ARB फाइल JSON. संपूर्ण अॅपमधला प्रत्येक वापरकर्ता-तोंडी मजकूर त्याच ओळखकर्त्याने की केलेला दोन्ही फाइलमध्ये अस्तित्वात आहे. कोड AppLocalizations.of(context).key म्हणून संदर्भ देतो — वापरकर्ता-तोंडी मजकूर कधीही हार्डकोड करू नका. भाषा लॉगिनवर निवडली जाते (S31) आणि users.language_pref मध्ये साठवली. अॅप पुन्हा सुरू केल्याने बदल अंमलात येतो.
+Critical strings by category
+वर्गानुसार मुख्य मजकूर
+Navigation & nav-bar labels
+नेव्हिगेशन व नेव्ह-बार लेबल
+Buttons & actions
+बटणे व कृती
+Status & bands
+स्थिती व पट्ट्या
+Errors & validation
+त्रुटी आणि पडताळणी
+Success & confirmations
+यश व पुष्ट्या
+Section 9 — CAP Workflow — State Machine
+विभाग ९ — CAP कार्यप्रवाह — स्थिती यंत्र
+The state diagram in plain text
+स्पष्ट मजकुरात स्थिती आकृती
+A CAP moves through six possible states. Allowed transitions are strictly enforced — Claude Code MUST validate every state change against this table before writing to the database. An invalid transition (e.g., open → closed without going through done and verified) is a code bug and must throw.
+एक CAP सहा शक्य स्थितींमधून फिरते. परवानगी असलेले संक्रमण कठोरपणे अंमलात आणले जातात — क्लॉड कोडने डेटाबेसवर लिहिण्यापूर्वी प्रत्येक स्थिती बदलाची या तक्त्याशी पडताळणी करावी. अवैध संक्रमण (उदा. पूर्ण आणि पडताळलेले न जाता open → closed) हा कोड बग आणि throw करावा.
+9.1 — Aging logic — runs daily at midnight
+९.१ — जुने होणे तर्क — दर मध्यरात्री चालते
+// Scheduled via flutter_workmanager — runs once per day at 00:05 local time
+ageCheck():
+today = today's date
+open_caps = SELECT * FROM caps WHERE status IN ('open', 'done')
+for each cap in open_caps:
+if cap.deadline < today AND cap.status == 'open':
+UPDATE caps SET status='aged', aged_count = aged_count + 1
+INSERT cap_log: event='aged', from='open', to='aged'
+escalate_one_tier_up(cap)  // SM-owned → GM; GM-owned → Owner
+elif cap.deadline < today AND cap.status == 'done' AND days_since_done > 3:
+// Verification is overdue, not just the CAP
+escalate('verify_pending', target=cap.verifier_or_GM, urgency='same_day')
+9.2 — Extension rules
+९.२ — मुदतवाढ नियम
+Only GM or Owner can extend a deadline.
+फक्त GM किंवा मालक मुदत वाढवू शकतो.
+Must be done BEFORE the original deadline expires. Cannot extend a CAP that is already aged.
+मूळ मुदत संपण्यापूर्वी केले पाहिजे. आधीच जुनी झालेली CAP वाढवू शकत नाही.
+Extension requires a written reason (stored in caps.latest_extension_reason and appended to cap_log).
+मुदतवाढीला लेखी कारण लागते (caps.latest_extension_reason मध्ये साठवले आणि cap_log ला जोडले).
+Maximum 2 extensions per CAP. After 2 extensions, further extension requests are rejected — the CAP must be re-planned with a new 5 Whys instead.
+प्रति CAP जास्तीत जास्त २ मुदतवाढ. २ नंतर, पुढच्या मुदतवाढ विनंत्या नाकारल्या जातात — त्याऐवजी नवीन पाच का? सह CAP पुन्हा नियोजित करावी.
+Section 10 — Notifications & Alerts
+विभाग १० — सूचना व अॅलर्ट
+Two channels
+दोन मार्ग
+Channel A — in-app local notifications via flutter_local_notifications. These appear in the Android notification tray. Required for every notification triggered by the app.
+मार्ग अ — flutter_local_notifications द्वारे अॅप-अंतर्गत लोकल सूचना. Android सूचना ट्रेमध्ये दिसतात. अॅपने सुरू केलेल्या प्रत्येक सूचनेसाठी आवश्यक.
+Channel B — WhatsApp deep link via url_launcher. Used only for high-urgency escalations where the recipient must act outside the app. Opens WhatsApp with the recipient's number pre-selected and the escalation message pre-filled. The user still has to tap Send manually — we never auto-send.
+मार्ग ब — url_launcher द्वारे WhatsApp डीप लिंक. प्राप्तकर्त्याने अॅपच्या बाहेर कृती करायचीच अशा उच्च-तातडीच्या एस्केलेशनसाठीच वापरला जातो. प्राप्तकर्त्याचा नंबर पूर्व-निवडलेला आणि एस्केलेशन संदेश पूर्व-भरलेला असलेले WhatsApp उघडते. वापरकर्त्याला तरीही पाठवा हाताने टॅप करावे लागते — आम्ही आपोआप पाठवत नाही.
+Notification matrix — what fires when
+सूचना मॅट्रिक्स — कधी काय सुरू होते
+10.1 — WhatsApp deep link format
+१०.१ — WhatsApp डीप लिंक स्वरूप
+// Per WhatsApp documentation — works on Android and iOS
+url = 'https://wa.me/' + recipient_phone_e164 + '?text=' + urlencode(message)
+// Example
+recipient_phone_e164 = '91XXXXXXXXXX'  // no plus sign, no spaces
+message = '[SAME_NIGHT] Trigger 1 — 2026-05-27\n\n1. What happened: ...'
+launchExternalUrl(url, mode: LaunchMode.externalApplication)
+10.2 — In-app notification behaviour
+१०.२ — अॅप-अंतर्गत सूचना वर्तन
+All notifications also create an entry in the in-app Notifications screen (a future Phase 3 screen) so the user can review what they missed.
+सर्व सूचना अॅप-अंतर्गत सूचना स्क्रीनमध्ये (भविष्यातील टप्पा ३ स्क्रीन) नोंदी तयार करतात जेणेकरून वापरकर्ता काय चुकले ते पुनरावलोकन करू शकतो.
+Notifications never repeat — once an event is notified, the same event does not re-notify even if app is closed and reopened.
+सूचना कधीही पुनरावृत्ती होत नाहीत — एका घटनेची सूचना दिल्यानंतर, अॅप बंद करून पुन्हा उघडले तरी तीच घटना पुन्हा सूचना देत नाही.
+Critical-band and Trigger 5 (security/legal) notifications use a distinct sound and the persistent notification flag — they remain in the tray until the user opens them.
+क्रिटिकल पट्टी आणि ट्रिगर ५ (सुरक्षा/कायदेशीर) सूचना वेगळा आवाज आणि कायमस्वरूपी सूचना झेंडा वापरतात — वापरकर्त्याने उघडेपर्यंत ट्रेमध्ये राहतात.
+All other notifications use the default sound and auto-dismiss after the user taps them.
+इतर सर्व सूचना डीफॉल्ट आवाज वापरतात आणि वापरकर्त्याने टॅप केल्यावर आपोआप गायब.
+10.3 — Permission flow
+१०.३ — परवानगी प्रवाह
+On first launch after S3 (first-time setup), the app requests notification permission with the rationale: "The app needs to notify you when an audit needs your attention. Without this, urgent issues might be missed." If the user denies, the app continues to work, but a banner appears at the top of the Home screen recommending enabling notifications.
+S3 (पहिल्यांदा सेटअप) नंतर पहिल्या लॉन्चवर, अॅप कारणासह सूचना परवानगी मागते: "ऑडिटला तुमचे लक्ष लागले की अॅपला सूचना द्यायची गरज. याशिवाय, तातडीच्या समस्या चुकू शकतात." वापरकर्त्याने नकार दिला, अॅप काम करत राहते, पण होम स्क्रीनच्या वर बॅनर दिसून सूचना सक्षम करण्याची शिफारस.
+Section 11 — Reference Tab Content
+विभाग ११ — संदर्भ टॅब सामग्री
+What this section is
+हा विभाग काय
+The Reference tab is the app's built-in version of Workbook Appendices A.4 through A.7. The Store Manager needs these at 9:15 PM when paper cards have been lost or are unreachable. The four screens (S23–S26) render four reference sub-modules. The content for these screens comes from JSON files shipped with the app, so they can be updated in future versions without code changes.
+संदर्भ टॅब म्हणजे अॅपची पुस्तिकेच्या परिशिष्ट A.४ ते A.७ ची अंतर्निहित आवृत्ती. कागदी कार्ड हरवलेली किंवा पोचण्यायोग्य नसताना ९:१५ ला स्टोअर मॅनेजरला हे लागतात. चार स्क्रीन (S23–S26) चार संदर्भ उप-मॉड्यूल रेंडर करतात. या स्क्रीनसाठी सामग्री अॅपसोबत आलेल्या JSON फाइलमधून येते, त्यामुळे कोड बदलाशिवाय भविष्यातील आवृत्त्यांत अद्ययावत करता येतात.
+11.1 — S23 Rating Scale content
+११.१ — S23 रेटिंग स्केल सामग्री
+Source: Workbook Appendix A.4. Render as two stacked sections.
+स्रोत: पुस्तिका परिशिष्ट A.४. दोन स्टॅक केलेले विभाग म्हणून रेंडर.
+Section 1: 5 Compliance Bands table
+विभाग १: ५ अनुपालन पट्ट्या तक्ता
+Columns: Band (color), Range, Action.
+स्तंभ: पट्टी (रंग), श्रेणी, कृती.
+Rows: Excellent (≥95%), Good (90–94.9%), Fair (85–89.9%), Poor (80–84.9%), Critical (<80%).
+ओळी: उत्कृष्ट (≥९५%), चांगले (९०–९४.९%), बरे (८५–८९.९%), वाईट (८०–८४.९%), क्रिटिकल (<८०%).
+Each band is color-coded matching the workbook: Green / Navy / Amber / Red / Red.
+प्रत्येक पट्टी पुस्तिकेशी जुळणारी रंग-कोडित: हिरवा / नेव्ही / पिवळा / लाल / लाल.
+Section 2: Tier Targets table
+विभाग २: स्तर लक्ष्ये तक्ता
+Rows: Tier 1 daily (SM, 90%+, 81/90), Tier 2 weekly (GM, 92%+, 114/124), Tier 3 monthly (Owner, 95%+, qualitative).
+ओळी: टियर १ दैनंदिन (SM, ९०%+, ८१/९०), टियर २ साप्ताहिक (GM, ९२%+, ११४/१२४), टियर ३ मासिक (मालक, ९५%+, गुणात्मक).
+Section 3: Critical reminder banner
+विभाग ३: क्रिटिकल स्मरण बॅनर
+Warning callout: "Always score with one decimal. 89.9 is FAIR, not Good."
+इशारा कॉलआउट: "नेहमी एका दशांशासह गुण द्या. ८९.९ बरे आहे, चांगले नाही."
+11.2 — S24 Escalation Triggers content
+११.२ — S24 एस्केलेशन ट्रिगर सामग्री
+Source: Workbook Appendix A.5. Render as three sections.
+स्रोत: पुस्तिका परिशिष्ट A.५. तीन विभाग म्हणून रेंडर.
+Section 1: 7 Triggers table
+विभाग १: ७ ट्रिगर तक्ता
+Columns: #, Trigger, Threshold, Escalate to, When.
+स्तंभ: #, ट्रिगर, मर्यादा, कोणाकडे, कधी.
+7 rows: Daily Critical (<80%, GM→Owner if Cash/Inv, same night), Same checkpoint 5+ days (GM, weekly audit), Cash > ₹500 (GM, same day), Inventory > 2% (Owner, same day), Theft/security/legal (Owner, immediate), Customer complaint not store-resolvable (Owner, same day), 3+ weeks declining (Owner, week 3 audit).
+७ ओळी: दैनंदिन क्रिटिकल (<८०%, रोख/स्टॉक असेल GM→मालक, त्याच रात्री), एकच तपासणी बिंदू ५+ दिवस (GM, साप्ताहिक ऑडिट), रोख > ₹५०० (GM, त्याच दिवशी), स्टॉक > २% (मालक, त्याच दिवशी), चोरी/सुरक्षा/कायदेशीर (मालक, तातडीने), स्टोअर-न-सुटणारी ग्राहक तक्रार (मालक, त्याच दिवशी), ३+ आठवडे घसरता कल (मालक, आठवडा ३ ऑडिट).
+Section 2: 4-Part Message Format
+विभाग २: ४-भाग संदेश स्वरूप
+(1) What happened — 1 sentence. (2) Evidence. (3) Operational impact. (4) Requested action.
+(१) काय झाले — १ वाक्य. (२) पुरावा. (३) कार्यवाहक परिणाम. (४) मागितलेली कृती.
+Section 3: Examples
+विभाग ३: उदाहरणे
+3 worked example messages — one for each common trigger (1, 3, 5).
+३ उदाहरण संदेश — प्रत्येक सामान्य ट्रिगरसाठी एक (१, ३, ५).
+11.3 — S25 Evidence content
+११.३ — S25 पुरावा सामग्री
+Source: Workbook Appendix A.6. Two-column comparison table.
+स्रोत: पुस्तिका परिशिष्ट A.६. दोन-स्तंभ तुलना तक्ता.
+Left column: 8 Strong evidence types (timestamped photo, signed register, POS report, Sales Buddy upload, physical count, two-signature, bank slip, email trail).
+डावा स्तंभ: ८ मजबूत पुरावा प्रकार (वेळ-शिक्क्यासह फोटो, सही केलेले रजिस्टर, POS रिपोर्ट, सेल्स बडी अपलोड, प्रत्यक्ष मोजणी, दोन-सही, बँक स्लिप, ईमेल ट्रेल).
+Right column: 8 Weak evidence types (verbal, "manager confirmed", memory, photo without timestamp, unsigned doc, second-hand, deferred verification, assumption).
+उजवा स्तंभ: ८ दुर्बल पुरावा प्रकार (तोंडी, "मॅनेजरने सांगितले", स्मरण, वेळ-शिक्का नसलेला फोटो, सही नसलेले दस्त, दुसर्‍याकडून, पुढे ढकललेली पडताळणी, गृहीतक).
+Bottom warning: "Every finding must rest on the left column. Findings supported only by right-column items are reporting, not auditing."
+तळ इशारा: "प्रत्येक निष्कर्ष डाव्या स्तंभावर विसावला पाहिजे. फक्त उजव्या स्तंभातील आयटमने आधारित निष्कर्ष म्हणजे रिपोर्टिंग, ऑडिट नव्हे."
+11.4 — S26 Glossary content
+११.४ — S26 शब्दकोश सामग्री
+Source: Workbook Appendix A.7. 65 EN-MR-Meaning rows. Live-searchable.
+स्रोत: पुस्तिका परिशिष्ट A.७. ६५ EN-MR-अर्थ ओळी. लाइव्ह-शोधण्यायोग्य.
+Search behaviour
+शोध वर्तन
+Search box at top. As user types, filter rows where EN, MR, or Meaning contains the query (case-insensitive).
+वर शोध पेटी. वापरकर्ता टाइप करतो, EN, MR, किंवा अर्थ क्वेरी असलेल्या ओळी फिल्टर करा (केस-इन्सेन्सिटिव्ह).
+Empty search shows all 65 rows.
+रिकामा शोध सर्व ६५ ओळी दाखवतो.
+If user has Marathi UI, the search input accepts both Latin and Devanagari characters.
+वापरकर्त्याकडे मराठी UI असेल, शोध इनपुट लॅटिन आणि देवनागरी दोन्ही वर्ण स्वीकारतो.
+Storage
+साठवण
+assets/reference/glossary.json — array of objects {en, mr, meaning_en, meaning_mr}.
+assets/reference/glossary.json — ऑब्जेक्टचा अॅरे {en, mr, meaning_en, meaning_mr}.
+Updatable via app update (drop new JSON, ship new APK).
+अॅप अद्यतनाद्वारे अद्ययावत करण्यायोग्य (नवीन JSON टाका, नवीन APK पाठवा).
+Section 12 — Phasing Roadmap — Week by Week
+विभाग १२ — टप्पे — आठवडा-दर-आठवडा
+Phasing principle
+टप्पा तत्व
+Build one phase at a time. Use the actual app for two weeks at the store between phases. Do not start the next phase until the current phase is signed off using the Definition of Done in Section 16. The point of phasing is to find what does not work in real use BEFORE adding more features on top.
+एका वेळी एक टप्पा बांधा. टप्प्यांमध्ये स्टोअरमध्ये दोन आठवडे प्रत्यक्ष अॅप वापरा. विभाग १६ मधल्या Definition of Done वापरून सध्याचा टप्पा साइन-ऑफ होईपर्यंत पुढचा टप्पा सुरू करू नका. टप्प्यांचा मुद्दा हाच — अधिक फीचर्स वर जोडण्यापूर्वी प्रत्यक्ष वापरात काय काम करत नाही ते शोधणे.
+Phase 1 — Daily Audit Foundation (Weeks 1–4)
+टप्पा १ — दैनंदिन ऑडिट पाया (आठवडे १–४)
+Goal
+ध्येय
+Store Manager can log in, run a complete daily audit, capture photos for Cash/Inventory Fails, create CAPs from Fails, view audit history, and send the audit PDF to GM via WhatsApp. GM and Owner can log in but mostly read-only at this phase.
+स्टोअर मॅनेजर लॉग इन करू शकतो, संपूर्ण दैनंदिन ऑडिट चालवू शकतो, रोख/स्टॉक नापासांसाठी फोटो काढू शकतो, नापासांपासून CAP तयार करू शकतो, ऑडिट इतिहास पाहू शकतो, आणि WhatsApp द्वारे GM ला ऑडिट PDF पाठवू शकतो. GM आणि मालक लॉग इन करू शकतात पण या टप्प्यावर बहुतेक फक्त-वाचन.
+Week-by-week deliverables
+आठवडा-दर-आठवडा वितरण
+Phase 1 acceptance criteria
+टप्पा १ स्वीकृती निकष
+SM can complete a full daily audit in under 45 minutes on a phone.
+SM फोनवर ४५ मिनिटांच्या आत पूर्ण दैनंदिन ऑडिट करू शकतो.
+Score matches Workbook Day 5 Section 5.1 test case exactly (81/90 = 90.0% Good).
+गुण पुस्तिका दिवस ५ विभाग ५.१ चाचणी प्रकरणाशी अचूक जुळते (८१/९० = ९०.०% चांगले).
+Photo capture works in low light (test at counter after 8 PM).
+कमी प्रकाशात फोटो कॅप्चर चालते (८ PM नंतर काउंटरवर चाचणी).
+Offline mode works for 24 hours straight without sync.
+समक्रमणाशिवाय २४ तास सलग ऑफलाइन मोड चालतो.
+PDF export opens in WhatsApp and shares to a contact.
+PDF निर्यात WhatsApp मध्ये उघडते आणि संपर्काकडे शेअर होते.
+Both EN and MR work on every screen.
+प्रत्येक स्क्रीनवर EN आणि MR दोघे चालतात.
+Used at the actual store for at least 10 closings without major bugs.
+मोठ्या बग्सशिवाय किमान १० बंदोबस्तांसाठी प्रत्यक्ष स्टोअरमध्ये वापरला जातो.
+Phase 2 — Weekly Audit (Weeks 5–8)
+टप्पा २ — साप्ताहिक ऑडिट (आठवडे ५–८)
+Goal
+ध्येय
+GM can run a full weekly audit. 7-day daily review with spot checks. 36 weekly-only checkpoints. Weekly report generation matching Workbook Day 3 Section 3.6 format. CAP verification flow.
+GM संपूर्ण साप्ताहिक ऑडिट चालवू शकते. स्पॉट चेकसह ७-दिवस दैनंदिन पुनरावलोकन. ३६ साप्ताहिक-केवळ तपासणी बिंदू. पुस्तिका दिवस ३ विभाग ३.६ स्वरूपाशी जुळणारी साप्ताहिक अहवाल तयार करणे. CAP पडताळणी प्रवाह.
+Phase 2 acceptance criteria
+टप्पा २ स्वीकृती निकष
+GM can complete a weekly audit in 2–3 hours.
+GM २–३ तासांत साप्ताहिक ऑडिट पूर्ण करू शकते.
+Weekly score matches Workbook Day 5 Section 5.2 test exactly (104.8/124 = 84.5% Poor).
+साप्ताहिक गुण पुस्तिका दिवस ५ विभाग ५.२ चाचणीशी अचूक जुळते (१०४.८/१२४ = ८४.५% वाईट).
+Weekly report PDF is 1 page and follows the 9-section format from Workbook 3.6.
+साप्ताहिक अहवाल PDF १ पान आणि पुस्तिका ३.६ मधल्या ९-विभाग स्वरूपाचे पालन करतो.
+Spot check workflow works — GM can mark verified or flag discrepancy.
+स्पॉट चेक प्रवाह चालतो — GM पडताळलेले म्हणून खूण करू शकते किंवा विसंगती झेंडा.
+Used for at least 3 weekly audits with no major bugs.
+मोठ्या बग्सशिवाय किमान ३ साप्ताहिक ऑडिटसाठी वापरला.
+Phase 3 — Monthly + Escalation + Trends (Weeks 9–11)
+टप्पा ३ — मासिक + एस्केलेशन + कल (आठवडे ९–११)
+Goal
+ध्येय
+Owner can run a monthly audit. Escalation engine (Section 7) fully active. Trend analytics dashboard for Owner. Notifications (in-app + WhatsApp) live.
+मालक मासिक ऑडिट चालवू शकतो. एस्केलेशन इंजिन (विभाग ७) पूर्णतः सक्रिय. मालकासाठी कल विश्लेषण डॅशबोर्ड. सूचना (अॅप-अंतर्गत + WhatsApp) जिवंत.
+Phase 3 acceptance criteria
+टप्पा ३ स्वीकृती निकष
+All 7 escalation triggers fire correctly in the simulated audit scenarios.
+अनुकरण ऑडिट परिस्थितींमध्ये सर्व ७ एस्केलेशन ट्रिगर योग्यरीत्या सुरू होतात.
+WhatsApp deep link opens with correct pre-filled message.
+WhatsApp डीप लिंक योग्य पूर्व-भरलेल्या संदेशासह उघडते.
+Notifications appear in Android tray with sound for Critical triggers.
+क्रिटिकल ट्रिगरसाठी आवाजासह Android ट्रेमध्ये सूचना दिसतात.
+Trend dashboard loads in under 2 seconds for 12 weeks of data.
+१२ आठवड्यांच्या डेटासाठी कल डॅशबोर्ड २ सेकंदांच्या आत लोड.
+Day-of-week clustering pattern detected and shown when present.
+उपस्थित असेल आठवड्याच्या-दिवसाचा गठ्ठा पॅटर्न ओळखला आणि दाखवला.
+Phase 4 — Polish, Test, Release (Weeks 12–13)
+टप्पा ४ — पॉलिश, चाचणी, रिलीज (आठवडे १२–१३)
+Goal
+ध्येय
+Bug fixes from 8 weeks of real-store use. Performance pass. Accessibility pass. Play Store-ready APK with proper signing. 5-minute training video.
+८ आठवड्यांच्या प्रत्यक्ष-स्टोअर वापरातील बग्स दुरुस्त. कामगिरी पास. प्रवेशयोग्यता पास. योग्य सहीसह Play Store-तयार APK. ५-मिनिटांचा प्रशिक्षण व्हिडिओ.
+Phase 4 acceptance criteria
+टप्पा ४ स्वीकृती निकष
+All bugs from open bug list resolved or explicitly deferred to v2.
+उघड्या बग यादीतले सर्व बग्स सोडवले किंवा स्पष्टपणे v२ कडे पुढे ढकलले.
+APK installs cleanly on a fresh Android phone.
+APK ताज्या Android फोनवर स्वच्छपणे इन्स्टॉल होते.
+Sagar's keystore backed up in 2 locations (separate from the dev machine).
+सागरचा keystore २ ठिकाणी बॅकअप (डेव्ह मशीनपासून वेगळा).
+Training video covers the SM daily evening flow end-to-end.
+प्रशिक्षण व्हिडिओ SM दैनंदिन संध्याकाळचा प्रवाह सुरू-शेवटी कव्हर करतो.
+12.1 — What is explicitly OUT of scope for v1
+१२.१ — v१ साठी स्पष्टपणे व्याप्तीबाहेर
+These features are not part of v1. Anyone (including Claude Code) who suggests adding them mid-build should be politely refused and told to add them to a v2 wishlist file (docs/v2-wishlist.md). The point of phasing is to ship a complete v1; expanding scope mid-build is how 6-month projects become 18-month projects.
+ही फीचर्स v१ चा भाग नाहीत. बांधणीदरम्यान कोणीही (क्लॉड कोडसह) ती जोडण्याचे सुचवले — सौजन्याने नकार द्या आणि v२ wishlist फाइलमध्ये (docs/v2-wishlist.md) जोडायला सांगा. टप्प्यांचा मुद्दा हाच — पूर्ण v१ शिप करणे; बांधणीदरम्यान व्याप्ती वाढवल्याने ६-महिन्यांचे प्रकल्प १८-महिन्यांचे होतात.
+iOS / iPhone build. Android-only for v1.
+iOS / iPhone बिल्ड. v१ साठी फक्त-Android.
+Multi-store support. v1 is single combo store (WLMHW + HEMW share).
+बहु-स्टोअर समर्थन. v१ एकल कॉम्बो स्टोअर (WLMHW + HEMW शेअर).
+Tablet-optimised layouts. Phone-first; tablet works but unoptimized.
+टॅबलेट-अनुकूल मांडणी. फोन-प्रथम; टॅबलेट चालते पण अनुकूल नाही.
+Push notifications via Firebase Cloud Messaging. Local-only for v1.
+Firebase Cloud Messaging द्वारे पुश सूचना. v१ साठी फक्त-लोकल.
+CSV import of historic audits.
+ऐतिहासिक ऑडिटची CSV आयात.
+Custom checkpoint creation in-app (only seed JSON in v1).
+अॅप-अंतर्गत कस्टम तपासणी बिंदू तयार करणे (v१ मध्ये फक्त सीड JSON).
+Integration with Titan corporate systems or POS.
+टायटन कॉर्पोरेट सिस्टम किंवा POS शी एकीकरण.
+Voice-to-text for finding entry.
+निष्कर्ष नोंदीसाठी आवाज-ते-मजकूर.
+AI-suggested root causes or CAPs.
+AI-सुचवलेली मूळ कारणे किंवा CAPs.
+Section 13 — Test Scenarios
+विभाग १३ — चाचणी परिस्थिती
+How to use these tests
+या चाचण्या कशा वापरायच्या
+Each test scenario below is a reproducible script. Run it after every meaningful code change. If any test fails, the change is broken — roll back via Git, fix, and try again. Tests are organized by phase. Phase 1 tests must all pass before Phase 2 begins; Phase 2 tests must include all Phase 1 tests still passing.
+खाली प्रत्येक चाचणी परिस्थिती पुनरुत्पादक स्क्रिप्ट. प्रत्येक अर्थपूर्ण कोड बदलानंतर चालवा. कोणतीही चाचणी अयशस्वी झाली, बदल मोडला आहे — Git द्वारे मागे फिरा, दुरुस्ती करा, पुन्हा प्रयत्न करा. चाचण्या टप्प्यानुसार संघटित. टप्पा १ चाचण्या सर्व टप्पा २ सुरू होण्यापूर्वी पास झाल्या पाहिजेत; टप्पा २ चाचण्यांमध्ये सर्व टप्पा १ चाचण्या अजूनही पास होणे समाविष्ट.
+Phase 1 — Test Scenarios
+टप्पा १ — चाचणी परिस्थिती
+T1.1 — First-time setup
+T१.१ — पहिल्यांदा सेटअप
+Uninstall app. Reinstall. Launch.
+अॅप अनइन्स्टॉल करा. पुन्हा इन्स्टॉल करा. लॉन्च करा.
+Expect: Splash → Language Selection → First-Time Setup → Owner creation form.
+अपेक्षित: स्प्लॅश → भाषा निवड → पहिल्यांदा सेटअप → मालक तयार करण्याचा फॉर्म.
+Create Owner "Sagar" with PIN 1234. Expect navigation to Home.
+PIN १२३४ सह मालक "सागर" तयार करा. होमकडे जाणे अपेक्षित.
+From Settings → Manage Users, create GM and SM. From Manage CROs, add 4 CROs.
+सेटिंग्ज → वापरकर्ता व्यवस्थापन मधून GM आणि SM तयार करा. सीआरओ व्यवस्थापन मधून ४ सीआरओ जोडा.
+Expect: 3 users in DB (Owner, GM, SM), 4 CROs.
+अपेक्षित: DB मध्ये ३ वापरकर्ते (मालक, GM, SM), ४ सीआरओ.
+T1.2 — Daily audit reproduces Workbook Day 5 Section 5.1
+T१.२ — दैनंदिन ऑडिट पुस्तिका दिवस ५ विभाग ५.१ पुनरुत्पादन
+Log in as SM. Tap "Start Today's Daily Audit".
+SM म्हणून लॉग इन. "आजची दैनंदिन ऑडिट सुरू करा" टॅप.
+Enter the 12 observations from Workbook Day 5 Section 5.1:
+पुस्तिका दिवस ५ विभाग ५.१ मधली १२ निरीक्षणे टाका:
+F1 (1.4) → Fail, finding "Morning CRO Rohan without hand gloves at 11:20 AM"
+F१ (१.४) → नापास, निष्कर्ष "सकाळी ११:२० ला सीआरओ रोहन हात मोजे शिवाय"
+F2 (2.1, 2.2) → Pass + Pass
+F२ (२.१, २.२) → पास + पास
+F3 (3.x) → Fail
+F३ (३.x) → नापास
+F4 (4.x) → Pass with note
+F४ (४.x) → शेरा-असलेला-पास
+F5 (5.x) → Fail
+F५ (५.x) → नापास
+F6 (6.5) → Pass (with note: ₹60 over, explanation)
+F६ (६.५) → पास (शेरा: ₹६० जास्त, स्पष्टीकरण)
+F7 (6.11) → Fail (with photo)
+F७ (६.११) → नापास (फोटोसह)
+F8 (6.9) → Fail (with photo)
+F८ (६.९) → नापास (फोटोसह)
+F9 (7.1) → Pass
+F९ (७.१) → पास
+F10 (7.3) → Pass
+F१० (७.३) → पास
+F11 (7.8) → Fail (with photo)
+F११ (७.८) → नापास (फोटोसह)
+F12 (8.x) → Pass
+F१२ (८.x) → पास
+Mark remaining 56 checkpoints as Pass.
+उरलेले ५६ तपासणी बिंदू पास म्हणून खूण करा.
+Tap Submit.
+सादर टॅप करा.
+EXPECTED: compliance_pct = 90.0, band = 'good'. EXACT MATCH. If the app shows anything other than 90.0% Good, the score engine has a bug.
+अपेक्षित: compliance_pct = ९०.०, band = 'good'. अचूक जुळणी. अॅप ९०.०% चांगले व्यतिरिक्त काही दाखवत असेल, गुण इंजिनला बग आहे.
+T1.3 — Critical SOP Fail forces photo
+T१.३ — क्रिटिकल एसओपी नापास फोटो सक्ती
+Start a new daily audit.
+नवीन दैनंदिन ऑडिट सुरू करा.
+Mark checkpoint 6.5 (Cash variance) as Fail. Skip the photo attachment. Try to Submit.
+तपासणी बिंदू ६.५ (रोख तफावत) नापास म्हणून खूण. फोटो जोडणी वगळा. सादर करण्याचा प्रयत्न करा.
+EXPECTED: Submit blocked. Error message: "Photo required for Cash/Inventory Fails. Add photo to checkpoint 6.5."
+अपेक्षित: सादरीकरण ब्लॉक. त्रुटी संदेश: "रोख/स्टॉक नापासांना फोटो आवश्यक. तपासणी बिंदू ६.५ ला फोटो जोडा."
+T1.4 — NA handling
+T१.४ — NA हाताळणी
+Start a daily audit on a Sunday (closed-store scenario).
+रविवारी दैनंदिन ऑडिट सुरू करा (बंद-स्टोअर परिस्थिती).
+Mark 5 checkpoints as NA, each with a one-line reason.
+५ तपासणी बिंदू NA म्हणून खूण, प्रत्येकाला एका-ओळीचे कारण.
+Mark the remaining 63 as Pass.
+उरलेले ६३ पास म्हणून खूण.
+Submit.
+सादर करा.
+EXPECTED: max_score = 90 minus weights of the 5 NAs. compliance_pct calculated from new max_score, not 90. If NA weights sum to 10, max=80, compliance=63 weighted passes / 80 × 100.
+अपेक्षित: max_score = ९० वजा ५ NAs ची वजने. compliance_pct नवीन max_score वरून मोजली, ९० वरून नव्हे. NA वजने १० बेरीज असतील, max=८०, अनुपालन=६३ वजनी पास / ८० × १००.
+T1.5 — Offline operation for 24 hours
+T१.५ — २४ तास ऑफलाइन कार्य
+Enable airplane mode.
+विमान मोड सक्षम करा.
+Conduct 2 complete daily audits across 2 days, with photos, with CAPs.
+२ दिवसांत २ संपूर्ण दैनंदिन ऑडिट करा, फोटो आणि CAP सह.
+Verify all data is saved locally.
+सर्व डेटा लोकल जतन झाला याची पडताळणी करा.
+Disable airplane mode.
+विमान मोड अक्षम करा.
+EXPECTED: Sync state goes amber → green within 60 seconds. All audits, photos, CAPs appear in Firestore. Sync indicator shows green.
+अपेक्षित: समक्रमण स्थिती ६० सेकंदांत पिवळी → हिरवी. सर्व ऑडिट, फोटो, CAP Firestore मध्ये दिसतात. समक्रमण सूचक हिरवा.
+T1.6 — PIN lockout
+T१.६ — PIN लॉकआउट
+Enter wrong PIN 5 times within 60 seconds.
+६० सेकंदांत ५ वेळा चुकीचा PIN टाका.
+EXPECTED: 60-second lockout with countdown. Cannot try again until countdown ends.
+अपेक्षित: काउंटडाउनसह ६०-सेकंद लॉकआउट. काउंटडाउन संपेपर्यंत पुन्हा प्रयत्न करता येत नाही.
+T1.7 — Language toggle persists
+T१.७ — भाषा टॉगल टिकते
+Log in as SM with EN. Go to Settings → Language. Switch to MR. App restarts.
+EN सह SM म्हणून लॉग इन. सेटिंग्ज → भाषा. MR वर स्विच. अॅप पुन्हा सुरू.
+EXPECTED: All screens now in Marathi. Marathi persists across app close+reopen and across logout+login.
+अपेक्षित: सर्व स्क्रीन आता मराठीत. अॅप बंद+पुन्हा उघडा आणि लॉगआउट+लॉगिन मध्ये मराठी टिकते.
+Phase 2 — Test Scenarios (in addition to all Phase 1)
+टप्पा २ — चाचणी परिस्थिती (सर्व टप्पा १ व्यतिरिक्त)
+T2.1 — Weekly audit reproduces Workbook Day 5 Section 5.2
+T२.१ — साप्ताहिक ऑडिट पुस्तिका दिवस ५ विभाग ५.२ पुनरुत्पादन
+Seed 7 daily audits with compliance percentages: 92.2, 91.1, 90.0, 88.8, 93.3, 89.7, 91.4.
+७ दैनंदिन ऑडिट सीड करा अनुपालन टक्केवारीसह: ९२.२, ९१.१, ९०.०, ८८.८, ९३.३, ८९.७, ९१.४.
+Log in as GM. Start weekly audit.
+GM म्हणून लॉग इन. साप्ताहिक ऑडिट सुरू करा.
+Enter weekly-only checkpoint results matching Workbook 5.2: Operations 7/10, Cash 10/16, R&S 4/6, Inventory 22/24.
+पुस्तिका ५.२ शी जुळणारे साप्ताहिक-केवळ तपासणी बिंदू निकाल टाका: ऑपरेशन्स ७/१०, रोख १०/१६, R&S ४/६, स्टॉक २२/२४.
+Submit weekly audit.
+साप्ताहिक ऑडिट सादर.
+EXPECTED: total_raw = 104.8, total_max = 124, compliance_pct = 84.5, band = 'poor'. EXACT MATCH.
+अपेक्षित: total_raw = १०४.८, total_max = १२४, compliance_pct = ८४.५, band = 'poor'. अचूक जुळणी.
+T2.2 — Missing daily counts as 0%
+T२.२ — गहाळ दैनंदिन ०% म्हणून मोजला
+Seed 6 daily audits with 90% average; skip day 3 (no audit row for that date).
+९०% सरासरीसह ६ दैनंदिन ऑडिट सीड; दिवस ३ वगळा (त्या तारखेसाठी ऑडिट ओळ नाही).
+Run weekly audit.
+साप्ताहिक ऑडिट चालवा.
+EXPECTED: daily-average treats day 3 as 0%, not as missing. Average = (90 × 6 + 0) / 7 = 77.1%. Contribution = 77.1 × 0.68 = 52.4.
+अपेक्षित: दैनंदिन-सरासरी दिवस ३ ला ०% म्हणून मानते, गहाळ नव्हे. सरासरी = (९० × ६ + ०) / ७ = ७७.१%. योगदान = ७७.१ × ०.६८ = ५२.४.
+T2.3 — Spot check workflow
+T२.३ — स्पॉट चेक प्रवाह
+GM opens weekly audit, taps Day 3.
+GM साप्ताहिक ऑडिट उघडते, दिवस ३ टॅप करते.
+App shows 3 randomly-selected checkpoints from day 3 for spot check.
+स्पॉट चेकसाठी अॅप दिवस ३ मधून ३ यादृच्छिक-निवडलेले तपासणी बिंदू दाखवते.
+GM marks all 3 as Verified.
+GM तिघांना पडताळलेले म्हणून खूण.
+EXPECTED: Day 3 daily audit now shows GM-verified status. GM signature recorded.
+अपेक्षित: दिवस ३ दैनंदिन ऑडिट आता GM-पडताळलेले स्थिती. GM सही नोंदवली.
+T2.4 — Pattern detection (same checkpoint 3+ days)
+T२.४ — पॅटर्न शोध (एकच तपासणी बिंदू ३+ दिवस)
+Seed 5 daily audits where checkpoint 1.4 (hand gloves) fails on days 1, 2, 3.
+५ दैनंदिन ऑडिट सीड जिथे तपासणी बिंदू १.४ (हात मोजे) दिवस १, २, ३ नापास.
+Run weekly audit.
+साप्ताहिक ऑडिट चालवा.
+EXPECTED: Pattern section of weekly report includes: "Checkpoint 1.4 failed on 3 days (Mon, Tue, Wed) — pattern". A single Pattern CAP is auto-suggested, not three separate CAPs.
+अपेक्षित: साप्ताहिक अहवालाच्या पॅटर्न विभागात समावेश: "तपासणी बिंदू १.४ ३ दिवस नापास (सोम, मंगळ, बुध) — पॅटर्न". तीन वेगळ्या CAP नव्हे, एक पॅटर्न CAP आपोआप सुचवली.
+Phase 3 — Test Scenarios
+टप्पा ३ — चाचणी परिस्थिती
+T3.1 — Trigger 1 fires on Critical daily
+T३.१ — क्रिटिकल दैनंदिनवर ट्रिगर १ सुरू
+As SM, submit a daily audit with compliance 78% (Critical band), with at least one Cash Fail.
+SM म्हणून, क्रिटिकल पट्टी ७८% अनुपालनासह दैनंदिन ऑडिट सादर, किमान एक रोख नापास.
+EXPECTED:
+अपेक्षित:
+escalations row created with trigger_number=1, raised_to=GM.
+escalations ओळ तयार trigger_number=१, raised_to=GM.
+Second escalations row created with trigger_number=1, raised_to=Owner (because Cash cause).
+trigger_number=१, raised_to=मालक सह दुसरी escalations ओळ तयार (रोख कारण).
+In-app notification visible to GM and Owner.
+GM आणि मालकाला अॅप-अंतर्गत सूचना दिसते.
+WhatsApp opens with pre-filled escalation message.
+पूर्व-भरलेल्या एस्केलेशन संदेशासह WhatsApp उघडते.
+T3.2 — Trigger 7 fires after 3 declining weeks
+T३.२ — ३ घसरत्या आठवड्यांनंतर ट्रिगर ७ सुरू
+Seed 4 weekly audits with compliance: 93.4, 92.1, 91.5, 90.8.
+अनुपालनासह ४ साप्ताहिक ऑडिट सीड: ९३.४, ९२.१, ९१.५, ९०.८.
+Submit the 4th weekly audit.
+४थी साप्ताहिक ऑडिट सादर.
+EXPECTED: Trigger 7 fires (3 consecutive decreases). escalations row → Owner. In-app notification.
+अपेक्षित: ट्रिगर ७ सुरू (सलग ३ घसरण). escalations ओळ → मालक. अॅप-अंतर्गत सूचना.
+T3.3 — CAP aging at midnight
+T३.३ — मध्यरात्री CAP जुनी होणे
+Create a CAP with deadline = yesterday. Mark status=open.
+मुदत = काल असलेली CAP तयार करा. status=open खूण.
+Manually run the aging job (in dev, exposed via Settings → Diagnostics).
+जुने होणे काम हाताने चालवा (डेव्हमध्ये, सेटिंग्ज → Diagnostics द्वारे उघड).
+EXPECTED: CAP status → aged. aged_count incremented. Escalation row created targeting next tier up.
+अपेक्षित: CAP status → aged. aged_count वाढले. पुढच्या स्तर वरच्या लक्ष्यासह एस्केलेशन ओळ तयार.
+T3.4 — Trend dashboard
+T३.४ — कल डॅशबोर्ड
+Seed 12 weeks of weekly audits with varied compliance percentages.
+विविध अनुपालन टक्केवारीसह १२ आठवड्यांच्या साप्ताहिक ऑडिट सीड.
+Owner opens trend dashboard.
+मालक कल डॅशबोर्ड उघडतो.
+EXPECTED: 12-week line chart loads in <2 seconds. Per-SOP rolling 4-week average shown. Day-of-week heatmap rendered if data sufficient.
+अपेक्षित: १२-आठवडी रेषा चार्ट <२ सेकंदांत लोड. प्रति-एसओपी रोलिंग ४-आठवडी सरासरी दाखवली. डेटा पुरेसा असेल आठवड्याचा-दिवस हीटमॅप रेंडर.
+13.1 — Test execution policy
+१३.१ — चाचणी अंमलबजावणी धोरण
+Run ALL Phase 1 tests before declaring Phase 1 done.
+टप्पा १ झाला घोषित करण्यापूर्वी सर्व टप्पा १ चाचण्या चालवा.
+Run ALL Phase 1 + Phase 2 tests before declaring Phase 2 done. Regression check.
+टप्पा २ झाला घोषित करण्यापूर्वी सर्व टप्पा १ + टप्पा २ चाचण्या चालवा. Regression तपासणी.
+Run ALL Phase 1 + 2 + 3 tests before Phase 4. By then there are 15+ test scenarios.
+टप्पा ४ पूर्वी सर्व टप्पा १ + २ + ३ चाचण्या चालवा. तोपर्यंत १५+ चाचणी परिस्थिती.
+If any test fails, do not proceed to a new feature. Fix the regression first.
+कोणतीही चाचणी अयशस्वी, नवीन फीचरवर जाऊ नका. आधी regression दुरुस्त.
+Document each test pass/fail in docs/test-log.md with date and tester.
+प्रत्येक चाचणी pass/fail docs/test-log.md मध्ये दिनांक आणि चाचणी घेणाऱ्यासह कागदपत्र.
+Section 14 — The Master Claude Code Prompt
+विभाग १४ — मास्टर क्लॉड कोड प्रॉम्प्ट
+How this section works
+हा विभाग कसा चालतो
+This section contains five prompts. The Session-Start Prompt is pasted at the start of EVERY Claude Code session — it sets the ground rules and tells Claude Code which documents to read first. The four Phase Prompts are pasted at the start of each phase to focus Claude Code on that phase's deliverables. Use them in order. Do not skip the Session-Start Prompt — it is what prevents Claude Code from wandering off-spec.
+या विभागात पाच प्रॉम्प्ट आहेत. सत्र-सुरुवात प्रॉम्प्ट प्रत्येक क्लॉड कोड सत्राच्या सुरुवातीला पेस्ट केला जातो — तो जमिनीचे नियम सेट करतो आणि क्लॉड कोडला कोणते दस्तऐवज आधी वाचायचे ते सांगतो. चार टप्पा प्रॉम्प्ट प्रत्येक टप्प्याच्या सुरुवातीला पेस्ट केले जातात — त्या टप्प्याच्या वितरणावर क्लॉड कोडचे लक्ष केंद्रित करण्यासाठी. क्रमाने वापरा. सत्र-सुरुवात प्रॉम्प्ट वगळू नका — तेच क्लॉड कोडला तपशीलातून भटकू देत नाही.
+14.1 — Session-Start Prompt (every session)
+१४.१ — सत्र-सुरुवात प्रॉम्प्ट (प्रत्येक सत्र)
+Paste this at the start of every Claude Code session, after uploading the two files. Wait for Claude Code to confirm it has read both before issuing any other instructions.
+दोन फाइल अपलोड केल्यानंतर प्रत्येक क्लॉड कोड सत्राच्या सुरुवातीला हा पेस्ट करा. इतर कोणत्याही सूचना देण्यापूर्वी क्लॉड कोडने दोन्ही वाचले याची पुष्टी मिळेपर्यंत वाट पाहा.
+Prompt text — copy below verbatim
+प्रॉम्प्ट मजकूर — खालचा जसाच्या तसा कॉपी करा
+You are building the Saagar Traders Priority 1 SOP Audit mobile
+application. I have uploaded two files:
+1. Saagar_P1_Audit_Workbook_v1.docx — the operational truth.
+This defines WHAT the audit programme is.
+2. Saagar_P1_App_Spec_v1.docx — the build manual.
+This defines HOW the app implements the Workbook.
+BEFORE you write any code or answer any question:
+STEP 1: Read the Specification document fully. It is the primary
+source for everything you build.
+STEP 2: Open the Workbook and confirm you can find Day 2 Section
+2.9 (the 8 SOPs), Day 3 Section 3.4 (weekly checkpoints),
+Day 4 Section 4.6 (escalation triggers), and Appendices A.1
+through A.7. You will reference these specific sections from
+inside your code's comments and from the Spec.
+STEP 3: Tell me which Phase we are working on today (1, 2, 3,
+or 4). Do not assume. If I have not told you, ask.
+HARD RULES — these apply in every session, never overridden:
+R1. The Workbook is the ground truth. If anything I say or
+anything in the Spec contradicts the Workbook, stop and
+flag it. Do not silently choose one over the other.
+R2. The tech stack is LOCKED to what the Spec Section 2
+specifies. Specifically: Flutter, Dart, sqflite (NOT drift
+or isar), Firebase Firestore + Storage, custom PIN auth
+(NOT Firebase Auth), Riverpod (NOT Provider or Bloc),
+go_router (NOT auto_route). Do NOT suggest alternatives.
+Do NOT silently swap libraries. Do NOT use deprecated APIs.
+If you believe an alternative is genuinely necessary,
+STOP and ask me. Do not implement first and explain later.
+R3. Every user-facing string MUST exist in both app_en.arb
+and app_mr.arb at the moment the string is added. Never
+hardcode user-visible text. If you do not know the
+Marathi translation, STOP and ask. Do not guess.
+R4. Every score calculation must match the formulas in Spec
+Section 6 EXACTLY. The two canonical test cases are
+Workbook Day 5 Section 5.1 (must produce 90.0% Good)
+and Day 5 Section 5.2 (must produce 84.5% Poor).
+If your code produces any other answer, the code is wrong.
+R5. Audit immutability — once status='submitted', the audits
+row and its audit_results rows MUST NOT be UPDATEd or
+DELETEd by any code path other than Owner-only "hide"
+(which sets status='hidden' but leaves all fields
+intact). Enforce this in the data access layer with
+a guard.
+R6. PINs are never stored, logged, or printed in plaintext.
+bcrypt hash only. Never log to console, crash reports,
+or audit_log.
+R7. Photos for Cash (SOP 6) and Inventory (SOP 7) Fails are
+MANDATORY. Submission validation must block until at
+least one photo is attached to each such Fail.
+R8. Offline-first. Every screen must function with airplane
+mode on. Sync runs in the background and never blocks
+the UI. If you write code that requires internet to
+function, that is a bug.
+R9. Do not add features not in the current Phase scope.
+Spec Section 12 defines the four phases. If you think a
+feature should be added, append it to docs/v2-wishlist.md
+and continue with the current Phase.
+R10. After every meaningful change, write a git commit with
+a Conventional Commit message (Spec Section 15.5).
+Never let a session end without committing.
+WHEN YOU FINISH READING BOTH DOCUMENTS, reply with:
+"Read both documents. Working on Phase ___. Ready."
+Do not start coding until I confirm the Phase and give you the
+Phase-specific prompt from Spec Section 14.2–14.5.
+14.2 — Phase 1 Prompt (Weeks 1–4)
+१४.२ — टप्पा १ प्रॉम्प्ट (आठवडे १–४)
+Paste this after the Session-Start Prompt has been acknowledged. This focuses Claude Code on Phase 1 deliverables.
+सत्र-सुरुवात प्रॉम्प्टची पुष्टी झाल्यानंतर हा पेस्ट करा. हा क्लॉड कोडचे लक्ष टप्पा १ वितरणांवर केंद्रित करतो.
+PHASE 1 — DAILY AUDIT FOUNDATION (Weeks 1–4)
+Phase 1 Goal (from Spec Section 12.1):
+Store Manager can log in, run a complete daily audit, capture
+photos for Cash/Inventory Fails, create CAPs from Fails, view
+audit history, and send the audit PDF to GM via WhatsApp.
+GM and Owner can log in but mostly read-only.
+Screens to build (Spec Section 5):
+S1 Splash, S2 Language Selection, S3 First-Time Setup,
+S4 Login, S5 Home, S6 Start Daily Audit,
+S7 Daily Audit Checkpoint, S8 Fail Detail, S9 Photo Capture,
+S10 Review & Submit, S11 Submitted Confirmation,
+S12 Audit History, S13 Audit Detail,
+S14 CAP List, S15 CAP Create, S16 CAP Detail,
+S17 CAP Mark Done, S22-S26 Reference tab, S27-S32 Settings.
+Data model to implement (Spec Section 4):
+All 14 tables. Seed sops.json (8 rows) and
+checkpoints.json (68 daily rows). Weekly-only checkpoints
+can be omitted until Phase 2.
+Score logic to implement (Spec Section 6):
+6.1 computeDailyScore, 6.2 bandFromCompliance,
+6.3 worked example (Workbook 5.1 → 90.0% Good),
+6.4 NA handling. Weekly score logic (6.5+) is Phase 2.
+Notifications to implement (Spec Section 10):
+Phase 1 has only basic in-app notifications. The 7-trigger
+escalation engine is Phase 3. For Phase 1, the only
+WhatsApp action is manual share of an audit PDF by the SM.
+Phase 1 Definition of Done (Spec Section 16.1):
+Run every test in Spec Section 13 Phase 1 (T1.1 through
+T1.7). All must pass. Then use the app at the store for
+at least 10 closings without major bugs. Then sign off.
+Build order (start with week 1):
+1. Create empty Flutter project. Set up Riverpod, go_router,
+sqflite. Connect to Firebase project (Sagar provides
+google-services.json).
+2. Implement all 14 SQLite tables from Spec Section 4.
+3. Write assets/seed/sops.json and
+assets/seed/checkpoints.json (daily only).
+4. Build S1, S2, S3, S4 (cold-launch flow).
+5. Stop. Show me a working build. I'll test the cold launch.
+DO NOT:
+- Build all screens at once before showing me anything.
+- Add features from Phase 2/3/4 "because they'll be needed.
+anyway".
+- Use any tech stack not in Spec Section 2.2.
+- Hardcode any user-facing text in English. Use ARB.
+- Skip writing a test for the score engine.
+Confirm you understand and tell me what you'll build first.
+14.3 — Phase 2 Prompt (Weeks 5–8)
+१४.३ — टप्पा २ प्रॉम्प्ट (आठवडे ५–८)
+PHASE 2 — WEEKLY AUDIT (Weeks 5–8)
+PRE-CONDITION: Phase 1 is signed off using DoD in Spec
+Section 16.1. All Phase 1 tests (T1.1–T1.7) pass.
+If they don't, STOP and finish Phase 1 first.
+Phase 2 Goal (from Spec Section 12.2):
+GM can run a full weekly audit with 7-day daily review +
+spot checks + 36 weekly-only checkpoints. Weekly report
+generation matches Workbook Day 3 Section 3.6 format.
+CAP verification flow active.
+New screens to build (Spec Section 5):
+S18 CAP Verify, S19 CAP Close, S20 Reports List,
+S21 Report Detail. Plus new weekly-audit screens
+(analogous to S6–S10 but for weekly audit type).
+Data model additions:
+Add 36 weekly-only checkpoint rows to checkpoints.json
+(Workbook Day 3 Section 3.4). Add reports table
+data layer.
+Score logic to add (Spec Section 6.5–6.7):
+computeWeeklyScore. Daily-audit-average contribution
+(× 0.68). Cumulative weekly cash variance check (CW.7).
+Missing-day-as-zero rule.
+Workflow to implement:
+7-day daily review screen — GM sees 7 daily audits as
+cards, opens each, app picks 3 random checkpoints for
+spot check, GM marks each Verified or Discrepancy.
+After all 7 days reviewed, weekly-only checkpoints flow.
+Phase 2 Definition of Done (Spec Section 16.2):
+All Phase 1 tests STILL pass (regression). Plus all
+Phase 2 tests (T2.1–T2.4). Used for at least 3 weekly
+audits at the store.
+Confirm and tell me the order you'll build in.
+14.4 — Phase 3 Prompt (Weeks 9–11)
+१४.४ — टप्पा ३ प्रॉम्प्ट (आठवडे ९–११)
+PHASE 3 — MONTHLY + ESCALATION + TRENDS (Weeks 9–11)
+PRE-CONDITION: Phases 1 and 2 signed off. All T1.x and
+T2.x tests pass.
+Phase 3 Goal (Spec Section 12.3):
+Owner can run a monthly audit. Escalation engine fully
+active (all 7 triggers). Trend analytics dashboard for
+Owner. WhatsApp deep links + in-app notifications live.
+New work:
+- Monthly audit data + checkpoints + screens (analogous to
+weekly).
+- Escalation engine — Spec Section 7. All 7 triggers.
+WhatsApp deep link format from Section 10.1.
+- Trend dashboard — fl_chart for 12-week compliance line,
+4-week rolling per-SOP, day-of-week heatmap.
+- CAP aging job via flutter_workmanager (Spec Section 9.1).
+Phase 3 Definition of Done (Spec Section 16.3):
+All T1.x, T2.x, T3.x tests pass. WhatsApp deeplink tested
+on a real device. Trend dashboard loads <2 seconds.
+14.5 — Phase 4 Prompt (Weeks 12–13)
+१४.५ — टप्पा ४ प्रॉम्प्ट (आठवडे १२–१३)
+PHASE 4 — POLISH, TEST, RELEASE (Weeks 12–13)
+PRE-CONDITION: Phases 1, 2, 3 all signed off.
+Phase 4 work:
+- Bug triage from open bug list (maintained in
+docs/bug-log.md across all phases).
+- Performance: every audit screen tap must respond
+in <100ms. Profile and fix slow paths.
+- Test on 3 Android phones: low-end (Android 7, 2GB RAM),
+mid-range (Android 11, 4GB RAM), recent (Android 14, 6GB+).
+- Accessibility: TalkBack labels on every interactive
+element. Contrast ratios ≥ 4.5:1.
+- Production APK signing. Keystore stored in Sagar's
+password manager + backup location.
+- README.md, ops runbook, training video script.
+DoD (Spec Section 16.4): App is Play-Store-ready. Sagar
+has the signed APK installed on his phone and uses it
+daily for a week without bug reports.
+Section 15 — Coding Conventions & Repository Structure
+विभाग १५ — कोडिंग संमेलने आणि रिपॉझिटरी रचना
+15.1 — GitHub repository setup
+१५.१ — GitHub रिपॉझिटरी सेटअप
+Create a private GitHub repository named saagar-audit-app under Sagar's account.
+सागरच्या खात्याअंतर्गत saagar-audit-app नावाची खाजगी GitHub रिपॉझिटरी तयार करा.
+Initialize with .gitignore for Flutter (use GitHub's default template).
+Flutter साठी .gitignore सह सुरुवात करा (GitHub चे डीफॉल्ट टेम्पलेट वापरा).
+Add Sagar as Owner (creator), and grant Claude Code session access via SSH key or fine-grained personal access token.
+सागरला मालक (निर्माता) जोडा, आणि SSH की किंवा fine-grained personal access token द्वारे क्लॉड कोड सत्र प्रवेश द्या.
+Enable branch protection on main: require PR before merge, require 1 approval (Sagar).
+main वर शाखा संरक्षण सक्षम करा: merge करण्यापूर्वी PR आवश्यक, १ मंजुरी (सागर) आवश्यक.
+15.2 — Folder structure
+१५.२ — फोल्डर रचना
+saagar-audit-app/
+├── README.md                       (project overview, how to build)
+├── .gitignore
+├── pubspec.yaml                    (Flutter dependencies)
+├── docs/
+│   ├── spec.md                     (link to this Spec docx)
+│   ├── workbook.md                 (link to Workbook docx)
+│   ├── data-model.md               (mirrors Spec Section 4)
+│   ├── score-logic.md              (mirrors Spec Section 6)
+│   ├── test-log.md                 (per-phase test results)
+│   ├── bug-log.md                  (open + resolved bugs)
+│   └── v2-wishlist.md              (deferred features)
+├── lib/
+│   ├── main.dart
+│   ├── app.dart                    (MaterialApp setup, routing)
+│   ├── data/
+│   │   ├── models/                 (one file per table: user.dart, audit.dart, ...)
+│   │   ├── db/
+│   │   │   ├── database.dart       (sqflite setup, migrations)
+│   │   │   ├── audit_dao.dart
+│   │   │   ├── cap_dao.dart
+│   │   │   └── ...                 (one DAO per table cluster)
+│   │   ├── firestore/
+│   │   │   ├── sync_service.dart
+│   │   │   └── storage_service.dart
+│   │   └── seed/
+│   │       └── seed_loader.dart    (reads assets/seed/*.json)
+│   ├── domain/
+│   │   ├── score_engine.dart       (Section 6 implementation)
+│   │   ├── escalation_engine.dart  (Section 7)
+│   │   ├── cap_state_machine.dart  (Section 9)
+│   │   └── pdf_generator.dart
+│   ├── ui/
+│   │   ├── screens/                (one folder per screen S1, S4, ...)
+│   │   ├── widgets/                (reusable widgets)
+│   │   └── theme/                  (navy/gold theme)
+│   ├── providers/                  (Riverpod providers)
+│   └── utils/
+│       ├── i18n.dart               (localization helpers)
+│       ├── date_utils.dart
+│       └── logger.dart
+├── test/                           (unit tests)
+│   ├── score_engine_test.dart      (regression tests for 5.1, 5.2)
+│   ├── escalation_engine_test.dart
+│   └── cap_state_machine_test.dart
+├── integration_test/               (end-to-end tests)
+├── android/                        (Android build config)
+├── assets/
+│   ├── translations/
+│   │   ├── app_en.arb
+│   │   └── app_mr.arb
+│   ├── seed/
+│   │   ├── sops.json
+│   │   └── checkpoints.json
+│   ├── reference/
+│   │   ├── rating_scale.json
+│   │   ├── escalation_triggers.json
+│   │   ├── evidence.json
+│   │   └── glossary.json
+│   ├── images/
+│   └── migrations/                 (schema v2.sql, v3.sql ...)
+└── builds/                         (compiled APKs, one per release)
+15.3 — File naming
+१५.३ — फाइल नामकरण
+Dart files: snake_case. Example: audit_result.dart, score_engine.dart.
+Dart फाइल्स: snake_case. उदाहरण: audit_result.dart, score_engine.dart.
+Class names: PascalCase. Example: AuditResult, ScoreEngine.
+क्लास नावे: PascalCase. उदाहरण: AuditResult, ScoreEngine.
+Variables and functions: camelCase. Example: computeDailyScore, currentUser.
+व्हेरिएबल आणि फंक्शन: camelCase. उदाहरण: computeDailyScore, currentUser.
+Constants: SCREAMING_SNAKE_CASE. Example: MAX_PHOTOS_PER_FAIL.
+स्थिरांक: SCREAMING_SNAKE_CASE. उदाहरण: MAX_PHOTOS_PER_FAIL.
+One screen per folder. lib/ui/screens/s07_checkpoint/ contains checkpoint_screen.dart, checkpoint_controller.dart, and any local widgets.
+प्रत्येक स्क्रीनसाठी एक फोल्डर. lib/ui/screens/s07_checkpoint/ मध्ये checkpoint_screen.dart, checkpoint_controller.dart, आणि कोणतेही लोकल विजेट्स.
+15.4 — Branch strategy
+१५.४ — शाखा धोरण
+main — protected. Only Sagar's PR approvals merge here. Always a working build.
+main — संरक्षित. फक्त सागरच्या PR मंजुरीने इथे merge. नेहमी काम करणारी build.
+phase-1, phase-2, phase-3, phase-4 — long-lived branches for each phase. Created off main.
+phase-1, phase-2, phase-3, phase-4 — प्रत्येक टप्प्यासाठी दीर्घजीवी शाखा. main वरून तयार.
+feature/* — short-lived branches off the current phase branch. One per screen or feature. Merge back to the phase branch via PR.
+feature/* — सध्याच्या टप्पा शाखेवरून अल्पजीवी शाखा. प्रत्येक स्क्रीन किंवा फीचरसाठी एक. PR द्वारे टप्पा शाखेकडे परत merge.
+Phase branches merge to main only when phase is signed off using DoD.
+DoD वापरून टप्पा साइन-ऑफ झाल्यावरच टप्पा शाखा main कडे merge.
+15.5 — Commit message format (Conventional Commits)
+१५.५ — कमिट संदेश स्वरूप (Conventional Commits)
+<type>(<scope>): <short description>
+Examples:
+feat(s07): add checkpoint screen with P/F/NA buttons
+feat(score): implement computeDailyScore per Spec 6.1
+fix(login): correct PIN lockout countdown logic
+test(score): add Workbook 5.1 regression test
+docs(readme): update build instructions
+refactor(dao): split audit_dao into audit + audit_result
+chore(deps): bump flutter to 3.18
+Types: feat / fix / docs / test / refactor / chore / perf
+Scope: short, lowercase, dash-separated. Optional but encouraged.
+15.6 — When and what to commit
+१५.६ — कधी आणि काय कमिट करायचे
+Commit every working chunk. Every screen rendering correctly = a commit. Every passing test = a commit.
+प्रत्येक काम करणारा भाग कमिट करा. प्रत्येक योग्य रेंडर होणारा स्क्रीन = कमिट. प्रत्येक पास होणारी चाचणी = कमिट.
+Never commit broken code to main or to a phase branch. Use feature branches for in-progress work.
+तुटलेला कोड main किंवा टप्पा शाखेवर कधीही कमिट करू नका. प्रगतीच्या कामासाठी feature शाखा वापरा.
+Never commit assets/seed/sops.json or checkpoints.json without also updating the Workbook reference comment.
+पुस्तिका संदर्भ टिप्पणी न अद्यतनित करता assets/seed/sops.json किंवा checkpoints.json कधीही कमिट करू नका.
+Never commit Firebase service account keys or google-services.json secret values to a public repo. Use .gitignore. (Private repo is OK for google-services.json since it ships with the APK anyway.)
+Firebase service account की किंवा google-services.json गुप्त मूल्ये सार्वजनिक रिपोवर कधीही कमिट करू नका. .gitignore वापरा. (खाजगी रिपोसाठी google-services.json ठीक — कारण ते APK सोबत येते.)
+Never commit the keystore file. Store it separately, password-protected.
+keystore फाइल कधीही कमिट करू नका. पासवर्ड-संरक्षित, वेगळी साठवा.
+15.7 — Code documentation rules
+१५.७ — कोड कागदपत्र नियम
+Every domain function (score, escalation, CAP transitions) has a /// dartdoc comment with: purpose, parameters, return value, and a reference to the Spec section it implements.
+प्रत्येक domain फंक्शन (गुण, एस्केलेशन, CAP संक्रमण) ला /// dartdoc टिप्पणी: हेतू, पॅरामीटर्स, परतावा मूल्य, आणि अंमलात आणलेल्या Spec विभागाचा संदर्भ.
+Example: /// Computes the weighted compliance score per Spec Section 6.1.
+उदाहरण: /// प्रति Spec विभाग ६.१ वजनी अनुपालन गुण मोजते.
+Every screen file's header comment lists the screen number from Spec Section 5 and the user roles it serves.
+प्रत्येक स्क्रीन फाइलच्या हेडर टिप्पणीत Spec विभाग ५ मधला स्क्रीन क्रमांक आणि सेवा देणाऱ्या वापरकर्ता भूमिका.
+Complex logic (>10 lines of branching) gets inline comments explaining WHY, not WHAT.
+जटिल तर्क (>१० ओळी शाखा) ला inline टिप्पण्या काय नव्हे, का स्पष्ट करत.
+Section 16 — Definition of Done Per Phase
+विभाग १६ — टप्प्यानुसार पूर्णतेची व्याख्या
+How to use this section
+हा विभाग कसा वापरायचा
+A phase is NOT done when the code compiles. A phase is NOT done when Claude Code says it is done. A phase is done when EVERY box in the checklist below is ticked, with evidence. Sagar personally walks each checklist before signing off. If any box is unticked, the phase continues. Skipping checklist items to "save time" is how 6-month projects become 18-month projects.
+कोड कंपाइल झाला म्हणून टप्पा पूर्ण नाही. क्लॉड कोड म्हणतो म्हणून टप्पा पूर्ण नाही. खालच्या चेकलिस्टमधला प्रत्येक बॉक्स पुराव्यासह तपासला जाईल तेव्हाच टप्पा पूर्ण. साइन-ऑफ करण्यापूर्वी सागर वैयक्तिकरीत्या प्रत्येक चेकलिस्टमधून जातो. एखादा बॉक्स तपासला नसेल, टप्पा सुरू राहतो. "वेळ वाचवण्यासाठी" चेकलिस्ट आयटम वगळणे — ६-महिन्यांचे प्रकल्प १८-महिन्यांचे होण्याचे कारण.
+16.1 — Phase 1 Definition of Done
+१६.१ — टप्पा १ पूर्णतेची व्याख्या
+Functional checklist
+कार्यात्मक चेकलिस्ट
+☐ Fresh APK install on a fresh Android phone produces the cold-launch flow (S1 → S2 → S3) without errors.
+☐ ताज्या Android फोनवर ताजे APK इन्स्टॉल कोल्ड-लॉन्च प्रवाह (S1 → S2 → S3) त्रुटीशिवाय तयार करते.
+☐ Owner login works. Owner can create GM and SM users from S29.
+☐ मालक लॉगिन चालते. S29 वरून मालक GM आणि SM वापरकर्ते तयार करू शकतो.
+☐ SM can complete a 68-checkpoint daily audit in under 45 minutes on a phone.
+☐ SM फोनवर ४५ मिनिटांच्या आत ६८-तपासणी बिंदू दैनंदिन ऑडिट पूर्ण करू शकतो.
+☐ Test T1.2: scoring matches Workbook 5.1 exactly (81/90 = 90.0% Good). EVIDENCE: screenshot.
+☐ चाचणी T१.२: स्कोअरिंग पुस्तिका ५.१ शी अचूक जुळते (८१/९० = ९०.०% चांगले). पुरावा: स्क्रीनशॉट.
+☐ Test T1.3: photo mandatory enforcement works on Cash/Inv Fails.
+☐ चाचणी T१.३: रोख/स्टॉक नापासांवर फोटो अनिवार्य अंमलबजावणी चालते.
+☐ Test T1.4: NA handling math correct (NAs excluded from both numerator and denominator).
+☐ चाचणी T१.४: NA हाताळणी गणित बरोबर (NA दोघांतून वगळले — अंक आणि भागक).
+☐ Test T1.5: 24-hour airplane mode test. All data captured offline, syncs cleanly when reconnected.
+☐ चाचणी T१.५: २४-तास विमान मोड चाचणी. सर्व डेटा ऑफलाइन कॅप्चर, पुन्हा जोडल्यावर स्वच्छ समक्रमण.
+☐ Test T1.6: PIN lockout after 5 wrong attempts in 60s. Countdown visible.
+☐ चाचणी T१.६: ६० सेकंदांत ५ चुकीच्या प्रयत्नांनंतर PIN लॉकआउट. काउंटडाउन दिसते.
+☐ Test T1.7: language toggle. MR persists across logout/login/restart.
+☐ चाचणी T१.७: भाषा टॉगल. MR लॉगआउट/लॉगिन/पुनरारंभात टिकते.
+☐ Photo capture works in low light (test taken at counter after 8 PM with photo on file).
+☐ कमी प्रकाशात फोटो कॅप्चर चालते (८ PM नंतर काउंटरवर फायलीवर फोटोसह चाचणी).
+☐ PDF export opens in WhatsApp; PDF arrives readable on a contact's phone.
+☐ PDF निर्यात WhatsApp मध्ये उघडते; PDF संपर्काच्या फोनवर वाचनीय पोचते.
+☐ CAP can be created from a Fail; assigned to a user; marked Done by responsible.
+☐ नापासापासून CAP तयार करता येते; वापरकर्त्याला नेमता येते; जबाबदाराकडून Done म्हणून खूण.
+☐ Reference tab (S22–S26) renders all 4 sub-modules; glossary search works in EN and MR.
+☐ संदर्भ टॅब (S22–S26) सर्व ४ उप-मॉड्यूल रेंडर करतो; शब्दकोश शोध EN आणि MR मध्ये चालतो.
+Quality checklist
+गुणवत्ता चेकलिस्ट
+☐ Every user-visible string is in both app_en.arb and app_mr.arb. NO hardcoded English text anywhere.
+☐ प्रत्येक वापरकर्ता-दृश्य मजकूर app_en.arb आणि app_mr.arb दोघांत आहे. कुठेही हार्डकोड इंग्रजी मजकूर नाही.
+☐ Score engine has a unit test that reproduces Workbook 5.1. Test runs green via `flutter test`.
+☐ गुण इंजिनकडे पुस्तिका ५.१ पुनरुत्पादन करणारी unit test आहे. `flutter test` द्वारे test हिरवी चालते.
+☐ All commits on phase-1 branch follow Conventional Commits format.
+☐ phase-1 शाखेवरील सर्व कमिट Conventional Commits स्वरूपाचे पालन करतात.
+☐ docs/bug-log.md exists with at least "none" entries per category; the log is real, not empty placeholders.
+☐ docs/bug-log.md अस्तित्वात — प्रत्येक श्रेणीसाठी किमान "none" नोंदी; लॉग खरा, रिकाम्या प्लेसहोल्डर्स नाही.
+☐ Phase 1 used at the actual store for 10 consecutive closings. SM signed-off list of bugs/observations in docs/phase-1-usage-log.md.
+☐ १० सलग बंदोबस्तांसाठी प्रत्यक्ष स्टोअरमध्ये टप्पा १ वापरला. docs/phase-1-usage-log.md मध्ये SM ने साइन-ऑफ केलेली बग्स/निरीक्षणे यादी.
+Sign-off
+साइन-ऑफ
+☐ Sagar walks the checklist personally. Date and signature in docs/phase-1-signoff.md. Only when this file exists is Phase 1 done.
+☐ सागर वैयक्तिकरीत्या चेकलिस्टमधून जातो. docs/phase-1-signoff.md मध्ये दिनांक आणि सही. ही फाइल अस्तित्वात आल्यावरच टप्पा १ पूर्ण.
+16.2 — Phase 2 Definition of Done
+१६.२ — टप्पा २ पूर्णतेची व्याख्या
+Functional checklist
+कार्यात्मक चेकलिस्ट
+☐ ALL Phase 1 DoD items still pass (regression). Re-walk the Phase 1 checklist before signing Phase 2.
+☐ सर्व टप्पा १ DoD आयटम अजूनही पास होतात (regression). टप्पा २ साइन करण्यापूर्वी टप्पा १ चेकलिस्ट पुन्हा चाला.
+☐ GM can complete a full weekly audit in 2 to 3 hours.
+☐ GM २ ते ३ तासांत पूर्ण साप्ताहिक ऑडिट करू शकते.
+☐ Test T2.1: Workbook 5.2 reproduction. 104.8/124 = 84.5% Poor. EXACT. EVIDENCE: screenshot.
+☐ चाचणी T२.१: पुस्तिका ५.२ पुनरुत्पादन. १०४.८/१२४ = ८४.५% वाईट. अचूक. पुरावा: स्क्रीनशॉट.
+☐ Test T2.2: missing daily counts as 0%. Confirmed via test data.
+☐ चाचणी T२.२: गहाळ दैनंदिन ०% म्हणून मोजला जातो. चाचणी डेटाद्वारे पुष्टी.
+☐ Test T2.3: spot check workflow — GM can mark verified or discrepancy.
+☐ चाचणी T२.३: स्पॉट चेक प्रवाह — GM पडताळलेले किंवा विसंगती खूण करू शकते.
+☐ Test T2.4: pattern detection — checkpoint failing 3+ days raises one Pattern CAP, not 3 individual CAPs.
+☐ चाचणी T२.४: पॅटर्न शोध — ३+ दिवस नापास होणारा तपासणी बिंदू ३ वैयक्तिक CAP नव्हे, एक पॅटर्न CAP तयार करतो.
+☐ Weekly report (S21) renders the 9-section format from Workbook 3.6. PDF export readable.
+☐ साप्ताहिक अहवाल (S21) पुस्तिका ३.६ मधले ९-विभाग स्वरूप रेंडर करते. PDF निर्यात वाचनीय.
+☐ Cumulative weekly cash variance check (CW.7) computes correctly across 7 days of varied variances.
+☐ ७ दिवसांच्या विविध तफावतांमध्ये एकत्रित साप्ताहिक रोख तफावत तपासणी (CW.७) योग्यरीत्या मोजते.
+☐ CAP verify (S18) re-runs the original checkpoint; verification failure correctly re-opens at Plan phase.
+☐ CAP पडताळणी (S18) मूळ तपासणी बिंदू पुन्हा चालवते; पडताळणी अपयश Plan टप्प्यावर योग्यरीत्या पुन्हा उघडते.
+☐ CAP close (S19) transitions correctly. Closed CAPs visible in CAP list under Closed filter.
+☐ CAP बंद (S19) योग्य संक्रमण. बंद CAP CAP यादीत Closed फिल्टरखाली दिसतात.
+Quality checklist
+गुणवत्ता चेकलिस्ट
+☐ Weekly score engine has unit tests reproducing Workbook 5.2. `flutter test` green.
+☐ साप्ताहिक गुण इंजिनकडे पुस्तिका ५.२ पुनरुत्पादन करणाऱ्या unit tests. `flutter test` हिरवा.
+☐ At least 3 weekly audits conducted at the actual store. GM signed-off observations in docs/phase-2-usage-log.md.
+☐ प्रत्यक्ष स्टोअरमध्ये किमान ३ साप्ताहिक ऑडिट. docs/phase-2-usage-log.md मध्ये GM ने साइन-ऑफ केलेली निरीक्षणे.
+Sign-off
+साइन-ऑफ
+☐ docs/phase-2-signoff.md by Sagar.
+☐ सागरकडून docs/phase-2-signoff.md.
+16.3 — Phase 3 Definition of Done
+१६.३ — टप्पा ३ पूर्णतेची व्याख्या
+Functional checklist
+कार्यात्मक चेकलिस्ट
+☐ All Phase 1 + Phase 2 DoD items still pass.
+☐ सर्व टप्पा १ + टप्पा २ DoD आयटम अजूनही पास.
+☐ Test T3.1: Trigger 1 fires on Critical daily with Cash cause. Both GM and Owner escalations created, WhatsApp opens.
+☐ चाचणी T३.१: रोख कारणासह क्रिटिकल दैनंदिनवर ट्रिगर १ सुरू. GM आणि मालक दोघांचे एस्केलेशन तयार, WhatsApp उघडते.
+☐ Test T3.2: Trigger 7 fires after 3 declining weeks. Escalation to Owner, in-app notification.
+☐ चाचणी T३.२: ३ घसरत्या आठवड्यांनंतर ट्रिगर ७ सुरू. मालकाकडे एस्केलेशन, अॅप-अंतर्गत सूचना.
+☐ Test T3.3: CAP aging job fires at 00:05 local time. Open CAPs past deadline → status='aged', escalation raised.
+☐ चाचणी T३.३: CAP जुने काम ००:०५ लोकल वेळी सुरू. मुदत संपलेल्या open CAPs → status='aged', एस्केलेशन उभे.
+☐ Test T3.4: trend dashboard loads in <2 seconds with 12 weeks of seeded data.
+☐ चाचणी T३.४: १२ आठवडे सीड केलेल्या डेटासह कल डॅशबोर्ड <२ सेकंदांत लोड.
+☐ All 7 escalation triggers tested manually with seeded scenarios that match each trigger's threshold.
+☐ प्रत्येक ट्रिगरच्या मर्यादेशी जुळणाऱ्या सीड परिस्थितींसह सर्व ७ एस्केलेशन ट्रिगर हाताने चाचणी.
+☐ WhatsApp deep link tested on a real device with a real recipient phone number; the message arrives correctly formatted.
+☐ खऱ्या प्राप्तकर्त्याच्या फोन नंबरसह खऱ्या डिव्हाइसवर WhatsApp डीप लिंक चाचणी; संदेश योग्य स्वरूपात पोचतो.
+☐ Monthly audit (Owner role) submitted at least once during testing. Monthly report generated.
+☐ चाचणीदरम्यान किमान एकदा मासिक ऑडिट (मालक भूमिका) सादर. मासिक अहवाल तयार.
+☐ Day-of-week heatmap renders correctly when 12+ weeks of data exists.
+☐ १२+ आठवडे डेटा अस्तित्वात असेल आठवड्याच्या-दिवसाचा हीटमॅप योग्यरीत्या रेंडर.
+Sign-off
+साइन-ऑफ
+☐ docs/phase-3-signoff.md by Sagar.
+☐ सागरकडून docs/phase-3-signoff.md.
+16.4 — Phase 4 Definition of Done (Release)
+१६.४ — टप्पा ४ पूर्णतेची व्याख्या (रिलीज)
+Bug & performance checklist
+बग आणि कामगिरी चेकलिस्ट
+☐ docs/bug-log.md shows zero open Severity-1 bugs. Severity-2 and 3 explicitly deferred to v2 with reasoning.
+☐ docs/bug-log.md शून्य उघडे Severity-१ बग्स दाखवते. Severity-२ आणि ३ कारणासह v२ कडे स्पष्टपणे पुढे ढकलले.
+☐ Tap response time profiled on all audit screens. 95th percentile <100ms on a low-end Android 7 phone with 2GB RAM.
+☐ सर्व ऑडिट स्क्रीनवर टॅप प्रतिसाद वेळ profiled. २GB RAM असलेल्या Android ७ कमी-एंड फोनवर ९५ वा percentile <१००ms.
+☐ Cold start time <3 seconds on the same low-end device.
+☐ त्याच कमी-एंड डिव्हाइसवर कोल्ड स्टार्ट वेळ <३ सेकंद.
+☐ App tested on 3 different Android devices spanning OS versions. Test results in docs/device-test-matrix.md.
+☐ OS आवृत्त्या समाविष्ट ३ वेगवेगळ्या Android डिव्हाइसवर अॅप चाचणी. docs/device-test-matrix.md मध्ये चाचणी निकाल.
+☐ Accessibility: TalkBack reads every interactive element correctly. Tested with Android Accessibility Scanner — zero critical issues.
+☐ प्रवेशयोग्यता: TalkBack प्रत्येक इंटरॲक्टिव्ह घटक योग्यरीत्या वाचतो. Android Accessibility Scanner ने चाचणी — शून्य गंभीर समस्या.
+☐ Contrast ratios on all text ≥ 4.5:1 (WCAG AA).
+☐ सर्व मजकुरावर contrast गुणोत्तर ≥ ४.५:१ (WCAG AA).
+Release checklist
+रिलीज चेकलिस्ट
+☐ Production APK signed with the release keystore. Keystore backed up in 2 locations (Sagar's password manager + offline encrypted drive).
+☐ रिलीज keystore ने प्रोडक्शन APK सही. २ ठिकाणी keystore बॅकअप (सागरचा पासवर्ड व्यवस्थापक + ऑफलाइन एनक्रिप्टेड ड्राइव्ह).
+☐ Keystore password documented securely (NOT in the repo). Sagar can recover the keystore without Claude Code's help.
+☐ keystore पासवर्ड सुरक्षितपणे कागदपत्रित (रिपोमध्ये नाही). क्लॉड कोडच्या मदतीशिवाय सागर keystore पुनर्प्राप्त करू शकतो.
+☐ APK installs cleanly on a fresh Android phone (no permissions errors, no missing dependencies).
+☐ ताज्या Android फोनवर APK स्वच्छपणे इन्स्टॉल (परवानगी त्रुटी नाहीत, गहाळ अवलंबित्व नाही).
+☐ Optional: Play Store internal track upload successful.
+☐ ऐच्छिक: Play Store इंटर्नल ट्रॅक अपलोड यशस्वी.
+☐ Sagar uses the signed APK on his personal phone daily for at least 7 consecutive days without raising new Severity-1 bugs.
+☐ नवीन Severity-१ बग्स न उठवता सागर त्याच्या वैयक्तिक फोनवर किमान ७ सलग दिवस सही केलेले APK वापरतो.
+Documentation checklist
+कागदपत्र चेकलिस्ट
+☐ README.md updated with: project summary, how to build locally, how to release a new version, contact info.
+☐ README.md अद्यतनित: प्रकल्प सारांश, लोकल बिल्ड कसा करायचा, नवीन आवृत्ती कशी रिलीज करायची, संपर्क माहिती.
+☐ Ops runbook (docs/runbook.md) covers: how to reset a PIN, how to add a new SM, how to restore from backup, how to recover from a failed sync.
+☐ Ops runbook (docs/runbook.md) कव्हर करते: PIN कसा रीसेट करायचा, नवीन SM कसा जोडायचा, बॅकअप मधून कसे पुनर्संचयित करायचे, अयशस्वी समक्रमण पुनर्प्राप्त.
+☐ 5-minute training video recorded showing the SM evening daily-audit flow. Stored on Sagar's Google Drive.
+☐ SM संध्याकाळी दैनंदिन-ऑडिट प्रवाह दाखवणारा ५-मिनिटांचा प्रशिक्षण व्हिडिओ. सागरच्या Google Drive वर साठवला.
+Sign-off — final release
+साइन-ऑफ — अंतिम रिलीज
+☐ docs/v1-release-signoff.md by Sagar. v1.0 tagged in Git. APK archived in builds/v1.0/.
+☐ सागरकडून docs/v1-release-signoff.md. Git मध्ये v१.० टॅग केले. builds/v१.०/ मध्ये APK संग्रहित.
+Section 17 — Recovery Patterns — When Claude Code Goes Off-Track
+विभाग १७ — पुनर्प्राप्ती पॅटर्न — क्लॉड कोड भरकटला तर
+Why this section exists
+हा विभाग का
+Claude Code is excellent but not infallible. Over a 13-week build, it will at some point: suggest swapping a locked library, add a feature you did not ask for, write code that doesn't match the Spec, or get stuck in a loop fixing one bug while introducing another. This section is the playbook for those moments. The single most important recovery skill is knowing when to roll back to the last known-good commit and try again, rather than trying to patch a broken state.
+क्लॉड कोड उत्कृष्ट पण निर्दोष नाही. १३-आठवड्यांच्या बांधणीत, कधीतरी ते: लॉक केलेली लायब्ररी बदलण्याचे सुचवेल, तुम्ही न मागितलेले फीचर जोडेल, तपशीलाशी न जुळणारा कोड लिहेल, किंवा एक बग दुरुस्त करताना दुसरा आणणाऱ्या लूपमध्ये अडकेल. त्या क्षणांसाठी हा विभाग म्हणजे playbook आहे. एकमेव सर्वात महत्त्वाचे पुनर्प्राप्ती कौशल्य म्हणजे तुटलेली स्थिती patch करण्याचा प्रयत्न करण्याऐवजी कधी मागच्या ज्ञात-चांगल्या कमिटवर परत जायचे ते जाणणे.
+17.1 — Anti-pattern detection — what to watch for
+१७.१ — विरुद्ध-पॅटर्न शोध — कशावर लक्ष ठेवायचे
+Claude Code says "I'll just use Provider instead of Riverpod — it's simpler." → REJECT. Tech stack is locked. Reply: "Stay with Riverpod per Spec Section 2.2."
+क्लॉड कोड म्हणतो "मी फक्त Riverpod ऐवजी Provider वापरतो — सोपे आहे." → नकार द्या. Tech stack लॉक. उत्तर द्या: "Spec Section 2.2 नुसार Riverpod वर रहा."
+Claude Code adds a new column to a table without updating the Spec or migration. → REJECT. Reply: "Add the column to the Spec Section 4 first. Show me the diff. Then write the migration."
+क्लॉड कोड Spec किंवा migration न अद्यतनित करता तक्त्यात नवीन स्तंभ जोडतो. → नकार. उत्तर: "आधी Spec Section 4 ला स्तंभ जोडा. diff दाखवा. मग migration लिहा."
+Claude Code creates a screen not in Spec Section 5. → REJECT. Reply: "That screen is not in the Spec. If you think it should be, add it to docs/v2-wishlist.md. Continue with the current Phase scope."
+क्लॉड कोड Spec Section 5 मध्ये नसलेला स्क्रीन तयार करतो. → नकार. उत्तर: "तो स्क्रीन Spec मध्ये नाही. असावा वाटले — docs/v2-wishlist.md ला जोडा. सध्याच्या टप्पा व्याप्तीत राहा."
+Claude Code says "the previous code was wrong, let me rewrite everything." → PAUSE. Reply: "Don't rewrite. Show me which file is wrong and explain why. We'll fix the one file."
+क्लॉड कोड म्हणतो "मागचा कोड चुकीचा होता, मी सर्व पुन्हा लिहितो." → थांबा. उत्तर: "पुन्हा लिहू नका. कोणती फाइल चुकीची आणि का स्पष्ट करा. आपण एकच फाइल दुरुस्त करू."
+Claude Code makes multi-file changes without committing in between. → STOP. Reply: "Commit what you have first. Show me the diff. Then continue."
+क्लॉड कोड मध्ये कमिट न करता बहु-फाइल बदल करते. → थांबा. उत्तर: "आधी जे आहे ते कमिट करा. diff दाखवा. मग पुढे."
+Claude Code's score engine produces 89.99 or 90.01 instead of 90.0. → STOP. Reply: "The math should produce 90.0 exactly. Re-read Spec Section 6 and find the rounding bug."
+क्लॉड कोडचे गुण इंजिन ९०.० ऐवजी ८९.९९ किंवा ९०.०१ तयार करते. → थांबा. उत्तर: "गणित अचूक ९०.० तयार करावे. Spec Section 6 पुन्हा वाचा आणि rounding बग शोधा."
+Claude Code says "I'll add Firebase Auth — it's better than custom PIN." → REJECT. Reply: "PIN auth is locked decision #2 in Spec Section 1. Do not change."
+क्लॉड कोड म्हणते "मी Firebase Auth जोडतो — कस्टम PIN पेक्षा चांगले." → नकार. उत्तर: "PIN auth Spec Section 1 मध्ये निर्णय #२ लॉक. बदलू नका."
+17.2 — Git rollback procedures
+१७.२ — Git rollback प्रक्रिया
+Soft rollback — undo last commit, keep changes
+मऊ rollback — मागचा कमिट पूर्ववत, बदल ठेवा
+git reset --soft HEAD~1
+Use when: the last commit message is wrong, or you want to bundle the last commit's changes with new work.
+वापर: मागच्या कमिटचा संदेश चुकीचा, किंवा मागच्या कमिटचे बदल नवीन कामासोबत बंडल करायचे.
+Hard rollback — discard last commit and its changes
+कठोर rollback — मागचा कमिट आणि त्याचे बदल टाकून
+git reset --hard HEAD~1
+Use when: Claude Code wrote a wrong implementation and you want to start that change over.
+वापर: क्लॉड कोडने चुकीची अंमलबजावणी लिहिली आणि तो बदल नव्याने सुरू करायचा.
+WARNING: uncommitted changes are lost. Stash first if needed: `git stash`.
+इशारा: कमिट न केलेले बदल गमावले जातात. गरज पडल्यास आधी stash करा: `git stash`.
+Rollback to a specific known-good commit
+विशिष्ट ज्ञात-चांगल्या कमिटवर rollback
+git log --oneline                  # find the commit hash
+git reset --hard <commit-hash>     # roll back to that point
+Use when: multiple commits are broken and you need to go back further.
+वापर: अनेक कमिट तुटलेले आणि आणखी मागे जायचे.
+Branch-and-explore — try without breaking main
+शाखा-व-शोध — main न मोडता प्रयत्न
+git checkout -b experiment/<name>  # create a new branch
+# ... try changes ...
+git checkout main                  # return to main
+git branch -D experiment/<name>    # delete experiment if bad
+Use when: you want to try a risky change without committing to it.
+वापर: कमिट न करता धोकादायक बदल वापरून पाहायचा.
+17.3 — The reset prompt — when to start a session fresh
+१७.३ — रीसेट प्रॉम्प्ट — सत्र नव्याने कधी सुरू करायचे
+If Claude Code has clearly lost the plot in a session — repeating the same mistake, making contradictory claims, or hallucinating about the codebase — close the session and start a new one. Paste the Session-Start Prompt again. Most session drift recovers from a fresh context.
+क्लॉड कोडने सत्रात स्पष्टपणे कथानक गमावले — तीच चूक पुनरावृत्ती, परस्परविरोधी दावे, किंवा codebase बद्दल hallucinations — सत्र बंद करा आणि नवीन सुरू करा. सत्र-सुरुवात प्रॉम्प्ट पुन्हा पेस्ट करा. बहुतेक सत्र drift ताज्या context मधून पुनर्प्राप्त होते.
+17.4 — When to escalate to a human Flutter developer
+१७.४ — मानवी Flutter डेव्हलपरकडे कधी एस्केलेट करायचे
+Claude Code has been stuck on the same bug for 3+ sessions and progress has gone backward.
+क्लॉड कोड ३+ सत्रांसाठी त्याच बगवर अडकले आणि प्रगती मागे गेली.
+A feature involves a Flutter or Firebase quirk that needs deep platform knowledge (e.g., Android background task limitations on specific OEMs).
+फीचरमध्ये खोल प्लॅटफॉर्म ज्ञान लागणारा Flutter किंवा Firebase quirk (उदा. विशिष्ट OEM वर Android background task मर्यादा).
+Sagar wants to ship faster than the 13-week phasing allows.
+सागरला १३-आठवड्यांच्या टप्प्यांपेक्षा वेगाने शिप करायचे.
+Approach: hand the Spec + Workbook + the GitHub repo to a freelance Flutter developer. They start from the same documents. No knowledge is lost in handover.
+दृष्टिकोन: Spec + Workbook + GitHub repo फ्रीलान्स Flutter डेव्हलपरला सोपवा. ते त्याच कागदपत्रांवरून सुरू करतात. हस्तांतरणात ज्ञान गमावले जात नाही.
+Section 18 — Glossary — Flutter, Firebase, Git Terms
+विभाग १८ — शब्दकोश — Flutter, Firebase, Git संज्ञा
+How to use this glossary
+हा शब्दकोश कसा वापरायचा
+This glossary is written for Sagar — owner-operator, not a developer. When Claude Code uses a term you do not recognize, look it up here. If a term is not in this glossary, ask Claude Code to explain it in plain language before letting it move on.
+हा शब्दकोश सागरसाठी — मालक-संचालक, डेव्हलपर नव्हे — लिहिला आहे. क्लॉड कोड न ओळखलेली संज्ञा वापरते — इथे शोधा. संज्ञा या शब्दकोशात नसेल, पुढे जाण्याआधी क्लॉड कोडला सोप्या भाषेत स्पष्ट करायला सांगा.
+Flutter & Dart terms
+Flutter आणि Dart संज्ञा
+Firebase terms
+Firebase संज्ञा
+Git & GitHub terms
+Git आणि GitHub संज्ञा
+Audit-app-specific shorthand
+ऑडिट-अॅप-विशिष्ट संक्षेप
+### TABLE 0 ###
+CRITICAL | अत्यावश्यक | READ THIS PAGE FIRST. This document is the build manual. The Workbook (Saagar_P1_Audit_Workbook_v1) is the operational truth. Both go together. Reading either alone will produce a broken app. | हे पान आधी वाचा. हा दस्तऐवज बांधणी पुस्तिका आहे. पुस्तिका (Saagar_P1_Audit_Workbook_v1) कार्यवाहक सत्य आहे. दोन्ही एकत्र जातात. एकटा कोणताही वाचला तर तुटलेले अॅप होईल.
+### TABLE 1 ###
+# || Decision | निर्णय || Locked answer | पक्के उत्तर
+1 || Roles in the app || Store Manager, GM, Owner login. CRO is a dropdown selection only, no login.
+2 || Login method || Name + 4-digit PIN. No email, no OTP.
+3 || Data storage || On-device SQLite + Firebase free tier (cloud sync, ₹0/month)
+4 || Photo evidence || Mandatory for Cash and Inventory Fails. Optional for all other SOPs.
+5 || CAPs || Built into Phase 1. Every Fail produces a CAP.
+6 || Bilingual UI || Toggle: user picks EN or MR at login. One language shown at a time.
+7 || Phasing || 4 phases over 13 weeks. Phase 1 daily audit + CAPs; Phase 2 weekly audit; Phase 3 monthly + escalation; Phase 4 polish & release.
+8 || Reference content || Workbook Appendices A.4 / A.5 / A.6 / A.7 built into app as Reference tab.
+### TABLE 2 ###
+WARNING | सूचना | If any decision above ever needs revisiting during the build, STOP coding. Revise this document first, get Sagar's sign-off, then resume coding. Do not let Claude Code change one of these decisions inside its own session. | बांधणीदरम्यान वरील कोणताही निर्णय पुन्हा तपासण्याची गरज पडली, तर कोडिंग थांबवा. आधी हा दस्तऐवज सुधारा, सागरची मान्यता घ्या, मग कोडिंग पुन्हा सुरू करा. क्लॉड कोडला त्याच्या स्वतःच्या सत्रात यापैकी एक निर्णय बदलू देऊ नका.
+### TABLE 3 ###
+Layer | थर || Technology | तंत्रज्ञान || Version | आवृत्ती || Why this choice | का
+UI framework || Flutter || >= 3.16 || Single codebase, Android first, iPhone-ready, Marathi rendering
+Language || Dart || >= 3.2 || Flutter's native language
+Local DB || SQLite via sqflite || Latest || Industry standard for offline storage on mobile
+Cloud DB || Firebase Firestore || Latest || Free tier sufficient for 3 users, automatic sync
+Cloud storage || Firebase Storage || Latest || Photos / PDF attachments; free tier 5 GB
+Auth || Local PIN (custom impl) || — || No Firebase Auth needed — 3-user PIN is simpler
+State mgmt || Riverpod || >= 2.4 || Most maintainable Flutter state library in 2026
+Routing || go_router || >= 12.0 || Standard Flutter routing
+i18n || flutter_localizations + intl || Latest || Standard Flutter bilingual support
+PDF generation || pdf package || >= 3.10 || For exporting audit reports
+Photo capture || image_picker + camera || Latest || Cross-platform camera access
+Notifications || flutter_local_notifications + url_launcher || Latest || In-app + WhatsApp deep links
+Charts/graphs || fl_chart || >= 0.65 || For trend analysis on Owner dashboard
+Build target || Android API 24+ (Android 7.0+) || — || Covers >99% of devices in India in 2026
+### TABLE 4 ###
+WARNING | सूचना | Do NOT swap any of these for alternatives during the build. "sqflite" not "drift" or "isar". "Riverpod" not "Provider" or "Bloc". "go_router" not "auto_route". Every alternative is good in its own right, but mixing creates bugs. The Master Prompt in Section 14 will explicitly forbid Claude Code from suggesting alternatives. | बांधणीदरम्यान यापैकी कोणतेही पर्यायाने बदलू नका. "sqflite" — "drift" किंवा "isar" नव्हे. "Riverpod" — "Provider" किंवा "Bloc" नव्हे. "go_router" — "auto_route" नव्हे. प्रत्येक पर्याय स्वतःमध्ये चांगला, पण मिसळल्याने बग्स तयार होतात. विभाग १४ मधला मास्टर प्रॉम्प्ट क्लॉड कोडला पर्याय सुचवण्यास स्पष्टपणे प्रतिबंध करतो.
+### TABLE 5 ###
+Item | आयटम || Cost | खर्च || Note | टीप
+Firebase Firestore (free tier) || ₹0 || 50K reads + 20K writes per day free; we will use < 5K of each
+Firebase Storage (free tier) || ₹0 || 5 GB free; we will use < 1 GB
+Google Play Developer account (one-time) || ₹2,000 || Optional — only if publishing publicly on Play Store
+Domain for support email (optional) || ₹800/year || Optional
+Apple Developer (if iPhone in future) || ₹8,000/year || Phase 5+ only, not in current scope
+TOTAL — Year 1 (Android only, Play Store) || ~₹2,800 / year || Effectively zero per month after one-time setup
+### TABLE 6 ###
+Capability | क्षमता || SM || GM || Owner
+Log in to app || ✓ || ✓ || ✓
+Change own PIN || ✓ || ✓ || ✓
+Run daily audit || ✓ || — || View only
+Submit daily audit || ✓ || — || —
+Run weekly audit || — || ✓ || View only
+Submit weekly audit || — || ✓ || —
+Run monthly audit || — || — || ✓
+Verify daily audit (spot check, sign) || — || ✓ || ✓
+Create CAP || ✓ || ✓ || ✓
+Mark CAP Done (own CAPs only) || ✓ || ✓ || ✓
+Verify CAP (any CAP) || — || ✓ || ✓
+Close CAP (any CAP) || — || ✓ || ✓
+Re-open closed CAP || — || — || ✓
+Extend CAP deadline (before expiry) || — || ✓ || ✓
+View own audit history || ✓ || ✓ || ✓
+View all audits (any user) || — || ✓ || ✓
+View weekly reports || — || ✓ || ✓
+View monthly reports || — || — || ✓
+View trend dashboards || — || ✓ || ✓
+Receive escalation notifications || — || ✓ || ✓
+Send escalation (via app) || ✓ || ✓ || —
+Manage CRO list (add/edit/remove names) || ✓ || ✓ || ✓
+Manage user list (create SM/GM logins) || — || — || ✓
+Reset another user's PIN || — || — || ✓
+Change app settings (language toggle, etc.) || ✓ own || ✓ own || ✓ all
+Export data (PDF / CSV) || ✓ own || ✓ all || ✓ all
+Delete an audit (cannot delete; only Owner can hide) || — || — || ✓ hide only
+Modify checkpoint definitions (SOP changes) || — || — || ✓ via JSON edit
+Access Reference tab || ✓ || ✓ || ✓
+Access Glossary || ✓ || ✓ || ✓
+### TABLE 7 ###
+NOTE | टीप | When Claude Code is writing role-check code, it must consult this table for every screen. If a feature is shown for a role where the capability is — (dash), the app must either hide the UI element entirely or disable it with an explanation tooltip in the user's chosen language. | क्लॉड कोड रोल-चेक कोड लिहीत असेल तेव्हा प्रत्येक स्क्रीनसाठी हा तक्ता पाहावा. क्षमता — (डॅश) असलेल्या भूमिकेसाठी फीचर दाखवले जात असेल — अॅपने UI घटक एकतर पूर्णपणे लपवावा किंवा वापरकर्त्याच्या निवडलेल्या भाषेत स्पष्टीकरण टूलटिपसह अक्षम करावा.
+### TABLE 8 ###
+Field | क्षेत्र || Type | प्रकार || Constraints | मर्यादा || Description | वर्णन
+id || TEXT || PRIMARY KEY, UUID || Unique user identifier
+name || TEXT || NOT NULL, length 2-50 || Display name e.g. "Suresh Patil"
+role || TEXT || NOT NULL, IN ('SM','GM','OWNER') || User's role
+pin_hash || TEXT || NOT NULL || bcrypt hash of 4-digit PIN
+language_pref || TEXT || NOT NULL, IN ('en','mr'), default 'en' || UI language for this user
+phone || TEXT || Optional, +91 format || For WhatsApp escalations
+is_active || INTEGER || NOT NULL, default 1 || 0 = deactivated, retained for history
+created_at || TEXT || ISO-8601 datetime || When user was created
+last_login_at || TEXT || ISO-8601 datetime || When user last logged in
+created_by || TEXT || FK → users.id, nullable || Owner ID who created this user (null for first Owner)
+### TABLE 9 ###
+WARNING | सूचना | PINs are never stored in plaintext. The PIN entered at login is hashed using bcrypt (cost factor 10) and compared to pin_hash. On PIN change, generate a fresh bcrypt hash. Never log PINs or hashes anywhere — not to console, not to crash reports, not to audit_log. | PIN प्लेन-टेक्स्टमध्ये कधीही साठवू नका. लॉगिनवर टाकलेला PIN bcrypt (कॉस्ट फॅक्टर १०) ने हॅश केला जातो आणि pin_hash शी तुलना केली जाते. PIN बदलावर ताजे bcrypt हॅश तयार करा. PIN किंवा हॅश कुठेही लॉग करू नका — कन्सोलवर नाही, क्रॅश रिपोर्टवर नाही, audit_log वर नाही.
+### TABLE 10 ###
+Field | क्षेत्र || Type | प्रकार || Description | वर्णन
+id || TEXT PRIMARY KEY || Device-generated UUID; persists across app reinstalls
+model || TEXT || e.g. "Samsung Galaxy A54"
+os_version || TEXT || e.g. "Android 14"
+app_version || TEXT || e.g. "1.0.3"
+last_user_id || TEXT FK → users.id || Who logged in last on this device
+last_seen_at || TEXT ISO-8601 || Last time the app was opened
+sync_state || TEXT || "synced", "syncing", "failed"
+last_sync_at || TEXT ISO-8601 || Last successful sync to Firestore
+### TABLE 11 ###
+Field | क्षेत्र || Type | प्रकार || Description | वर्णन
+id || TEXT PRIMARY KEY || Short code, e.g. "SOP1", "SOP6"
+number || INTEGER || 1 to 8
+name_en || TEXT || "Grooming & Personal Standards"
+name_mr || TEXT || "ग्रूमिंग आणि वैयक्तिक मानक"
+weight || INTEGER || 1 or 2 (Cash and Inventory are 2x)
+is_critical || INTEGER || 0 or 1 (1 for Cash, Inventory)
+display_order || INTEGER || 1-8, controls UI sort order
+### TABLE 12 ###
+id || Name (EN) || Name (MR) || Wt
+SOP1 || Grooming & Personal Standards || ग्रूमिंग आणि वैयक्तिक मानक || 1
+SOP2 || Sales Buddy Photo Compliance || सेल्स बडी फोटो अनुपालन || 1
+SOP3 || NPS Calling || एनपीएस कॉलिंग || 1
+SOP4 || Customer Data Capture || ग्राहक डेटा कॅप्चर || 1
+SOP5 || Display & Planogram || डिस्प्ले आणि प्लानोग्राम || 1
+SOP6 || Cash Management ★ || रोख व्यवस्थापन ★ || 2
+SOP7 || Inventory Management ★ || स्टॉक व्यवस्थापन ★ || 2
+SOP8 || Watch Service Intake || घड्याळ सर्व्हिस इनटेक || 1
+### TABLE 13 ###
+Field | क्षेत्र || Type | प्रकार || Description | वर्णन
+id || TEXT PRIMARY KEY || "1.1", "6.5", "CW.7", "IW.11"
+sop_id || TEXT FK → sops.id || Parent SOP
+frequency || TEXT || "daily", "weekly", "monthly"
+sequence || INTEGER || Order within SOP (1.1, 1.2, ...)
+text_en || TEXT || "Uniform clean and pressed"
+text_mr || TEXT || "गणवेश स्वच्छ आणि इस्त्री केलेला"
+evidence_en || TEXT || "Photo with timestamp"
+evidence_mr || TEXT || "वेळ-शिक्क्यासह फोटो"
+weight || INTEGER || 1 or 2 (matches parent SOP)
+allows_na || INTEGER || 0 or 1 (some checkpoints cannot be NA)
+requires_photo_on_fail || INTEGER || 0 or 1 (Cash/Inv = 1)
+### TABLE 14 ###
+WARNING | सूचना | The seed JSON file (assets/seed/checkpoints.json) is shipped with the app and contains all 104 checkpoints with their full EN+MR text, evidence requirements, weights, and flags. The contents of this JSON are drawn DIRECTLY from the Workbook — Day 2 Section 2.9 for daily, Day 3 Section 3.4 for weekly. Any change to a checkpoint requires (a) updating the Workbook, (b) updating this Spec, (c) updating the JSON, (d) versioned migration of any in-flight audits. Never change the JSON without all four. | सीड JSON फाइल (assets/seed/checkpoints.json) अॅपसोबत येते आणि सर्व १०४ तपासणी बिंदू त्यांच्या पूर्ण EN+MR मजकूर, पुरावा आवश्यकता, वजने, आणि झेंडे यासह आहेत. या JSON ची सामग्री पुस्तिकेतून थेट काढलेली — दैनंदिनसाठी दिवस २ विभाग २.९, साप्ताहिकसाठी दिवस ३ विभाग ३.४. तपासणी बिंदूत कोणताही बदल आवश्यक करतो (अ) पुस्तिका सुधारणे, (ब) ही तपशील सुधारणे, (क) JSON सुधारणे, (ड) चालू असलेल्या ऑडिटचे व्हर्जन माइग्रेशन. चारही नसताना JSON कधीही बदलू नका.
+### TABLE 15 ###
+Field | क्षेत्र || Type | प्रकार || Description | वर्णन
+id || TEXT PRIMARY KEY || UUID
+name || TEXT NOT NULL || Display name e.g. "Priya Kulkarni"
+counter || TEXT || "Titan" or "Helios" — which counter they staff
+shift || TEXT || "morning", "afternoon", "flexible"
+is_active || INTEGER default 1 || 0 = no longer with the store, kept for history
+joined_at || TEXT ISO-8601 date || Optional, for tenure tracking
+### TABLE 16 ###
+Field | क्षेत्र || Type | प्रकार || Description | वर्णन
+id || TEXT PRIMARY KEY || UUID
+audit_type || TEXT NOT NULL || "daily", "weekly", "monthly"
+audit_date || TEXT NOT NULL || ISO date the audit COVERS (not when submitted)
+week_number || INTEGER || Calendar week 1-53 (for weekly/monthly)
+month_number || INTEGER || 1-12 (for monthly only)
+year || INTEGER NOT NULL || e.g. 2026
+auditor_id || TEXT FK → users.id || Who conducted the audit
+device_id || TEXT FK → devices.id || Which device created it
+status || TEXT NOT NULL || "draft", "submitted", "verified", "hidden"
+raw_score || REAL || Raw weighted points earned
+max_score || REAL || Max possible (after NA adjustments)
+compliance_pct || REAL || raw_score / max_score × 100, 1 decimal
+band || TEXT || "excellent", "good", "fair", "poor", "critical"
+fail_count || INTEGER || Total Fails in this audit
+pass_count || INTEGER || Total Passes in this audit
+na_count || INTEGER || Total NAs in this audit
+draft_started_at || TEXT ISO-8601 || When SM/GM/Owner started the audit
+submitted_at || TEXT ISO-8601 || When the audit was submitted
+verified_at || TEXT ISO-8601 nullable || When GM/Owner verified it (daily only)
+verifier_id || TEXT FK → users.id nullable || Who verified it
+supersedes_audit_id || TEXT FK → audits.id nullable || If this audit replaces a hidden one
+hidden_at || TEXT nullable || If status='hidden', when
+hidden_by || TEXT FK → users.id nullable || Who hid it (Owner only)
+hidden_reason || TEXT nullable || Why it was hidden
+notes || TEXT || Free-text notes from auditor
+### TABLE 17 ###
+Field | क्षेत्र || Type | प्रकार || Description | वर्णन
+id || TEXT PRIMARY KEY || UUID
+audit_id || TEXT FK → audits.id || Parent audit
+checkpoint_id || TEXT FK → checkpoints.id || Which checkpoint
+result || TEXT NOT NULL || "P", "F", "NA"
+weighted_points || REAL || What this result contributes to raw_score
+finding_text || TEXT || One-sentence finding for Fails; NA reason for NAs
+cro_id || TEXT FK → cros.id nullable || Which CRO if relevant
+created_at || TEXT ISO-8601 || When this result was marked
+### TABLE 18 ###
+WARNING | सूचना | NA is critical to handle correctly. NA rows do not count in either the numerator (raw_score) or the denominator (max_score). A daily audit with 5 NAs has a max_score of 90 - sum(weights of those 5 checkpoints), not 90. This is why max_score is stored on the audit row — it's computed at submission time from the actual results. See Section 6 for full formulas. | NA योग्य प्रकारे हाताळणे महत्त्वाचे. NA ओळी अंकगणितात (raw_score) किंवा भागकात (max_score) दोन्ही मोजल्या जात नाहीत. ५ NA असलेल्या दैनंदिन ऑडिटचा max_score ९० नसून ९० - त्या ५ तपासणी बिंदूंच्या वजनांची बेरीज. म्हणूनच max_score ऑडिट ओळीवर साठवला जातो — सादरीकरणाच्या वेळी प्रत्यक्ष निकालांवरून मोजला जातो. पूर्ण सूत्रांसाठी विभाग ६ पाहा.
+### TABLE 19 ###
+Field | क्षेत्र || Type | प्रकार || Description | वर्णन
+id || TEXT PRIMARY KEY || UUID
+audit_result_id || TEXT FK nullable || If photo is for an audit Fail
+cap_id || TEXT FK nullable || If photo is for a CAP step/verification
+context || TEXT NOT NULL || "fail_evidence", "cap_progress", "cap_verification"
+local_path || TEXT || On-device path (e.g. /storage/.../IMG_xxx.jpg)
+cloud_url || TEXT nullable || Firebase Storage URL once uploaded
+upload_status || TEXT || "pending", "uploading", "uploaded", "failed"
+thumb_local_path || TEXT || 150x150 thumbnail for list view
+captured_at || TEXT ISO-8601 || When photo was taken (from EXIF if available)
+captured_lat || REAL nullable || GPS latitude (optional, for Sales Buddy parity)
+captured_lng || REAL nullable || GPS longitude
+uploaded_by || TEXT FK → users.id || Who took the photo
+file_size_bytes || INTEGER || For storage tracking
+### TABLE 20 ###
+NOTE | टीप | Photos are taken in-app via the camera. Maximum 5 photos per Fail. Each photo is automatically compressed to max 1280px on the long edge, JPEG quality 80%, before upload. Original is kept on-device temporarily then deleted after upload succeeds. This keeps Firebase Storage usage under 5 GB free tier for at least 18 months. | फोटो अॅपमध्ये कॅमेऱ्याद्वारे घेतले जातात. प्रति नापास जास्तीत जास्त ५ फोटो. प्रत्येक फोटो अपलोडपूर्वी आपोआप जास्तीत जास्त १२८० पिक्सेल लांब बाजूवर, JPEG गुणवत्ता ८०% पर्यंत संकुचित केला जातो. मूळ डिव्हाइसवर तात्पुरते ठेवले जातात आणि अपलोड यशस्वी झाल्यानंतर हटवले जातात. यामुळे Firebase Storage वापर किमान १८ महिने ५ GB मोफत मर्यादेखाली राहतो.
+### TABLE 21 ###
+Field | क्षेत्र || Type | प्रकार || Description | वर्णन
+id || TEXT PRIMARY KEY || Human-readable: "CAP-2026-W22-03" (auto-gen)
+origin_audit_id || TEXT FK → audits.id || Which audit produced this CAP
+origin_result_id || TEXT FK → audit_results.id nullable || Specific result (or null if pattern CAP)
+origin_checkpoint_id || TEXT FK → checkpoints.id || Which checkpoint
+is_pattern || INTEGER || 0 = single Fail; 1 = pattern (3+ days same checkpoint)
+problem_statement || TEXT NOT NULL || 1 sentence — what failed
+why_1 || TEXT || 5 Whys answer 1
+why_2 || TEXT || 5 Whys answer 2
+why_3 || TEXT || 5 Whys answer 3
+why_4 || TEXT || 5 Whys answer 4
+why_5 || TEXT || 5 Whys answer 5
+root_cause || TEXT NOT NULL || Distilled root cause from 5 Whys
+responsible_user_id || TEXT FK → users.id || CAP Owner
+deadline || TEXT ISO-8601 date || Default = origin audit date + 7 days
+verification_method || TEXT || Which checkpoint will be re-run
+status || TEXT NOT NULL || "open", "done", "verified", "closed", "aged", "reopened"
+opened_at || TEXT ISO-8601 || When CAP was created
+done_at || TEXT nullable || When responsible marked Done
+verified_at || TEXT nullable || When verifier confirmed
+closed_at || TEXT nullable || When formally closed
+verified_by || TEXT FK → users.id nullable || Who verified
+closed_by || TEXT FK → users.id nullable || Who closed
+aged_count || INTEGER default 0 || How many times this CAP has aged
+extension_count || INTEGER default 0 || How many extensions granted
+latest_extension_reason || TEXT nullable || Why deadline was extended
+### TABLE 22 ###
+Field | क्षेत्र || Type | प्रकार || Description | वर्णन
+id || TEXT PRIMARY KEY || UUID
+cap_id || TEXT FK → caps.id || Parent CAP
+sequence || INTEGER NOT NULL || 1, 2, 3, 4, 5 within the CAP
+action_text || TEXT NOT NULL || "Update Cash override SOP to include..."
+is_done || INTEGER default 0 || 0 = not done, 1 = done
+done_at || TEXT nullable || When marked done
+done_by || TEXT FK → users.id nullable || Who marked done
+done_notes || TEXT || Free text — what was actually done
+### TABLE 23 ###
+Field | क्षेत्र || Type | प्रकार || Description | वर्णन
+id || TEXT PRIMARY KEY || UUID
+cap_id || TEXT FK → caps.id || Parent CAP
+event || TEXT NOT NULL || "created", "action_done", "marked_done", "verified", "closed", "extended", "aged", "reopened"
+from_status || TEXT || Previous status (nullable for created)
+to_status || TEXT NOT NULL || Resulting status
+actor_user_id || TEXT FK → users.id || Who triggered the event
+device_id || TEXT FK → devices.id || From which device
+timestamp || TEXT ISO-8601 || When
+note || TEXT || Optional context — e.g. reason for extension
+### TABLE 24 ###
+Field | क्षेत्र || Type | प्रकार || Description | वर्णन
+id || TEXT PRIMARY KEY || UUID
+audit_id || TEXT FK → audits.id || The audit that produced this report
+report_type || TEXT || "weekly", "monthly"
+headline || TEXT || 1-line summary, e.g. "Week 22: 91.3% GOOD, on target"
+compliance_table_json || TEXT || JSON: 5-row component breakdown
+trend_block_json || TEXT || JSON: this week vs last vs 4wk avg
+findings_json || TEXT || JSON: up to 6 findings, one sentence each
+patterns_json || TEXT || JSON: up to 3 patterns
+caps_opened_json || TEXT || JSON: list of new CAPs this period
+caps_closed_json || TEXT || JSON: list of CAPs closed this period
+caps_aged_json || TEXT || JSON: list of CAPs that aged
+escalations_json || TEXT || JSON: up to 3 escalations needed
+author_user_id || TEXT FK → users.id || Who wrote the report
+submitted_at || TEXT ISO-8601 || When submitted
+read_by_owner_at || TEXT nullable || When Owner opened it
+pdf_local_path || TEXT || Cached PDF path
+pdf_cloud_url || TEXT || Firebase Storage URL
+### TABLE 25 ###
+Field | क्षेत्र || Type | प्रकार || Description | वर्णन
+id || TEXT PRIMARY KEY || UUID
+trigger_number || INTEGER || 1-7, or 0 for manual
+trigger_label || TEXT || "Daily Critical", "Cash > ₹500", etc.
+source_type || TEXT || "audit", "cap", "trend", "manual"
+source_audit_id || TEXT FK nullable || If linked to an audit
+source_cap_id || TEXT FK nullable || If linked to a CAP
+raised_by_user_id || TEXT FK → users.id || Who/what raised it
+raised_to_user_id || TEXT FK → users.id || Whom it goes to (GM or Owner)
+urgency || TEXT || "immediate", "same_day", "same_night", "next_audit"
+what_happened || TEXT || 1 sentence
+evidence || TEXT || What evidence proves it
+impact || TEXT || Operational impact
+requested_action || TEXT || What recipient should do
+status || TEXT || "open", "acknowledged", "resolved"
+raised_at || TEXT ISO-8601 || When
+acknowledged_at || TEXT nullable || When recipient opened it
+resolved_at || TEXT nullable || When marked resolved
+resolution_notes || TEXT || How it was resolved
+whatsapp_sent || INTEGER default 0 || Did we open WhatsApp deeplink?
+### TABLE 26 ###
+Field | क्षेत्र || Type | प्रकार || Description | वर्णन
+id || INTEGER AUTOINCREMENT || Local-only PK
+table_name || TEXT || Which table was written
+row_id || TEXT || PK of the affected row
+operation || TEXT || "insert", "update", "delete_attempt"
+actor_user_id || TEXT || Who did it
+device_id || TEXT || From which device
+timestamp || TEXT ISO-8601 || When
+before_json || TEXT nullable || Row state before (for updates)
+after_json || TEXT || Row state after
+sync_state || TEXT || "local", "pushed_to_cloud"
+### TABLE 27 ###
+NOTE | टीप | audit_log entries are NEVER deleted, even when their source rows are deleted/hidden. It is the system's permanent record. The audit_log can grow large — implement a 90-day retention policy on this table only (oldest entries can be archived to Firestore cold storage). | audit_log नोंदी कधीही हटवल्या जात नाहीत, त्यांच्या स्रोत ओळी हटवल्या/लपवल्या तरीही. हा सिस्टमचा कायमचा रेकॉर्ड. audit_log मोठा होऊ शकतो — फक्त या तक्त्यावर ९०-दिवस धारणा धोरण अंमलात आणा (जुन्या नोंदी Firestore कोल्ड स्टोरेजमध्ये संग्रहित करता येतात).
+### TABLE 28 ###
+# || Screen | स्क्रीन || Roles | भूमिका
+S1 || Splash / Loading || All
+S2 || Language Selection (first launch only) || All
+S3 || First-Time Setup (first launch only) || Owner
+S4 || Login || All
+S5 || Home / Dashboard || All
+S6 || Start Daily Audit || SM
+S7 || Daily Audit — Checkpoint Screen || SM
+S8 || Daily Audit — Fail Detail || SM
+S9 || Daily Audit — Photo Capture || SM
+S10 || Daily Audit — Review & Submit || SM
+S11 || Daily Audit — Submitted Confirmation || SM
+S12 || Audit History (own / all) || All
+S13 || Audit Detail (read-only view) || All
+S14 || CAP List || All
+S15 || CAP Create || SM, GM, Owner
+S16 || CAP Detail || All
+S17 || CAP Action — Mark Done || Responsible user
+S18 || CAP Verify || GM, Owner
+S19 || CAP Close || GM, Owner
+S20 || Reports List || GM, Owner
+S21 || Report Detail || GM, Owner
+S22 || Reference Tab — Index || All
+S23 || Reference — Rating Scale || All
+S24 || Reference — Escalation Triggers || All
+S25 || Reference — Evidence Reference || All
+S26 || Reference — Bilingual Glossary || All
+S27 || Settings || All
+S28 || Settings — Manage CROs || SM, GM, Owner
+S29 || Settings — Manage Users || Owner
+S30 || Settings — Change PIN || All
+S31 || Settings — Language || All
+S32 || Settings — Backup & Export || All
+### TABLE 29 ###
+WARNING | सूचना | BOUNDARIES ARE STRICT. 89.9 is FAIR, not Good. 84.9 is POOR, not Fair. 79.9 is CRITICAL. The most common bug in audit programmes is auditors (or code) rounding 89.7 up to 90 and calling it Good. Claude Code: always store and display ONE DECIMAL place. Never round before band calculation. | मर्यादा कठोर आहेत. ८९.९ "बरे" आहे, "चांगले" नाही. ८४.९ "वाईट" आहे, "बरे" नाही. ७९.९ "क्रिटिकल". ऑडिट कार्यक्रमातला सर्वात सामान्य बग म्हणजे ऑडिटर (किंवा कोड) ८९.७ ला ९० पर्यंत गोलाकार करून "चांगले" म्हणणे. क्लॉड कोड: नेहमी एक दशांश स्थानात साठवा आणि दाखवा. पट्टी गणनेपूर्वी गोलाकार करू नका.
+### TABLE 30 ###
+F# || Checkpoint || Result || Weight || Earned
+F1 || 1.4 || F || 1 || 0
+F2 || 2.1 + 2.2 || P (both) || 1+1 || 2
+F3 || 3.x || F || 1 || 0
+F4 || 4.x || P || 1 || 1
+F5 || 5.x || F || 1 || 0
+F6 || 6.5 || P (with note) || 2 || 2
+F7 || 6.11 || F || 2 || 0
+F8 || 6.9 || F || 2 || 0
+F9 || 7.1 || P || 2 || 2
+F10 || 7.3 || P || 2 || 2
+F11 || 7.8 || F || 2 || 0
+F12 || 8.x || P || 1 || 1
+Other 56 implied || various || P || — || 56
+TOTAL || 68 checkpoints, 0 NAs || — || 90 || 81
+### TABLE 31 ###
+WARNING | सूचना | Test scenario: Feed the app the exact Day 5 Section 5.2 data. The app MUST produce 84.5% Poor. If it produces anything else (84.4, 84.6, 85.0 because of rounding), the math is broken. This is the canonical regression test for the score engine. | चाचणी परिस्थिती: अॅपला दिवस ५ विभाग ५.२ चा अचूक डेटा द्या. अॅपने ८४.५% वाईट दिलेच पाहिजे. इतर काही दिले (गोलाकारामुळे ८४.४, ८४.६, ८५.०) — गणित मोडले. गुण इंजिनसाठी ही अधिकृत regression test आहे.
+### TABLE 32 ###
+NOTE | टीप | The escalation message must always be in English regardless of the recipient's UI language. Reason: it goes via WhatsApp and may be forwarded to people outside the immediate team (e.g., the bank, the police, Titan corporate) where English is the lingua franca. If the recipient wants to see it in Marathi, they read it in the app under Escalations. | प्राप्तकर्त्याच्या UI भाषेची पर्वा न करता एस्केलेशन संदेश नेहमी इंग्रजीत असला पाहिजे. कारण: WhatsApp द्वारे जातो आणि तातडीच्या टीमच्या बाहेरच्या लोकांना अग्रेषित होऊ शकतो (उदा. बँक, पोलिस, टायटन कॉर्पोरेट) जिथे इंग्रजी संपर्क भाषा. प्राप्तकर्त्याला मराठीत पाहायचे असेल, ते अॅपमध्ये एस्केलेशन अंतर्गत वाचतो.
+### TABLE 33 ###
+Key || EN || MR
+nav.home || Home || मुख्यपृष्ठ
+nav.audits || Audits || ऑडिट
+nav.caps || CAPs || CAPs
+nav.reference || Reference || संदर्भ
+nav.settings || Settings || सेटिंग्ज
+nav.reports || Reports || अहवाल
+### TABLE 34 ###
+Key || EN || MR
+btn.start_audit || Start Audit || ऑडिट सुरू करा
+btn.submit || Submit || सादर करा
+btn.save_draft || Save Draft || ड्राफ्ट जतन करा
+btn.cancel || Cancel || रद्द
+btn.continue || Continue || पुढे
+btn.back || Back || मागे
+btn.next || Next || पुढे
+btn.previous || Previous || मागे
+btn.pass || Pass || पास
+btn.fail || Fail || नापास
+btn.na || NA || NA
+btn.add_photo || Add Photo || फोटो जोडा
+btn.retake || Retake || पुन्हा घ्या
+btn.use_photo || Use || वापरा
+btn.create_cap || Create CAP || CAP तयार करा
+btn.mark_done || Mark Done || पूर्ण म्हणून खूण
+btn.verify || Verify || पडताळा
+btn.close_cap || Close CAP || CAP बंद करा
+btn.reopen || Reopen || पुन्हा उघडा
+btn.extend || Extend Deadline || मुदतवाढ
+btn.escalate || Escalate || एस्केलेट
+btn.export_pdf || Export PDF || PDF निर्यात
+btn.share_whatsapp || Share to WhatsApp || WhatsApp ला शेअर
+btn.login || Login || लॉगिन
+btn.logout || Logout || लॉगआउट
+btn.change_pin || Change PIN || PIN बदला
+btn.add || Add || जोडा
+btn.edit || Edit || संपादन
+btn.delete || Delete || हटवा
+btn.deactivate || Deactivate || निष्क्रिय करा
+### TABLE 35 ###
+Key || EN || MR
+band.excellent || Excellent || उत्कृष्ट
+band.good || Good || चांगले
+band.fair || Fair || बरे
+band.poor || Poor || वाईट
+band.critical || Critical || अत्यावश्यक
+cap.status.open || Open || उघडे
+cap.status.done || Done || पूर्ण
+cap.status.verified || Verified || पडताळलेले
+cap.status.closed || Closed || बंद
+cap.status.aged || Aged || जुने
+cap.status.reopened || Reopened || पुन्हा उघडलेले
+audit.status.draft || Draft || ड्राफ्ट
+audit.status.submitted || Submitted || सादर
+audit.status.verified || Verified || पडताळलेले
+audit.status.hidden || Hidden || लपवलेले
+### TABLE 36 ###
+Key || EN || MR
+err.wrong_pin || Wrong PIN || चुकीचा PIN
+err.locked || Too many attempts. Locked for {seconds}s. || बरेच प्रयत्न. {seconds}s लॉक.
+err.required_field || This field is required. || हे क्षेत्र आवश्यक.
+err.future_date || Future date not allowed. || भविष्यातील तारीख स्वीकारली जात नाही.
+err.photo_required || Photo required for Cash/Inventory Fails. || रोख/स्टॉक नापासांना फोटो आवश्यक.
+err.finding_required || Please write a one-sentence finding. || कृपया एका वाक्याचा निष्कर्ष लिहा.
+err.no_internet || No internet — will sync later. || इंटरनेट नाही — नंतर समक्रमित होईल.
+err.cap_deadline_passed || Cannot extend — deadline already passed. || वाढवू शकत नाही — मुदत आधीच संपली.
+err.cannot_edit_submitted || Submitted audits cannot be edited. || सादर ऑडिट संपादित करता येत नाहीत.
+### TABLE 37 ###
+Key || EN || MR
+ok.audit_submitted || Audit submitted successfully || ऑडिट यशस्वीरीत्या सादर
+ok.cap_created || CAP created || CAP तयार
+ok.cap_marked_done || CAP marked done || CAP पूर्ण म्हणून खूण
+ok.cap_verified || CAP verified || CAP पडताळलेले
+ok.cap_closed || CAP closed || CAP बंद
+ok.pin_changed || PIN changed || PIN बदलला
+ok.synced || Synced to cloud || क्लाउडशी समक्रमित
+### TABLE 38 ###
+WARNING | सूचना | The full ARB files (250+ keys) live in assets/translations/. The tables above are the most critical sample. Claude Code: as you build each screen, every string you write must immediately be added to BOTH app_en.arb and app_mr.arb. Never leave a TODO for translation. If you are unsure of a Marathi translation, ask Sagar in chat — do not guess. | पूर्ण ARB फाइल्स (२५०+ की) assets/translations/ मध्ये राहतात. वरचे तक्ते सर्वात मुख्य नमुना. क्लॉड कोड: प्रत्येक स्क्रीन बांधताना तुम्ही लिहिलेला प्रत्येक मजकूर लगेच app_en.arb आणि app_mr.arb दोघांत जोडला पाहिजे. भाषांतरासाठी TODO सोडू नका. मराठी भाषांतराची खात्री नसेल, चॅटमध्ये सागरला विचारा — अंदाज करू नका.
+### TABLE 39 ###
+From | पासून || Event | घटना || To | कडे || Allowed by | परवानगी || Side effects | दुष्परिणाम
+(new) || create || open || SM, GM, Owner || INSERT cap_log 'created'; push notification to responsible
+open || mark_done || done || Responsible user || INSERT cap_log; notify GM
+open || extend_deadline || open || GM, Owner (before deadline only) || UPDATE deadline, INSERT cap_log 'extended'
+open || auto-age || aged || system (deadline passed without verify) || INSERT cap_log 'aged'; escalate to next tier
+done || verify || verified || GM, Owner || INSERT cap_log; notify responsible
+done || verify_failed || open (back to plan) || GM, Owner || Re-open at plan phase — new 5 Whys required
+verified || close || closed || GM, Owner || INSERT cap_log; final
+aged || mark_done || done || Responsible user || Same as open→done; aged_count increment
+aged || auto-age (again) || aged || system (still no verify) || INSERT cap_log; escalate further
+closed || reopen || open (Plan phase) || Owner only || INSERT cap_log 'reopened'; aged_count carried over
+### TABLE 40 ###
+Event | घटना || Recipient | प्राप्तकर्ता || Channel | मार्ग
+Daily audit submitted || GM || In-app
+Daily audit in Critical band (Trigger 1) || GM || WhatsApp + in-app
+Daily audit Critical + Cash/Inv cause || Owner || WhatsApp + in-app
+Cash variance > ₹500 single day (Trigger 3) || GM || WhatsApp + in-app
+Cash variance > ₹500 two days running || Owner || WhatsApp + in-app
+Weekly audit submitted || Owner || In-app
+Weekly audit shows pattern (Trigger 2) || GM || In-app
+Inventory variance > 2% (Trigger 4) || Owner || WhatsApp + in-app
+Security/legal concern flagged (Trigger 5) || Owner || WhatsApp + in-app
+Customer complaint escalation (Trigger 6) || Owner || WhatsApp + in-app
+3-week declining trend (Trigger 7) || Owner || In-app
+CAP assigned to me || Responsible user || In-app
+CAP I assigned was marked Done || GM (the verifier) || In-app
+CAP aged (deadline passed) || Responsible + next tier up || In-app
+CAP verification failed → reopened || Original responsible || In-app
+Sync failed 3 times in a row || Current device user || In-app silent
+### TABLE 41 ###
+NOTE | टीप | Phone numbers in users.phone MUST be stored in E.164 format without the leading +. The app's user-management screen (S29) validates this on input. If the phone field is empty for a recipient, the escalation falls back to in-app only and shows a warning to the sender: "Recipient has no WhatsApp number set. Tell them in person." | users.phone मधले फोन नंबर सुरुवातीच्या + शिवाय E.164 स्वरूपात साठवले पाहिजेत. अॅपची वापरकर्ता-व्यवस्थापन स्क्रीन (S29) इनपुटवर हे पडताळते. प्राप्तकर्त्यासाठी फोन फील्ड रिकामे असेल, एस्केलेशन फक्त-अॅप-अंतर्गत वर पडते आणि पाठवणाऱ्याला इशारा दाखवते: "प्राप्तकर्त्याकडे WhatsApp नंबर नाही. प्रत्यक्ष सांगा."
+### TABLE 42 ###
+Week || Deliverable | वितरण
+1 || Project setup. Flutter scaffolding. SQLite schema. Firebase project created. assets/seed/*.json loaded. Screens S1, S2, S3, S4 (Splash, Language, First-Time Setup, Login).
+2 || Screens S5 (Home), S6 (Start Audit), S7 (Checkpoint), S8 (Fail Detail), S9 (Photo Capture). Score logic Section 6.1–6.4. Daily audit can be conducted end-to-end but no submit yet.
+3 || Screens S10 (Review & Submit), S11 (Confirmation), S12 (History), S13 (Audit Detail). PDF export. WhatsApp share. Auto-sync to Firestore. Photo upload to Firebase Storage.
+4 || Screens S14 (CAP List), S15 (CAP Create), S16 (CAP Detail), S17 (Mark Done). Screens S22-S26 (Reference tab). Screens S27-S32 (Settings). Phase 1 polish.
+### TABLE 43 ###
+Week || Deliverable | वितरण
+5 || Weekly audit data model finalized. assets/seed/checkpoints.json updated with 36 weekly-only. Weekly audit screens (analogue to S6-S10 but weekly).
+6 || 7-day daily review screen — GM sees 7 daily audits as cards, opens each for spot check. Spot check validation against original photos/registers. GM signature.
+7 || Weekly score formula (Section 6.5–6.7). Weekly report generation (S20, S21). Daily-audit-average contribution math. Cumulative cash variance check (CW.7).
+8 || CAP verification (S18) and close (S19). GM dashboard with pending verifications. Phase 2 polish.
+### TABLE 44 ###
+Week || Deliverable | वितरण
+9 || Monthly audit checkpoints added to seed JSON. Monthly audit screens (analogue to weekly). escalations table populated.
+10 || Escalation engine — all 7 triggers from Section 7. WhatsApp deep links. In-app notifications via flutter_local_notifications.
+11 || Trend analytics: 4-week rolling per-SOP graph, day-of-week heatmap (Pattern 3 detection), 12-week compliance trend chart. fl_chart integration.
+### TABLE 45 ###
+Week || Deliverable | वितरण
+12 || Bug triage from a list maintained across phases. Performance pass (audit screen must respond in <100ms per tap). Test on 3 different Android phones (low-end, mid-range, recent). Accessibility check (TalkBack labels, contrast).
+13 || Production APK build with signing key (kept in Sagar's secure vault). Optional: Play Store internal track upload. 5-min training video showing SM evening flow. Documentation: README, ops runbook, this Spec attached.
+### TABLE 46 ###
+WARNING | सूचना | Paste these prompts EXACTLY as written. Do not paraphrase. The wording — including the harsh "do not" lines — is calibrated to give Claude Code the right boundaries. Soft prompts produce soft code; precise prompts produce precise code. | हे प्रॉम्प्ट जसेच्या तसे पेस्ट करा. परिस्करण करू नका. शब्दरचना — कठोर "करू नका" ओळींसह — क्लॉड कोडला योग्य मर्यादा देण्यासाठी कॅलिब्रेट केलेली आहे. मऊ प्रॉम्प्ट मऊ कोड तयार करतात; अचूक प्रॉम्प्ट अचूक कोड तयार करतात.
+### TABLE 47 ###
+Term || Meaning
+Flutter || Google's framework for building mobile, web, and desktop apps from a single codebase. The thing we're using.
+Dart || The programming language used by Flutter. Looks similar to Java/JavaScript.
+Widget || A building block in Flutter. Everything you see — a button, a text field, a screen — is a widget.
+State || Data inside a widget that can change (like the contents of a text field).
+StatefulWidget || A widget whose state can change over time. Used for interactive parts of the UI.
+StatelessWidget || A widget whose contents never change. Used for static parts.
+BuildContext || An object Flutter passes to every widget so it can find its place in the widget tree. Don't worry about it; Claude Code handles this.
+Riverpod || A library for managing state across the app. Acts as the glue between data and UI.
+Provider (Riverpod) || A named piece of state that any widget can read from. Different from the older "Provider" library — we use Riverpod's.
+Hot reload || Flutter's feature that lets you see code changes in the running app without restarting. Speeds up development hugely.
+go_router || The library we use for navigating between screens.
+Future / async || Dart's way of handling things that take time (like a network call). "await" pauses until done.
+Stream || A series of values arriving over time. Used for data that updates live (like sync status).
+pubspec.yaml || The file listing all the libraries ("packages") the app depends on. Like a shopping list.
+Package / dependency || A reusable library written by someone else. We install them via pubspec.yaml.
+pub get || The command that downloads all the packages listed in pubspec.yaml.
+APK || Android Package — the .apk file that installs the app on an Android phone.
+Keystore || A file containing the cryptographic key used to sign the APK. Loss = cannot release updates.
+MainAxisAlignment / CrossAxisAlignment || How widgets are spaced in a row or column. Claude Code knows; you don't need to.
+ARB file || JSON file containing translations. We have app_en.arb and app_mr.arb.
+intl package || The package that handles dates, numbers, and translations in different locales.
+sqflite || The Flutter package for using a SQLite database (local storage on the device).
+DAO || Data Access Object. A class that reads and writes a specific table. Keeps SQL code in one place.
+### TABLE 48 ###
+Term || Meaning
+Firebase || Google's cloud platform. We use it for the database (Firestore) and photo storage (Storage). Free for our scale.
+Firestore || A NoSQL cloud database. Stores data as "documents" inside "collections".
+Document (Firestore) || Equivalent to a row in a SQL table. Has a unique ID and a set of fields.
+Collection (Firestore) || A group of documents. Similar to a SQL table.
+Firebase Storage || Cloud storage for files like photos and PDFs. We store audit photos here.
+google-services.json || The config file Firebase generates for our specific project. Ships with the APK. Identifies the app to Firebase.
+Security Rules || Firebase's permission system. Defines who can read/write what. We'll write rules so only our 3 users can access the data.
+Free tier || The amount of Firebase usage Google gives away for free. We stay well within: 50K reads + 20K writes per day, 5GB storage.
+Cold tier (Storage) || Cheaper storage for files we rarely access. We use it for older backups.
+Authentication (Firebase) || Firebase's built-in user-login system. We're NOT using it — we use custom PIN auth instead. Decision locked.
+### TABLE 49 ###
+Term || Meaning
+Git || The version-control tool. Tracks every change to every file. Lets you roll back to any past state.
+GitHub || A website hosting Git repositories. We host the project there.
+Repository (repo) || A project folder under Git's control. Contains all the code, history, and branches.
+Commit || A saved snapshot of the project at one point in time. Has a message describing what changed.
+Commit hash || The unique ID of a commit, like a8f3b2c. Used to refer to a specific commit.
+Branch || An independent line of development. main is the primary branch; we create other branches for in-progress work.
+Main branch || The branch holding the canonical, working code. Protected — only PRs can merge here.
+Feature branch || A short-lived branch for one new feature. Merged to main via PR when ready.
+PR (Pull Request) || A request to merge changes from one branch into another. Sagar reviews and approves before merge.
+Merge || Combining two branches into one. Done via PR for main.
+Conflict (merge conflict) || When two branches changed the same line. Git asks a human to choose. Rare in solo development.
+Stash || Temporarily set aside uncommitted changes. Use to switch branches without losing work.
+Push || Send your local commits to GitHub.
+Pull || Download new commits from GitHub to your local copy.
+Clone || Download a fresh copy of a repo from GitHub. Done once at setup.
+.gitignore || A file listing things Git should NOT track. We use it to skip the build folder, the keystore, secrets, etc.
+Tag || A label attached to a specific commit. We tag the release commit as v1.0.
+HEAD || Git's pointer to your current commit. HEAD~1 means "one commit before HEAD".
+Reset --soft || Undo last commit but keep its changes ready to re-commit.
+Reset --hard || Undo last commit AND discard its changes. Dangerous; use carefully.
+Conventional Commits || A commit message convention: feat / fix / docs / test / refactor / chore. We use this — Section 15.5.
+### TABLE 50 ###
+Term || Meaning
+S1, S5, S7 … || Screen IDs. Defined in Spec Section 5.
+SOP1 … SOP8 || The 8 Priority 1 SOPs. Defined in Workbook Day 2 Section 2.9.
+CW.1, CW.7 … || Cash Weekly checkpoints. Workbook Day 3 Section 3.4.
+IW.1, IW.11 … || Inventory Weekly checkpoints. Workbook Day 3 Section 3.4.
+Trigger 1 … Trigger 7 || The 7 mandatory escalation triggers. Workbook Day 4 Section 4.6.
+DoD || Definition of Done. Spec Section 16. Walked before signing off a phase.
+CAP || Corrective Action Plan. Workbook Day 4 Section 4.3–4.4.
+5 Whys || Root-cause technique. Drill 5 levels deep. Workbook Day 4 Section 4.2.
+RSO || Regional Service Outlet — Titan's term for a service-enabled franchise store. Our store IS one.
+### TABLE 51 ###
+BEST PRACTICE | उत्तम सराव | End of the Specification. Combined with Saagar_P1_Audit_Workbook_v1, this document gives Claude Code everything it needs to build the audit app without bugs from ambiguity. Read Section 14 once more before your first Claude Code session — that's the bit you'll actually paste. | तपशील समाप्त. Saagar_P1_Audit_Workbook_v1 सोबत, हा दस्तऐवज क्लॉड कोडला अस्पष्टतेच्या बग्सशिवाय ऑडिट अॅप बांधण्यासाठी सर्व आवश्यक देतो. तुमच्या पहिल्या क्लॉड कोड सत्रापूर्वी विभाग १४ पुन्हा एकदा वाचा — तेच तुम्ही प्रत्यक्ष पेस्ट कराल.

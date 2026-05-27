@@ -1,0 +1,682 @@
+[
+  {
+    "id": "2.1",
+    "sop_id": "SOP2",
+    "text": "Opening photo uploaded between 10:15 and 10:45",
+    "evidence": "Sales Buddy timestamp",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 1
+  },
+  {
+    "id": "2.2",
+    "sop_id": "SOP2",
+    "text": "Closing photo uploaded between 9:00 and 9:30 PM",
+    "evidence": "Sales Buddy timestamp",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 2
+  },
+  {
+    "id": "2.3",
+    "sop_id": "SOP2",
+    "text": "GPS enabled at opening upload",
+    "evidence": "Sales Buddy location field",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 3
+  },
+  {
+    "id": "2.4",
+    "sop_id": "SOP2",
+    "text": "GPS enabled at closing upload",
+    "evidence": "Sales Buddy location field",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 4
+  },
+  {
+    "id": "2.5",
+    "sop_id": "SOP2",
+    "text": "Full storefront window visible in photo",
+    "evidence": "Photo review",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 5
+  },
+  {
+    "id": "2.6",
+    "sop_id": "SOP2",
+    "text": "Photo clear and in focus",
+    "evidence": "Photo review",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 6
+  },
+  {
+    "id": "2.7",
+    "sop_id": "SOP2",
+    "text": "Titan acknowledgement received for uploads",
+    "evidence": "Sales Buddy ack screen",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 7
+  },
+  {
+    "id": "2.8",
+    "sop_id": "SOP2",
+    "text": "No pending uploads at day end",
+    "evidence": "Sales Buddy outbox empty",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 8
+  },
+  {
+    "id": "4.1",
+    "sop_id": "SOP4",
+    "text": "Walk-in register entry for every customer (≥90% capture)",
+    "evidence": "Register vs CCTV",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 9
+  },
+  {
+    "id": "4.2",
+    "sop_id": "SOP4",
+    "text": "Phone number captured for every walk-in",
+    "evidence": "Register column",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 10
+  },
+  {
+    "id": "4.3",
+    "sop_id": "SOP4",
+    "text": "Customer interest captured",
+    "evidence": "Register column",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 11
+  },
+  {
+    "id": "4.4",
+    "sop_id": "SOP4",
+    "text": "KYC complete for every billed customer",
+    "evidence": "Invoice attachments",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 12
+  },
+  {
+    "id": "4.5",
+    "sop_id": "SOP4",
+    "text": "ID copy attached for sales ≥ ₹2 lakh",
+    "evidence": "Invoice attachments",
+    "weight": 1,
+    "allows_na": true,
+    "photo_required_on_fail": false,
+    "order": 13
+  },
+  {
+    "id": "4.6",
+    "sop_id": "SOP4",
+    "text": "DPDP consent ticked at billing",
+    "evidence": "Invoice / consent form",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 14
+  },
+  {
+    "id": "4.7",
+    "sop_id": "SOP4",
+    "text": "Customer data file backed up at EOD",
+    "evidence": "Backup log",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 15
+  },
+  {
+    "id": "4.8",
+    "sop_id": "SOP4",
+    "text": "No customer data shared verbally with anyone",
+    "evidence": "CRO observation",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 16
+  },
+  {
+    "id": "5.1",
+    "sop_id": "SOP5",
+    "text": "Glass display clean (no smudges or dust)",
+    "evidence": "Visual + smudge wipe",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 17
+  },
+  {
+    "id": "5.2",
+    "sop_id": "SOP5",
+    "text": "All display lighting functional",
+    "evidence": "Visual check",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 18
+  },
+  {
+    "id": "5.3",
+    "sop_id": "SOP5",
+    "text": "Brands placed in correct zones",
+    "evidence": "Planogram match",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 19
+  },
+  {
+    "id": "5.4",
+    "sop_id": "SOP5",
+    "text": "Price tags present and legible, match POS",
+    "evidence": "Spot-check 5 SKUs",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 20
+  },
+  {
+    "id": "5.5",
+    "sop_id": "SOP5",
+    "text": "Display density per planogram",
+    "evidence": "Planogram compare",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 21
+  },
+  {
+    "id": "5.6",
+    "sop_id": "SOP5",
+    "text": "Empty slots filled or removed",
+    "evidence": "Visual check",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 22
+  },
+  {
+    "id": "5.7",
+    "sop_id": "SOP5",
+    "text": "Premium SKUs in eye-line position",
+    "evidence": "Planogram match",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 23
+  },
+  {
+    "id": "5.8",
+    "sop_id": "SOP5",
+    "text": "Current month promo displayed",
+    "evidence": "Promo calendar",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 24
+  },
+  {
+    "id": "5.9",
+    "sop_id": "SOP5",
+    "text": "Multi-brand consistency in Helios counter",
+    "evidence": "Helios planogram",
+    "weight": 1,
+    "allows_na": true,
+    "photo_required_on_fail": false,
+    "order": 25
+  },
+  {
+    "id": "1.1",
+    "sop_id": "SOP1",
+    "text": "Uniform clean and well-fitted",
+    "evidence": "Visual check at start of shift",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 26
+  },
+  {
+    "id": "1.2",
+    "sop_id": "SOP1",
+    "text": "Name badge worn",
+    "evidence": "Visible on uniform",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 27
+  },
+  {
+    "id": "1.3",
+    "sop_id": "SOP1",
+    "text": "Hair gelled (M) / tied in bun (F)",
+    "evidence": "Visual check",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 28
+  },
+  {
+    "id": "1.4",
+    "sop_id": "SOP1",
+    "text": "Hand gloves worn at jewellery counter",
+    "evidence": "Observe at counter",
+    "weight": 1,
+    "allows_na": true,
+    "photo_required_on_fail": false,
+    "order": 29
+  },
+  {
+    "id": "1.5",
+    "sop_id": "SOP1",
+    "text": "Closed black polished shoes",
+    "evidence": "Visual check",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 30
+  },
+  {
+    "id": "1.6",
+    "sop_id": "SOP1",
+    "text": "Mobile phone in pocket, not on counter",
+    "evidence": "Spot check counter top",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 31
+  },
+  {
+    "id": "6.1",
+    "sop_id": "SOP6",
+    "text": "Opening cash = yesterday's closing + ₹5,000 float",
+    "evidence": "Opening count slip",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 32
+  },
+  {
+    "id": "6.2",
+    "sop_id": "SOP6",
+    "text": "Cash register entries up-to-date",
+    "evidence": "Register review",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 33
+  },
+  {
+    "id": "6.3",
+    "sop_id": "SOP6",
+    "text": "POS total = cash + card + UPI",
+    "evidence": "POS day-end report",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 34
+  },
+  {
+    "id": "6.4",
+    "sop_id": "SOP6",
+    "text": "GST collected matches POS report",
+    "evidence": "POS GST report",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 35
+  },
+  {
+    "id": "6.5",
+    "sop_id": "SOP6",
+    "text": "Cash variance ≤ ₹50 (or fully explained)",
+    "evidence": "Variance note",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 36
+  },
+  {
+    "id": "6.6",
+    "sop_id": "SOP6",
+    "text": "Cash > ₹50,000 deposited at bank by 9 PM",
+    "evidence": "Bank deposit slip",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 37
+  },
+  {
+    "id": "6.7",
+    "sop_id": "SOP6",
+    "text": "Stamped deposit slip filed",
+    "evidence": "Deposit slip file",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 38
+  },
+  {
+    "id": "6.8",
+    "sop_id": "SOP6",
+    "text": "Petty cash withdrawals authorized in writing",
+    "evidence": "Petty cash book",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 39
+  },
+  {
+    "id": "6.9",
+    "sop_id": "SOP6",
+    "text": "Original receipts attached for every petty entry",
+    "evidence": "Receipts file",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 40
+  },
+  {
+    "id": "6.10",
+    "sop_id": "SOP6",
+    "text": "Safe locked at all times outside cash handling",
+    "evidence": "Spot check safe",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 41
+  },
+  {
+    "id": "6.11",
+    "sop_id": "SOP6",
+    "text": "POS overrides countersigned by 2 staff",
+    "evidence": "Override log",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 42
+  },
+  {
+    "id": "6.12",
+    "sop_id": "SOP6",
+    "text": "EOD cash summary completed by 9:30 PM",
+    "evidence": "EOD summary slip",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 43
+  },
+  {
+    "id": "7.1",
+    "sop_id": "SOP7",
+    "text": "Daily cycle count on rotation tray complete",
+    "evidence": "Cycle count log",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 44
+  },
+  {
+    "id": "7.2",
+    "sop_id": "SOP7",
+    "text": "POS sales match stock deduction",
+    "evidence": "POS + stock report",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 45
+  },
+  {
+    "id": "7.3",
+    "sop_id": "SOP7",
+    "text": "Today's GRNs entered into system",
+    "evidence": "GRN log",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 46
+  },
+  {
+    "id": "7.4",
+    "sop_id": "SOP7",
+    "text": "Damaged items segregated and logged",
+    "evidence": "Damage register",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 47
+  },
+  {
+    "id": "7.5",
+    "sop_id": "SOP7",
+    "text": "Returns processed within 24 hours",
+    "evidence": "Returns log",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 48
+  },
+  {
+    "id": "7.6",
+    "sop_id": "SOP7",
+    "text": "High-value items (≥₹25,000) in secure storage",
+    "evidence": "Storage check",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 49
+  },
+  {
+    "id": "7.7",
+    "sop_id": "SOP7",
+    "text": "Service intake items in service area only",
+    "evidence": "Service area check",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 50
+  },
+  {
+    "id": "7.8",
+    "sop_id": "SOP7",
+    "text": "FIFO confirmed on 3 random spot-checks",
+    "evidence": "Spot check log",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 51
+  },
+  {
+    "id": "7.9",
+    "sop_id": "SOP7",
+    "text": "Repair-in register updated for every intake",
+    "evidence": "Repair register",
+    "weight": 2,
+    "allows_na": true,
+    "photo_required_on_fail": true,
+    "order": 52
+  },
+  {
+    "id": "7.10",
+    "sop_id": "SOP7",
+    "text": "EOD stock summary sent to GM by 9:30 PM",
+    "evidence": "Sent message",
+    "weight": 2,
+    "allows_na": false,
+    "photo_required_on_fail": true,
+    "order": 53
+  },
+  {
+    "id": "3.1",
+    "sop_id": "SOP3",
+    "text": "Yesterday's billed customers identified (100% from POS)",
+    "evidence": "POS export",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 54
+  },
+  {
+    "id": "3.2",
+    "sop_id": "SOP3",
+    "text": "NPS calls attempted (100% of yesterday's billed customers)",
+    "evidence": "Call log",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 55
+  },
+  {
+    "id": "3.3",
+    "sop_id": "SOP3",
+    "text": "Calls completed ≥70% of attempts",
+    "evidence": "Call log",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 56
+  },
+  {
+    "id": "3.4",
+    "sop_id": "SOP3",
+    "text": "Standard NPS script followed",
+    "evidence": "Call recording sample",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 57
+  },
+  {
+    "id": "3.5",
+    "sop_id": "SOP3",
+    "text": "NPS score recorded for each completed call",
+    "evidence": "Call log",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 58
+  },
+  {
+    "id": "3.6",
+    "sop_id": "SOP3",
+    "text": "Detractor (score ≤6) escalated within 24 hours",
+    "evidence": "Escalation log",
+    "weight": 1,
+    "allows_na": true,
+    "photo_required_on_fail": false,
+    "order": 59
+  },
+  {
+    "id": "3.7",
+    "sop_id": "SOP3",
+    "text": "Daily NPS summary signed by SM by 9:30 PM",
+    "evidence": "Signed summary",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 60
+  },
+  {
+    "id": "8.1",
+    "sop_id": "SOP8",
+    "text": "Service intake form signed by customer + CRO",
+    "evidence": "Form file",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 61
+  },
+  {
+    "id": "8.2",
+    "sop_id": "SOP8",
+    "text": "System Order ID generated",
+    "evidence": "Order ID slip",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 62
+  },
+  {
+    "id": "8.3",
+    "sop_id": "SOP8",
+    "text": "Customer ID copy on file (DPDP-compliant)",
+    "evidence": "ID copy file",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 63
+  },
+  {
+    "id": "8.4",
+    "sop_id": "SOP8",
+    "text": "Intake photos captured by Order ID",
+    "evidence": "Photo folder",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 64
+  },
+  {
+    "id": "8.5",
+    "sop_id": "SOP8",
+    "text": "Estimate and timeline written on form",
+    "evidence": "Form review",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 65
+  },
+  {
+    "id": "8.6",
+    "sop_id": "SOP8",
+    "text": "Watch tagged and placed on service rack",
+    "evidence": "Rack inspection",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 66
+  },
+  {
+    "id": "8.7",
+    "sop_id": "SOP8",
+    "text": "Service register updated at EOD",
+    "evidence": "Service register",
+    "weight": 1,
+    "allows_na": false,
+    "photo_required_on_fail": false,
+    "order": 67
+  },
+  {
+    "id": "8.8",
+    "sop_id": "SOP8",
+    "text": "Pending pickups > 24 hrs overdue → customer called",
+    "evidence": "Call log",
+    "weight": 1,
+    "allows_na": true,
+    "photo_required_on_fail": false,
+    "order": 68
+  }
+]

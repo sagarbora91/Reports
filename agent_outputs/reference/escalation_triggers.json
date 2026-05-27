@@ -1,0 +1,177 @@
+{
+  "_source": "Saagar_P1_App_Spec_v1.docx §11.2 + Saagar_P1_Audit_Workbook_v1.docx Appendix A.5 (Table 77, with worked-example content drawn from Workbook §5.4 Scenarios A, B/D, F).",
+  "_translator_notes": {
+    "verbatim_from_workbook": [
+      "Trigger labels, thresholds, escalate-to, and timing columns are verbatim from Workbook A.5 Table 77.",
+      "The 4-part message-format part labels (What happened / Evidence / Operational impact / Requested action → काय झाले / पुरावा / कार्यवाहक परिणाम / मागितलेली कृती) are verbatim from Spec §11.2 / Workbook A.5 paragraphs P3175–P3182."
+    ],
+    "review_needed": [
+      "Worked example message bodies (example_message_en, example_message_mr) are CONSTRUCTED: the Workbook describes the 4-part format but never prints fully-worded sample messages. Each example here is constructed from the Workbook's §5.4 scenario content (Scenarios A, B-D, F respectively) and the App Spec §7.2 message template. The English examples should be reviewed by Sagar; the Marathi translations marked [REVIEW].",
+      "Trigger-2, 4, 6, 7 do not have a worked example in either Spec §11.2 (which only requests examples for triggers 1, 3, 5) or in the Workbook. example_message_* is null for those.",
+      "title_mr — composed from Spec §11.2 wording ('एस्केलेशन ट्रिगर'); not a verbatim Workbook chapter title."
+    ]
+  },
+  "title_en": "Escalation triggers",
+  "title_mr": "एस्केलेशन ट्रिगर",
+  "subtitle_en": "Source: Workbook Appendix A.5 — Escalation Checklist. Seven mandatory triggers; when any one is met, escalation happens regardless of auditor preference.",
+  "subtitle_mr": "[REVIEW] स्रोत: पुस्तिका परिशिष्ट A.५ — एस्केलेशन चेकलिस्ट. सात अनिवार्य ट्रिगर; एकही पूर्ण झाला की ऑडिटरच्या पसंतीची पर्वा न करता एस्केलेशन होते.",
+  "message_format": {
+    "intro_en": "Every escalation message has 4 parts. Send in English; WhatsApp may forward externally. Be short — the recipient is deciding under time pressure. Speed beats polish.",
+    "intro_mr": "[REVIEW] प्रत्येक एस्केलेशन संदेशाला ४ भाग असतात. इंग्रजीत पाठवा; व्हॉट्सअॅप पुढे बाहेर जाऊ शकते. छोटा ठेवा — प्राप्तकर्ता वेळेच्या दबावाखाली निर्णय घेत आहे. वेग पॉलिशपेक्षा महत्त्वाचा.",
+    "parts": [
+      {
+        "number": 1,
+        "label_en": "What happened",
+        "label_mr": "काय झाले",
+        "description_en": "One sentence stating the event, including the relevant numbers.",
+        "description_mr": "संबंधित आकड्यांसह घटना सांगणारे एक वाक्य."
+      },
+      {
+        "number": 2,
+        "label_en": "Evidence",
+        "label_mr": "पुरावा",
+        "description_en": "The photo, register entry, variance amount, complaint reference, or trend chart that proves it.",
+        "description_mr": "फोटो, रजिस्टर नोंद, तफावत रक्कम, तक्रार संदर्भ, किंवा कल चार्ट."
+      },
+      {
+        "number": 3,
+        "label_en": "Impact",
+        "label_mr": "कार्यवाहक परिणाम",
+        "description_en": "The immediate operational impact — store-day, brand-counter, customer relationship, financial exposure.",
+        "description_mr": "तातडीचा कार्यवाहक परिणाम — स्टोअर-दिवस, ब्रँड-काउंटर, ग्राहक नातेसंबंध, आर्थिक धोका."
+      },
+      {
+        "number": 4,
+        "label_en": "Requested action",
+        "label_mr": "मागितलेली कृती",
+        "description_en": "Information only / decision needed / immediate action needed. Be explicit.",
+        "description_mr": "फक्त माहिती / निर्णय आवश्यक / तातडीची कृती आवश्यक. स्पष्ट सांगा."
+      }
+    ]
+  },
+  "triggers": [
+    {
+      "number": 1,
+      "label_en": "Daily audit Critical band",
+      "label_mr": "दैनंदिन ऑडिट क्रिटिकल पट्टी",
+      "threshold_en": "Score < 80%",
+      "threshold_mr": "गुण < ८०%",
+      "to_en": "GM (Owner if Cash/Inv is the cause)",
+      "to_mr": "जीएम (कारण रोख/स्टॉक असेल तर मालक)",
+      "channel": ["WhatsApp", "In-app"],
+      "when_en": "Same night",
+      "when_mr": "त्याच रात्री",
+      "urgency": "same_night",
+      "example_message_en": "ESCALATION — Daily audit Critical band\n\n1. What happened: Tuesday daily audit scored 78.2%; cause is three Cash checkpoint Fails (override countersignature missing on 6.11, petty cash receipt missing on 6.9, till variance ₹420 over on 6.5).\n2. Evidence: Score sheet (attached), POS override register page for today, petty cash file photo.\n3. Impact: Critical-band day on a Cash-cause means the GM-to-Owner chain fires tonight. Cash-control credibility at stake; tomorrow opening will use a watched float.\n4. Requested action: Decision needed — GM to confirm Owner notification tonight and authorise tomorrow's tighter cash-handover procedure.\n\n—\nSaagar Traders audit app — auto-generated\nDate: 2026-05-27 • Tier: daily",
+      "example_message_mr": "[REVIEW] एस्केलेशन — दैनंदिन ऑडिट क्रिटिकल पट्टी\n\n१. काय झाले: मंगळवारच्या दैनंदिन ऑडिटला ७८.२% गुण; कारण तीन रोख तपासणी बिंदू नापास (६.११ वर ओव्हरराइड काऊंटर सही गहाळ, ६.९ वर फुटकळ रोख पावती गहाळ, ६.५ वर तिजोरी तफावत ₹४२० जास्त).\n२. पुरावा: स्कोअर शीट (जोडलेले), आजचे POS ओव्हरराइड रजिस्टर पान, फुटकळ रोख फाइलचा फोटो.\n३. कार्यवाहक परिणाम: रोख-कारणावरचा क्रिटिकल-पट्टी दिवस म्हणजे जीएम-ते-मालक साखळी आज रात्री सुरू होते. रोख-नियंत्रणाची विश्वासार्हता धोक्यात; उद्याची सुरुवात पाहणीतल्या फ्लोटने.\n४. मागितलेली कृती: निर्णय आवश्यक — जीएमने आज रात्री मालकाला कळवण्याची पुष्टी करावी आणि उद्याच्या अधिक कडक रोख-हस्तांतरण प्रक्रियेला मान्यता द्यावी.\n\n—\nसागर ट्रेडर्स ऑडिट अॅप — स्वयं-निर्मित\nदिनांक: २०२६-०५-२७ • स्तर: दैनंदिन"
+    },
+    {
+      "number": 2,
+      "label_en": "Same checkpoint repeated Fail",
+      "label_mr": "एकच तपासणी बिंदू पुन्हा-पुन्हा नापास",
+      "threshold_en": "5+ days in a week",
+      "threshold_mr": "एका आठवड्यात ५+ दिवस",
+      "to_en": "GM (open a Pattern CAP)",
+      "to_mr": "जीएम (पॅटर्न CAP उघडा)",
+      "channel": ["In-app"],
+      "when_en": "At weekly audit",
+      "when_mr": "साप्ताहिक ऑडिटमध्ये",
+      "urgency": "next_audit",
+      "example_message_en": null,
+      "example_message_mr": null
+    },
+    {
+      "number": 3,
+      "label_en": "Single-day cash variance",
+      "label_mr": "एका दिवसाची रोख तफावत",
+      "threshold_en": "> ₹500 (regardless of explanation)",
+      "threshold_mr": "> ₹५०० (स्पष्टीकरण काहीही असो)",
+      "to_en": "GM (Owner if it recurs the next day)",
+      "to_mr": "जीएम (दुसर्‍या दिवशी पुन्हा झाले तर मालक)",
+      "channel": ["WhatsApp", "In-app"],
+      "when_en": "Same day",
+      "when_mr": "त्याच दिवशी",
+      "urgency": "same_day",
+      "example_message_en": "ESCALATION — Single-day cash variance > ₹500\n\n1. What happened: Friday closing cash variance ₹580 short on count one; investigation shows ₹600 over-payment to a customer at lunchtime. Customer returned ₹600 at 4 PM; final net variance ₹20 short.\n2. Evidence: Cash register page (attached) showing both counts; customer return receipt; CCTV timestamp 13:42 (over-payment) and 16:08 (return).\n3. Impact: Trigger 3 was breached at lunchtime even though the situation closed clean. Documenting because the weekly audit reviews \"explained\" variances cumulatively to ensure they do not become a habit.\n4. Requested action: Information only — no further action needed tonight, but please flag this CRO in the Wed–Fri pattern check at weekly audit.\n\n—\nSaagar Traders audit app — auto-generated\nDate: 2026-05-27 • Tier: daily",
+      "example_message_mr": "[REVIEW] एस्केलेशन — एका दिवसाची रोख तफावत > ₹५००\n\n१. काय झाले: शुक्रवारी बंदोबस्त रोख पहिल्या मोजणीत ₹५८० कमी; तपास दाखवतो दुपारी ग्राहकाला ₹६०० जास्त दिले गेले. ग्राहकाने ४ PM ला ₹६०० परत केले; अंतिम निव्वळ तफावत ₹२० कमी.\n२. पुरावा: रोख रजिस्टरचे पान (जोडलेले) दोन्ही मोजण्या दाखवते; ग्राहक परत पावती; सीसीटीव्ही वेळ-शिक्का १३:४२ (जास्त-पेमेंट) आणि १६:०८ (परत).\n३. कार्यवाहक परिणाम: परिस्थिती स्वच्छ बंद झाली तरीही दुपारी ट्रिगर ३ मोडले. कागदपत्र करत आहे कारण साप्ताहिक ऑडिट \"स्पष्टीकरण-असलेल्या\" तफावती एकत्रित पाहते — सवय होत नाही याची खात्री.\n४. मागितलेली कृती: फक्त माहिती — आज रात्री पुढे कृती नाही, पण कृपया साप्ताहिक ऑडिटच्या बुध-शुक्र पॅटर्न तपासणीत या सीआरओला झेंडा द्या.\n\n—\nसागर ट्रेडर्स ऑडिट अॅप — स्वयं-निर्मित\nदिनांक: २०२६-०५-२७ • स्तर: दैनंदिन"
+    },
+    {
+      "number": 4,
+      "label_en": "Inventory variance",
+      "label_mr": "स्टॉक तफावत",
+      "threshold_en": "> 2% of stock value",
+      "threshold_mr": "स्टॉक मूल्याच्या > २%",
+      "to_en": "Owner directly",
+      "to_mr": "थेट मालक",
+      "channel": ["WhatsApp", "In-app"],
+      "when_en": "Same day",
+      "when_mr": "त्याच दिवशी",
+      "urgency": "same_day",
+      "example_message_en": null,
+      "example_message_mr": null
+    },
+    {
+      "number": 5,
+      "label_en": "Theft / security / legal",
+      "label_mr": "चोरी / सुरक्षा / कायदेशीर",
+      "threshold_en": "Any indication",
+      "threshold_mr": "कोणताही संकेत",
+      "to_en": "Owner directly",
+      "to_mr": "थेट मालक",
+      "channel": ["WhatsApp", "In-app"],
+      "when_en": "Immediate",
+      "when_mr": "तातडीने",
+      "urgency": "immediate",
+      "example_message_en": "ESCALATION — Theft / security / legal indication\n\n1. What happened: At Thursday closing, back-office CCTV Camera 3 was found pointing at the wall, not the safe. Six days of safe-area footage are lost. Store Manager believes it was knocked when the cleaning ladder was moved Monday morning; no witness reports tampering.\n2. Evidence: Camera 3 current frame (attached, showing wall); Camera 3 footage log Mon–Thu (all wall); cleaning ladder photo for context.\n3. Impact: Whether the cause was innocent or not, six days of unmonitored safe-area is the issue. Safe count tonight will proceed under dual observation; FIR may be needed for caution.\n4. Requested action: Decision needed — Owner please direct (a) whether to involve security audit, (b) whether to file a precautionary FIR, (c) re-aim camera tonight or hold for inspection. Holding closing until you respond.\n\n—\nSaagar Traders audit app — auto-generated\nDate: 2026-05-27 • Tier: daily",
+      "example_message_mr": "[REVIEW] एस्केलेशन — चोरी / सुरक्षा / कायदेशीर संकेत\n\n१. काय झाले: गुरुवारच्या बंदोबस्ताला, मागील-कार्यालयाचा सीसीटीव्ही कॅमेरा ३ तिजोरीऐवजी भिंतीकडे पाहत आढळला. तिजोरी क्षेत्राचे सहा दिवसांचे फुटेज गमावले. स्टोअर मॅनेजरच्या मते सोमवारी सकाळी स्वच्छता शिडी हलवताना धक्का लागला; कोणीही साक्षीदार छेडछाडीची नोंद करत नाही.\n२. पुरावा: कॅमेरा ३ ची सध्याची फ्रेम (जोडलेली, भिंत दाखवते); कॅमेरा ३ सोम–गुरु फुटेज लॉग (सर्व भिंत); संदर्भासाठी स्वच्छता शिडीचा फोटो.\n३. कार्यवाहक परिणाम: कारण निरुपद्रवी असो की नसो, मुद्दा सहा दिवस अप्रत्यक्ष तिजोरी क्षेत्र हाच आहे. आज रात्री तिजोरीची मोजणी दोन-व्यक्तीच्या निरीक्षणाखाली होईल; सावधगिरीसाठी FIR आवश्यक असू शकते.\n४. मागितलेली कृती: निर्णय आवश्यक — मालकाने (अ) सुरक्षा ऑडिट जोडायचे का, (ब) सावधगिरीचा FIR दाखल करायचा का, (क) कॅमेरा आज रात्री पुन्हा लावायचा की तपासणीसाठी राखायचा — कृपया निर्देश द्या. तुमच्या उत्तरापर्यंत बंदोबस्त थांबवला आहे.\n\n—\nसागर ट्रेडर्स ऑडिट अॅप — स्वयं-निर्मित\nदिनांक: २०२६-०५-२७ • स्तर: दैनंदिन"
+    },
+    {
+      "number": 6,
+      "label_en": "Customer complaint",
+      "label_mr": "ग्राहक तक्रार",
+      "threshold_en": "Not resolvable at store level",
+      "threshold_mr": "स्टोअर स्तरावर सुटण्यासारखी नाही",
+      "to_en": "Owner directly",
+      "to_mr": "थेट मालक",
+      "channel": ["WhatsApp", "In-app"],
+      "when_en": "Same day",
+      "when_mr": "त्याच दिवशी",
+      "urgency": "same_day",
+      "example_message_en": null,
+      "example_message_mr": null
+    },
+    {
+      "number": 7,
+      "label_en": "Declining trend",
+      "label_mr": "घसरता कल",
+      "threshold_en": "3+ consecutive weeks of decline",
+      "threshold_mr": "सलग ३+ आठवडे घसरण",
+      "to_en": "Owner",
+      "to_mr": "मालक",
+      "channel": ["In-app"],
+      "when_en": "At the third week's weekly audit",
+      "when_mr": "तिसर्‍या आठवड्याच्या साप्ताहिक ऑडिटमध्ये",
+      "urgency": "next_audit",
+      "example_message_en": null,
+      "example_message_mr": null
+    }
+  ],
+  "never_escalates": {
+    "title_en": "What never escalates",
+    "title_mr": "[REVIEW] काय कधीच एस्केलेट होत नाही",
+    "items": [
+      {
+        "en": "Single-checkpoint Fails within Good or Excellent band — get a CAP, not an escalation.",
+        "mr": "चांगले किंवा उत्कृष्ट पट्टीतले एकल-तपासणी बिंदू नापास — CAP मिळते, एस्केलेशन नाही."
+      },
+      {
+        "en": "Personal disagreements between Store Manager and CRO — go through HR, not audit.",
+        "mr": "स्टोअर मॅनेजर आणि सीआरओ यांच्यातले वैयक्तिक मतभेद — HR मधून जातात, ऑडिटमधून नव्हे."
+      },
+      {
+        "en": "Scoring debates between Store Manager and GM on borderline checkpoints — resolve at weekly audit through evidence review.",
+        "mr": "सीमारेषेच्या तपासणी बिंदूवर स्टोअर मॅनेजर आणि जीएम यांच्यात स्कोअरिंग वाद — साप्ताहिक ऑडिटमध्ये पुरावा पुनरावलोकनातून सुटतात."
+      }
+    ]
+  }
+}

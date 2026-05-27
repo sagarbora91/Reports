@@ -1,0 +1,760 @@
+=== TABLE 0 ===
+
+VERSION | 1.0 (Build 1) || PUBLISHED | May 2026 | मे २०२६
+PROGRAMME OWNER | Sagar, Owner — Saagar Traders || CERTIFICATION | On passing final assessment
+
+
+=== TABLE 1 ===
+
+Day | दिवस || Module | विभाग || Learning | शिकणे || Practice | सराव || Total | एकूण
+Day 1 || Audit Fundamentals || 1.0 hr || 1.0 hr || 2.0 hr
+Day 2 || Daily Audit Mastery (8 SOPs) || 1.5 hr || 2.0 hr || 3.5 hr
+Day 3 || Weekly Audit Mastery || 1.0 hr || 1.5 hr || 2.5 hr
+Day 4 || Scoring, Analysis, CAPs || 1.0 hr || 1.0 hr || 2.0 hr
+Day 5 || Practical Application & Certification || 0.5 hr || 2.5 hr || 3.0 hr
+TOTAL || Full programme || 5.0 hr || 8.0 hr || 13.0 hr
+
+
+=== TABLE 2 ===
+
+NOTE | टीप | If you are the Store Manager, you should be able to conduct a complete daily audit in 30–45 minutes by the end of Day 2. If you cannot, re-do Day 2 before moving on. The point of this workbook is competence in the live store, not certificate decoration. | तुम्ही स्टोअर मॅनेजर असाल, तर दिवस २ संपेपर्यंत संपूर्ण दैनंदिन ऑडिट ३०–४५ मिनिटांत करायला आले पाहिजे. नाही आले तर दिवस २ पुन्हा करा, मग पुढे जा. या पुस्तिकेचा हेतू प्रत्यक्ष स्टोअरमधील कौशल्य आहे — प्रमाणपत्राची सजावट नाही.
+
+
+=== TABLE 3 ===
+
+WARNING | सूचना | Self-audit by the audited is not auditing — it is reporting. The reason the GM exists in this hierarchy is to make sure daily audits are honest. The reason the Owner exists in this hierarchy is to make sure weekly audits are honest. Do not collapse the layers when you are pressed for time. | ऑडिट केले जाणाऱ्या व्यक्तीनेच स्वतःचे ऑडिट करणे म्हणजे ऑडिट नव्हे — ती फक्त नोंद आहे. दैनंदिन ऑडिट प्रामाणिक आहेत याची खात्री करण्यासाठीच जीएम या उतरंडीत आहेत. साप्ताहिक ऑडिट प्रामाणिक आहेत याची खात्री करण्यासाठीच मालक उतरंडीत आहे. वेळ कमी आहे म्हणून थर एकत्र करू नका.
+
+
+=== TABLE 4 ===
+
+WARNING | सूचना | An audit you don't do is not an audit. An audit you do but cannot evidence is not an audit. An audit you do, evidence, but never act on is also not an audit. All three failure modes are common — and all three end with the same outcome: surprise losses. | न केलेली ऑडिट ही ऑडिट नाही. केलेली पण पुरावा नसलेली ऑडिट ही ऑडिट नाही. केलेली, पुरावा असलेली, पण कधीही कृती न केलेली ऑडिटही ऑडिट नाही. हे तीनही अपयश सामान्य आहेत — आणि तिघांचाही शेवट एकाच परिणामात: अनपेक्षित तोटा.
+
+
+=== TABLE 5 ===
+
+# || SOP | एसओपी || Weight | वजन || Why on this list | या यादीत का
+1 || Grooming & Personal Standards | ग्रूमिंग || 1× || First thing every customer sees. Visible non-compliance erodes brand trust instantly.
+2 || Sales Buddy Photo Compliance | सेल्स बडी फोटो || 1× || Titan's digital compliance backbone. Missing uploads create RSO-level escalations that are visible above us.
+3 || NPS Calling | एनपीएस कॉलिंग || 1× || The only customer-feedback loop we control daily. A silent week means we cannot tell which CRO is selling well versus selling problems.
+4 || Customer Data Capture | ग्राहक डेटा || 1× || Every walk-in not captured is a future repeat sale lost. Also our DPDP compliance foundation.
+5 || Display & Planogram | डिस्प्ले || 1× || Watch sales correlate directly to display quality. Helios's fifteen brands each have their own visual standard.
+6 || Cash Management | रोख व्यवस्थापन ★ || 2× || Single largest source of franchise-ending losses across the industry. Daily reconciliation is non-optional.
+7 || Inventory Management | स्टॉक व्यवस्थापन ★ || 2× || Watches are small, portable, and expensive. A 1% inventory leakage on a ₹2 crore stock is ₹2 lakh a year, silently.
+8 || Watch Service Intake | सर्व्हिस इनटेक || 1× || Customers bring in valuables. Lost or damaged service-intake watches become legal liabilities, not just complaints.
+
+
+=== TABLE 6 ===
+
+CRITICAL | अत्यावश्यक | If you are tempted to skip a Cash or Inventory checkpoint because "it was fine yesterday", remember that the double weight means a single skip costs you twice as much score as skipping a Grooming checkpoint. The math is deliberate. Honour it. | "काल ठीक होते" म्हणून रोख किंवा स्टॉकचा तपासणी बिंदू वगळण्याचा मोह झाला, तर लक्षात ठेवा — दुप्पट वजनामुळे एक वगळणीचा खर्च ग्रूमिंग बिंदू वगळण्यापेक्षा दुप्पट आहे. हे गणित जाणूनबुजून ठरवले आहे. त्याचा सन्मान करा.
+
+
+=== TABLE 7 ===
+
+NOTE | टीप | The audit form is a confidential operational document. Treat it the way you would treat a bank statement — not for general circulation. The Store Manager keeps the original; only the GM and Owner receive copies through agreed escalation channels. | ऑडिट फॉर्म हा गोपनीय कार्यवाहक दस्तऐवज आहे. बँक स्टेटमेंटसारखा वागवा — सामान्य प्रसारणासाठी नाही. मूळ प्रत स्टोअर मॅनेजरकडे; जीएम आणि मालकाला केवळ ठरलेल्या एस्केलेशन मार्गाने प्रती मिळतात.
+
+
+=== TABLE 8 ===
+
+Band | पट्टी || Range | श्रेणी || Action | कृती || Who acts | कोण कृती करतो
+EXCELLENT | उत्कृष्ट || 95% – 100% || Reward and document the practice || Store Manager records best practice; GM cites in weekly report
+GOOD | चांगले || 90% – 94.9% || Note minor fixes for next day || Store Manager addresses verbally with relevant CRO
+FAIR | बरे || 85% – 89.9% || Written Corrective Action Plan required || Store Manager opens CAP; GM reviews at weekly audit
+POOR | वाईट || 80% – 84.9% || Urgent CAP + escalate one tier up || Store Manager opens CAP; immediate escalation to GM
+CRITICAL | अत्यावश्यक || Below 80% || Same-day escalation; full root-cause analysis || Escalation to Owner regardless of tier
+
+
+=== TABLE 9 ===
+
+WARNING | सूचना | Always score with one decimal place. "90" is ambiguous — is it 90.0 or 89.7 that got rounded up by an over-helpful auditor? Always write the decimal. The single most common scoring error is writing 90 when the math gave 89.7. | नेहमी एक दशांश स्थानासह गुण लिहा. "९०" अस्पष्ट आहे — ते ९०.० आहे की ८९.७ जे एका अति-मदतगार ऑडिटरने वरच्या बाजूला केले? दशांश नेहमी लिहा. सर्वात सामान्य स्कोअरिंग चूक म्हणजे गणिताने ८९.७ दिले असताना ९० लिहिणे.
+
+
+=== TABLE 10 ===
+
+CRITICAL | अत्यावश्यक | Self-audit by the audited is not auditing — it is reporting. If you accept only verbal evidence, you are not running an audit. You are taking dictation. | ऑडिट केल्या जाणार्‍या व्यक्तीनेच स्वतःचे ऑडिट करणे म्हणजे ऑडिट नव्हे — ती फक्त नोंद आहे. केवळ तोंडी पुरावा स्वीकारत असाल, तर तुम्ही ऑडिट करत नाही. तुम्ही फक्त लिहून घेत आहात.
+
+
+=== TABLE 11 ===
+
+NOTE | टीप | Score yourself honestly. If you scored below 10 out of 12, re-read the relevant sections of Day 1 before starting Day 2. Day 2 builds on every concept tested here. | स्वतःचे प्रामाणिकपणे मूल्यांकन करा. १२ पैकी १० पेक्षा कमी गुण आले तर दिवस २ सुरू करण्यापूर्वी दिवस १ चे संबंधित विभाग पुन्हा वाचा. दिवस २ इथे तपासलेल्या प्रत्येक संकल्पनेवर बांधलेला आहे.
+
+
+=== TABLE 12 ===
+
+BEST PRACTICE | उत्तम सराव | Day 1 complete. You have built the conceptual foundation. Tomorrow we move into the eight Priority 1 SOPs — by the end of Day 2, you will be able to conduct a full daily audit at your own store. Take a break before starting Day 2. | दिवस १ संपला. तुम्ही संकल्पनात्मक पाया रचला. उद्या आपण आठ प्राधान्य १ एसओपींकडे जातो — दिवस २ संपेपर्यंत तुम्ही स्वतःच्या स्टोअरमध्ये पूर्ण दैनंदिन ऑडिट करू शकाल. दिवस २ सुरू करण्यापूर्वी थोडी विश्रांती घ्या.
+
+
+=== TABLE 13 ===
+
+NOTE | टीप | Do not skim. The Day 2 self-test contains questions from every SOP, and you cannot pass it by reading half. Set aside three and a half hours today, take breaks at SOP 3 and SOP 6, and conduct the live daily audit yourself at closing tonight. | वरवर पाहू नका. दिवस २ च्या स्वयं-चाचणीत प्रत्येक एसओपीतून प्रश्न आहेत — अर्ध वाचून पास होणार नाही. आज साडेतीन तास बाजूला ठेवा, एसओपी ३ व ६ नंतर विश्रांती घ्या, आणि आज रात्री बंदोबस्ताच्या वेळी प्रत्यक्ष दैनंदिन ऑडिट स्वतः करा.
+
+
+=== TABLE 14 ===
+
+# || Checkpoint | तपासणी बिंदू || Standard | मानक
+1.1 || Uniform fit & condition | गणवेश || Well-fitted, ironed, no loose threads, no stains
+1.2 || Shirt sleeves (M) / blouse fit (F) | शर्ट बाह्या/ब्लाउज || Sleeves correct length, not rolled; blouse fitted, not loose
+1.3 || Hair (M: short/gelled; F: bun) | केस || M: trimmed, gel only, no oil; F: neat bun, black band, off face
+1.4 || Natural hair colour | केसांचा नैसर्गिक रंग || No visible dyed unnatural colours (red, blue, etc.)
+1.5 || Name badge visible | नावाचा बॅज || Pinned on left chest, name clearly readable from 1 metre
+1.6 || Shoes — black, polished | बूट — काळे, पॉलिश || Closed-toe formal shoes, freshly polished, no scuffs
+1.7 || Belt — black, visible | बेल्ट — काळा, दिसणारा || Plain black formal belt visible (M) / matching belt (F)
+1.8 || Hand gloves at jewellery handling | दागिने हाताळताना ग्लोव्ह्ज || Worn while handling Tanishq/Helios premium items
+1.9 || Nails clean & trimmed | नखे || Clean, trimmed; F: nude polish only, no chipped polish
+1.10 || Wristwatch worn | घड्याळ घातलेले || Saagar/Titan watch worn (we sell what we wear)
+
+
+=== TABLE 15 ===
+
+NOTE | टीप | Strong evidence: timestamped WhatsApp photo + grooming checklist tool entry. Weak evidence: "yes I gelled my hair this morning" or a photo without a clearly visible date. If the photo cannot be tied to today, mark the relevant checkpoint Unclear or Fail. | मजबूत पुरावा: वेळ-शिक्क्यासह व्हॉट्सअॅप फोटो + ग्रूमिंग चेकलिस्ट टूलची नोंद. दुर्बल पुरावा: "हो, आज सकाळी जेल लावले" किंवा स्पष्ट दिनांक नसलेला फोटो. फोटो आजच्याशी जोडता येत नसेल, तर संबंधित तपासणी बिंदू अस्पष्ट किंवा नापास म्हणून खूण करा.
+
+
+=== TABLE 16 ===
+
+# || Checkpoint | तपासणी बिंदू || Window | वेळ
+2.1 || Opening photo — store frontage | उघडण्याचा फोटो || 10:00–10:15 AM
+2.2 || Opening photo — Titan World counter | टायटन वर्ल्ड || 10:00–10:15 AM
+2.3 || Opening photo — Helios counter | हेलिओस || 10:00–10:15 AM
+2.4 || Mid-day display photo (when required) | दुपारी डिस्प्ले || 1:00–2:00 PM
+2.5 || Closing photo — Titan World secured | टायटन वर्ल्ड बंद || 8:45–9:00 PM
+2.6 || Closing photo — Helios secured | हेलिओस बंद || 8:45–9:00 PM
+2.7 || Closing photo — store frontage shutter down | दर्शनी भाग || 9:00–9:15 PM
+2.8 || Event/promo photos when launched | इव्हेंट फोटो || As required
+
+
+=== TABLE 17 ===
+
+WARNING | सूचना | If the app is having upload failures (poor network, server side, etc.), the CRO must still take the photo on time and then upload as soon as connectivity returns — with a note in the Store Manager WhatsApp group explaining the delay. Late upload with proactive notification is a Pass with caveat; late upload without notification is a Fail. | अॅपमध्ये अपलोड अपयश येत असतील (खराब नेटवर्क, सर्व्हर बाजू, इ.), तर सीआरओने तरीही फोटो वेळेवर काढायचा आणि कनेक्टिव्हिटी परत आल्याबरोबर अपलोड करायचा — आणि उशिराचे कारण स्टोअर मॅनेजर व्हॉट्सअॅप गटात कळवायचे. अगोदर सूचना देऊन उशिरा अपलोड — मर्यादेसह पास; सूचनेशिवाय उशिरा अपलोड — नापास.
+
+
+=== TABLE 18 ===
+
+# || Checkpoint | तपासणी बिंदू || Target | लक्ष्य
+3.1 || Yesterday's billed customers identified | कालचे बिल केलेले ग्राहक || 100% from POS report
+3.2 || NPS calls attempted | कॉल केले || 100% of identified customers
+3.3 || Calls successfully completed (connected + responded) | पूर्ण झालेले कॉल || ≥ 70% of attempts
+3.4 || Standard NPS script followed | मानक स्क्रिप्ट || Zero deviations on audit listen-in
+3.5 || Score recorded in NPS register | रजिस्टरमध्ये गुण || 100% of completed calls
+3.6 || Detractor escalation (score ≤ 6) | त्रासी ग्राहक एस्केलेशन || Within 24 hours of call
+3.7 || Daily NPS summary signed by Store Manager | स्टोअर मॅनेजरची सही || By 9:30 PM closing
+
+
+=== TABLE 19 ===
+
+NOTE | टीप | Phone-call duration matters. A "call" of 12 seconds is a wrong number or a hangup — not a completed NPS call. Audit standard: a completed call has a minimum duration of 45 seconds (enough to ask the question and get a number back). | कॉल कालावधी महत्त्वाचा. १२ सेकंदांचा "कॉल" म्हणजे चुकीचा नंबर किंवा कट केला — पूर्ण झालेला एनपीएस कॉल नव्हे. ऑडिट मानक: पूर्ण कॉलचा किमान कालावधी ४५ सेकंद (प्रश्न विचारून आकडा परत मिळवण्यासाठी पुरेसा).
+
+
+=== TABLE 20 ===
+
+# || Checkpoint | तपासणी बिंदू || Standard | मानक
+4.1 || Walk-in register filled for every customer | वॉक-इन रजिस्टर || Capture rate ≥ 90% of footfall (counted vs CCTV)
+4.2 || Phone number captured | फोन नंबर || 10-digit Indian mobile; refusals noted with reason
+4.3 || Interest captured | स्वारस्य || At minimum: Titan / Helios / brand name
+4.4 || Billed customer KYC complete | बिलिंग KYC || All fields including pin code and email when given
+4.5 || High-value sales: ID copy attached | उच्च-मूल्य आयडी || PAN or Aadhaar copy for billing ≥ ₹2,00,000
+4.6 || DPDP consent line ticked | DPDP संमती || Customer initials in consent column
+4.7 || Digital customer file backed up | डिजिटल बॅकअप || End-of-day upload to secure cloud folder
+4.8 || No customer data shared verbally | डेटा सामायिक केला नाही || Confirmed via random check; no breach incidents
+
+
+=== TABLE 21 ===
+
+WARNING | सूचना | DPDP is not optional. Even if a customer is in a hurry, the consent column must be initialled. If the customer refuses consent, capture only the minimum data required for billing and tax purposes, and note the refusal in the register. Missing consent on a captured record is a Fail on 4.6 — and a regulatory exposure that grows the longer it goes unaddressed. | DPDP ऐच्छिक नाही. ग्राहक घाईत असला तरीही, संमती स्तंभात आद्याक्षरे असली पाहिजेत. ग्राहक संमती नाकारत असेल तर — बिलिंग व कर हेतूंसाठी किमान डेटा कॅप्चर करा, आणि नकार रजिस्टरमध्ये नोंदवा. नोंद केलेल्या रेकॉर्डवर संमती नसणे — बिंदू ४.६ वर नापास — आणि कायदेशीर धोका जो जितका न सोडवला तितका वाढतो.
+
+
+=== TABLE 22 ===
+
+# || Checkpoint | तपासणी बिंदू || Standard | मानक
+5.1 || Glass & counter clean | काच व काउंटर स्वच्छ || No fingerprints, no dust, no smudge on showcase glass
+5.2 || Lighting all functional | प्रकाशयोजना || All counter LEDs lit; no dim sections; warm white tone
+5.3 || Watches in correct brand zone | ब्रँड क्षेत्र || No Casio in Titan section; no Titan in Helios section
+5.4 || Price tags present & legible | किंमत-टॅग || Every piece has tag; tag matches POS price; readable
+5.5 || Density per planogram | घनता || Not too cramped; not too sparse; matches brand standard
+5.6 || Empty slots filled or removed | रिकाम्या जागा || No empty stand for sold-out item without replacement plan
+5.7 || Premium pieces in eye-line | प्रीमियम डोळ्यासमोर || Tanishq Rivaah / Helios premium at customer eye-level
+5.8 || Promo materials current | प्रचार साहित्य || Standees, posters, danglers all current month's
+5.9 || Multi-brand consistency in Helios | हेलिओस सुसंगतता || All 15 brands maintain their per-brand standard
+
+
+=== TABLE 23 ===
+
+# || Checkpoint | तपासणी बिंदू || Standard | मानक
+6.1 || Opening float counted & matched | उघडण्याची रोख || Float of ₹5,000 counted and signed at opening
+6.2 || Every cash sale entered in POS | POSमध्ये नोंद || 100% — no off-POS cash sales
+6.3 || POS day-end report generated | POS दिवस-अंत रिपोर्ट || By 9:00 PM, before counting
+6.4 || Physical cash counted twice | प्रत्यक्ष मोजणी || Both by CRO and by Store Manager
+6.5 || Variance within ₹50 | तफावत ₹५० च्या आत || ≤ ₹50 OK; > ₹50 needs written explanation
+6.6 || Two signatures on reconciliation | दोन सह्या || CRO + Store Manager, dated
+6.7 || Cash deposit slip filed | बँक स्लिप || Yesterday's deposit slip with bank stamp in file
+6.8 || Safe combination secure | तिजोरी सुरक्षित || No more than 3 people know the combination
+6.9 || Petty cash file current | फुटकळ रोख || Original receipts; balance reconciled weekly
+6.10 || No IOUs / unrecorded withdrawals | लिखित नसलेले काढणे नाही || Zero tolerance
+6.11 || POS user logs reviewed | POS यूजर लॉग || No void / refund transactions without dual signature
+6.12 || Cash exposure overnight minimised | रात्रीची उघड रोख || Excess deposited; only ₹5,000 float held in safe
+
+
+=== TABLE 24 ===
+
+CRITICAL | अत्यावश्यक | An undocumented cash variance is never just an accounting mistake. It is always one of three things: a counting error (most common, easily fixed by recounting), a process gap (manageable, fixed by procedure change), or theft (rare, but everything else must be ruled out first). Confusing the three categories — calling theft a process gap or vice versa — is the single most damaging cash-audit mistake. Always investigate, do not assume. | अनोंदलेली रोख तफावत ही फक्त लेखा चूक कधीही नसते. ती नेहमी तीनपैकी एक: मोजणी चूक (सर्वात सामान्य, पुनर्मोजणीने सहज सोडता येते), प्रक्रिया त्रुटी (व्यवस्थापनीय, प्रक्रिया बदलून सोडता येते), किंवा चोरी (दुर्मिळ, पण बाकी सगळे आधी नाकारले पाहिजे). तीन वर्गांना गोंधळवणे — चोरीला प्रक्रिया त्रुटी म्हणणे किंवा उलट — सर्वात नुकसानकारक रोख-ऑडिट चूक. नेहमी तपास करा, गृहीत धरू नका.
+
+
+=== TABLE 25 ===
+
+# || Checkpoint | तपासणी बिंदू || Evidence | पुरावा || Wt | वजन
+7.1 || Daily cycle count for one tray (rotated through display) || Cycle count sheet — tray ID, system qty, physical qty, counter signature || 2×
+7.2 || All today's POS sales have matching stock deduction || POS sales report vs system stock movement report; counts match || 2×
+7.3 || All today's GRNs (incoming stock) entered into system || GRN register vs system stock receipts; counts and box codes match || 2×
+7.4 || Damaged stock segregated, logged, and in damage cupboard || Damage register with date, brand, model, reason; physical separation || 2×
+7.5 || Returned items from customers processed within 24 hours || Returns register; system reversal entry; refund or replacement record || 2×
+7.6 || High-value stock (above ₹25,000) in secure storage at closing || Closing storage list signed by two; tally with system high-value report || 2×
+7.7 || Service intake watches secured in service area, not floor || Service intake register vs physical count in service area || 2×
+7.8 || FIFO maintained — oldest stock at display front, newest at back || Visual spot check on three randomly selected models; batch codes visible || 2×
+7.9 || Repair-in watches register updated (in/out movements today) || Repair register with dispatch / receipt timestamps || 2×
+7.10 || End-of-day stock summary submitted to GM by 9:30 PM || Email / WhatsApp with stock summary + variance log; timestamped || 2×
+
+
+=== TABLE 26 ===
+
+CRITICAL | अत्यावश्यक | Every single checkpoint on this SOP is double-weighted. A single skipped checkpoint costs you two weighted points; three skipped checkpoints brings the entire daily audit into the Poor band, regardless of how well everything else went. There is no acceptable shortcut on inventory. | या एसओपीवरचा प्रत्येक एकेक तपासणी बिंदू दुप्पट वजनाचा आहे. एक वगळलेला बिंदू तुम्हाला दोन वजनी गुण घालवतो; तीन वगळले की संपूर्ण दैनंदिन ऑडिट "वाईट" पट्टीत येते — बाकी सगळे कितीही चांगले असो. स्टॉकवर कोणताही स्वीकार्य शॉर्टकट नाही.
+
+
+=== TABLE 27 ===
+
+# || Checkpoint | तपासणी बिंदू || Evidence | पुरावा || Wt | वजन
+8.1 || Every intake today has a signed intake form (customer + CRO) || Stack of today's intake forms; signatures present on both lines || 1×
+8.2 || Every intake has a system-generated unique Order ID || Form Order ID field; system intake register sequence number || 1×
+8.3 || Customer ID copy attached (Aadhaar/PAN extract; non-storage) || Photocopy or scan attached to form; KYC log shows verified-not-stored || 1×
+8.4 || Intake photograph(s) taken and saved against Order ID || Service intake photo folder organized by Order ID; today's set present || 1×
+8.5 || Estimate amount and timeline given in writing to customer || Form fields filled and customer signature on estimate line || 1×
+8.6 || Watch tagged with Order ID and stored in service rack (not loose) || Walk-through of service rack; tags visible; no loose intake items || 1×
+8.7 || Service register updated for every intake by end of day || Service register entries — Order ID, brand, model, customer name, status || 1×
+8.8 || Pending pickups beyond agreed date flagged for customer call || Pending list; customer call register shows follow-up made within 24 hours of due date || 1×
+
+
+=== TABLE 28 ===
+
+SOP || Name | नाव || Raw points | कच्चे गुण || Weight | वजन || Weighted | वजनी
+1 || Grooming & Personal Standards || 6 || 1× || 6
+2 || Sales Buddy Photo Compliance || 8 || 1× || 8
+3 || NPS Calling || 7 || 1× || 7
+4 || Customer Data Capture || 8 || 1× || 8
+5 || Display & Planogram || 9 || 1× || 9
+6 || Cash Management ★ || 12 || 2× || 24
+7 || Inventory Management ★ || 10 || 2× || 20
+8 || Watch Service Intake || 8 || 1× || 8
+TOTAL || Daily Audit || 68 raw || — || 90 weighted
+
+
+=== TABLE 29 ===
+
+NOTE | टीप | The actual weighted total is 90 points; the target compliance of 90% therefore requires at least 81 weighted points passing. Cash and Inventory together (44 weighted points) are nearly half the total weight — they are not optional, they are decisive. | खरा वजनी एकूण ९० गुण आहे; ९०% लक्ष्य अनुपालन म्हणजे किमान ८१ वजनी गुण पास झाले पाहिजेत. रोख आणि स्टॉक मिळून (४४ वजनी गुण) एकूण वजनाच्या जवळजवळ निम्मे — ते ऐच्छिक नाहीत, ते निर्णायक आहेत.
+
+
+=== TABLE 30 ===
+
+Block | खंड || Time | वेळ || Activity | क्रिया || What you need | काय हवे
+0 || 0–5 min || Preparation — pull score sheet, all registers, yesterday's audit || Printed score sheet, all registers, calculator, pen
+1 || 5–10 min || SOP 2 Sales Buddy — verify opening + closing photos uploaded || Phone with WhatsApp Store Manager group; Sales Buddy app on tablet
+2 || 10–15 min || SOP 4 Customer Data — verify today's walk-in capture || CRM access; daily customer log; signed consent forms
+3 || 15–20 min || SOP 5 Display — visual walk-through of both brand zones || Planogram reference; clean cloth; price-tag check list
+4 || 20–25 min || SOP 1 Grooming — review today's check-in log + verify CAP closures || Grooming HTML tool; CAP log from yesterday
+5 || 25–32 min || SOP 6 Cash ★ — POS reconciliation + petty cash + safe verification || POS report, cash register, petty cash file, safe key, calculator
+6 || 32–38 min || SOP 7 Inventory ★ — today's cycle count + GRN + service-display ties || Cycle count sheet, GRN register, service intake register, system stock view
+7 || 38–42 min || SOP 3 NPS + SOP 8 Service Intake — register reviews + pending pickups || NPS call register, service intake stack, pending pickup list
+8 || 42–45 min || Score & Document — calculate weighted score, write findings, submit || Score sheet, email or WhatsApp to GM, sign and date
+
+
+=== TABLE 31 ===
+
+NOTE | टीप | If you find yourself spending less than 30 minutes total, you are skipping. If you find yourself spending more than 60 minutes, you are either still learning (acceptable for the first two weeks) or being inefficient with one block (review which block ate the time and adjust). | एकूण ३० मिनिटांपेक्षा कमी वेळ लागत असेल, तर तुम्ही वगळत आहात. ६० मिनिटांपेक्षा जास्त लागत असेल, तर एकतर अजून शिकत आहात (पहिले दोन आठवडे ठीक) किंवा एक खंड अकार्यक्षम आहे (कोणत्या खंडाने वेळ खाल्ला ते पाहा आणि समायोजित करा).
+
+
+=== TABLE 32 ===
+
+NOTE | टीप | If you scored below 12 out of 15, re-read the SOP sections covering your missed questions before starting Day 3. Day 3 builds on the operational mastery this self-test confirms. | १५ पैकी १२ पेक्षा कमी गुण आले — चुकलेल्या प्रश्नांचे SOP विभाग दिवस ३ सुरू करण्यापूर्वी पुन्हा वाचा. दिवस ३ या स्वयं-चाचणीने पुष्टी केलेल्या कार्यवाहक प्रभुत्वावर बांधलेला आहे.
+
+
+=== TABLE 33 ===
+
+BEST PRACTICE | उत्तम सराव | Day 2 complete. You now have the operational mastery to run a full daily audit at Saagar Traders. Apply it at closing tonight. Tomorrow we move to Day 3 — Weekly Audit Mastery, where the GM-level checkpoints, the seven-daily-audit review process, and the additional weekly-only checkpoints are introduced. | दिवस २ संपला. आता तुम्ही सागर ट्रेडर्समध्ये पूर्ण दैनंदिन ऑडिट चालवू शकाल — कार्यवाहक प्रभुत्व आहे. आज रात्री बंदोबस्तावर त्याचा वापर करा. उद्या आपण दिवस ३ कडे — साप्ताहिक ऑडिटवर प्रभुत्व — जिथे जीएम-स्तर तपासणी बिंदू, सात-दैनंदिन-ऑडिट पुनरावलोकन प्रक्रिया, आणि अतिरिक्त साप्ताहिक-केवळ तपासणी बिंदू सादर होतील.
+
+
+=== TABLE 34 ===
+
+Component | भाग || Weighted pts | वजनी गुण || What it covers | काय कव्हर करते || Time | वेळ
+1. Daily Audit Average || 68 || Average of the past 7 days' daily audit scores || 45 min
+2. Operations Weekly || 10 || Staff scheduling, attendance, training, register integrity || 20 min
+3. Cash Weekly ★ || 16 || Bank deposits, petty cash audit, safe count, refund authorizations || 30 min
+4. Reporting & Service || 6 || Weekly report submission, service intake aging, complaint resolution || 15 min
+5. Inventory Weekly ★ || 24 || Stock variance, GRN audit, FIFO sweep, damage/returns disposal || 40 min
+TOTAL || 124 weighted pts || Full weekly audit || 2–3 hours
+
+
+=== TABLE 35 ===
+
+NOTE | टीप | Target compliance: 92% or higher. The Tier 2 target is one percentage point higher than Tier 1 because the GM has more time, fewer checkpoints, and greater depth. A 91.8% weekly score is FAIR, not Good — exactly the same way 89.7% on daily was Fair, not Good. Read the bands carefully. | लक्ष्य अनुपालन: ९२% किंवा अधिक. टियर २ चे लक्ष्य टियर १ पेक्षा एक टक्के जास्त — कारण जीएमकडे अधिक वेळ, कमी तपासणी बिंदू, आणि अधिक खोली. ९१.८% साप्ताहिक गुण "बरे" आहेत, "चांगले" नव्हे — अगदी ८९.७% दैनंदिनला जसे "बरे" होते तसेच. पट्ट्या काळजीपूर्वक वाचा.
+
+
+=== TABLE 36 ===
+
+WARNING | सूचना | Trend over average. If you remember one rule from this section, remember this: in the weekly audit, the direction the scores are moving in matters more than where they currently sit. A store sliding from 94 to 85 is in trouble; a store steady at 88 is just a CAP away from improvement. | सरासरीपेक्षा कल. या विभागातून एकच नियम लक्षात ठेवायचा — साप्ताहिक ऑडिटमध्ये गुण कोणत्या दिशेने सरकत आहेत, हे ते सध्या कुठे आहेत यापेक्षा जास्त महत्त्वाचे. ९४ ते ८५ उतरत असलेले स्टोअर अडचणीत आहे; ८८ वर स्थिर असलेले स्टोअर एका CAP च्या अंतरावर सुधारणा आहे.
+
+
+=== TABLE 37 ===
+
+# || Checkpoint | तपासणी बिंदू || Evidence | पुरावा || Wt | वजन
+O.1 || Next week's staff schedule published by Saturday close || Printed roster shared in CRO WhatsApp group; signed by Store Manager || 1×
+O.2 || All CROs have attended at least 30 hours this week (or pro-rata for leave) || Biometric / attendance register summary; leave records explain any shortfall || 1×
+O.3 || No CRO worked more than 6 consecutive days without a weekly off || Attendance + roster — no 7-day continuous run for any individual || 1×
+O.4 || Training compliance — at least one training topic completed this week per CRO || Training log signed by CRO; topic + duration recorded || 1×
+O.5 || All daily audits submitted on time (within 15 min of 9:30 PM) for the week || Email/WhatsApp timestamps for all 7 audits; no later than 9:45 PM || 1×
+O.6 || Attendance register reconciles with biometric log || Side-by-side compare; no entries in one missing from the other || 1×
+O.7 || Complaint register reviewed; all open complaints have action notes || Walk through complaint register; every open item has dated action entry || 1×
+O.8 || Store opening/closing keys handover log complete for the week || Key log — each handover has time, taker, and giver signatures || 1×
+O.9 || Visitor register (vendors, technicians, auditors) complete for the week || Visitor log — every non-staff entry has name, purpose, in/out times, host || 1×
+O.10 || Fire safety, electrical, and CCTV — visual check passed || Walk-through note: extinguisher pressure ok, CCTV LED on all cameras, no exposed wiring || 1×
+
+
+=== TABLE 38 ===
+
+# || Checkpoint | तपासणी बिंदू || Evidence | पुरावा || Wt | वजन
+CW.1 || Bank deposits made on schedule (2–3 times per week typical) || Deposit slips with bank stamp; matched to POS cash sales summary || 2×
+CW.2 || Petty cash file — every entry has original receipt attached || Walkthrough of petty cash file; photocopies, missing receipts = Fail || 2×
+CW.3 || Petty cash variance for the week ≤ ₹100 || Weekly petty cash reconciliation sheet; opening + spends − closing = 0 (or explanation) || 2×
+CW.4 || Safe count by GM matches register || Physical count by GM; counter-signed against safe register || 2×
+CW.5 || All POS override transactions countersigned by Store Manager || POS override log; every override has SM signature on override form || 2×
+CW.6 || All refunds > ₹500 have customer signature + ID copy on file || Refund register; ID + signature attached for every refund above threshold || 2×
+CW.7 || Sunday's closing cash deposited or held in safe — not at counter || Monday opening — Sunday closing cash either in deposit slip or safe sealed-pouch || 2×
+CW.8 || Weekly cash summary signed by Store Manager + GM || Summary sheet — week's opening float, total sales, deposits, closing — two signatures || 2×
+
+
+=== TABLE 39 ===
+
+CRITICAL | अत्यावश्यक | The override log (CW.5) is the most common cash-leakage entry point in retail. Every override is a transaction outside the standard rules, which means every override is an opportunity for either an honest customer accommodation or an unauthorised cash adjustment. The signed paper form is what distinguishes one from the other. Audit this checkpoint with extra care every week. | ओव्हरराइड लॉग (CW.५) रिटेलमधले सर्वात सामान्य रोख-गळतीचे प्रवेशस्थान आहे. प्रत्येक ओव्हरराइड म्हणजे मानक नियमांबाहेरचा व्यवहार — म्हणजे प्रत्येक ओव्हरराइड एकतर प्रामाणिक ग्राहक सोय किंवा अनधिकृत रोख फेरबदलाची संधी. सही केलेला कागदी फॉर्म एकाला दुसऱ्यापासून वेगळे करतो. दर आठवड्याला या तपासणी बिंदूचे विशेष काळजीपूर्वक ऑडिट करा.
+
+
+=== TABLE 40 ===
+
+# || Checkpoint | तपासणी बिंदू || Evidence | पुरावा || Wt | वजन
+RS.1 || Weekly report submitted to Owner by Sunday 8 PM || Email to Owner with weekly score, trends, CAPs status; timestamp on send || 1×
+RS.2 || No service intake older than 14 days without explanation || Service register filter on intake date; any > 14 days has dated note in remarks || 1×
+RS.3 || Complaint resolution rate ≥ 80% for the week (complaints closed within 7 days) || Complaint register — closed within 7 days / total complaints opened this week || 1×
+RS.4 || All open CAPs from previous weeks reviewed and status updated || CAP tracker — each open CAP has updated status note dated this week || 1×
+RS.5 || NPS aggregated for the week — promoter % and detractor % calculated || NPS log with weekly aggregate, plus 1-line trend note vs previous week || 1×
+RS.6 || Weekly photo audit — 3 random WhatsApp opening/closing photos verified || Three random dates from the week's photos opened, content matches photo standards || 1×
+
+
+=== TABLE 41 ===
+
+# || Checkpoint | तपासणी बिंदू || Evidence | पुरावा || Wt | वजन
+IW.1 || Weekly stock variance ≤ 1% of stock value || Weekly system stock total vs physical sample count by GM; variance documented || 2×
+IW.2 || All daily cycle counts from the week consistent (no zigzag pattern) || Cycle count summary — same trays not repeatedly showing variance, no oscillation || 2×
+IW.3 || GRN audit — all this week's GRNs match supplier invoices to the rupee || All GRNs cross-checked vs supplier invoices; quantities, codes, prices all match || 2×
+IW.4 || Damage cupboard cleared — no item older than 14 days || Damage register dates — every item dispositioned (returned, repaired, or written off) within 14 days || 2×
+IW.5 || Returns processed end-to-end within 7 days of customer return || Returns register — every return closed (refund issued or replacement dispatched) within 7 days || 2×
+IW.6 || Full FIFO sweep across all display trays || Audit sheet listing every tray, batch codes in display order; corrections marked || 2×
+IW.7 || High-value stock (above ₹25,000) physically counted and matched to system || High-value count sheet — every item physically located, signed by GM + Store Manager || 2×
+IW.8 || Slow-moving stock identified — items not sold for 60+ days flagged || Aging report from system; flagged items have action note (markdown, return, promotion) || 2×
+IW.9 || Repair-in turnaround time — average ≤ 21 days for the week's completions || Repair register — for completions this week, average days from dispatch to return || 2×
+IW.10 || Spare-parts inventory checked (batteries, straps, screws) || Spare parts count sheet; minimum stock levels verified against par stock list || 2×
+IW.11 || Service intake area neat — no loose watches, no expired tags || Visual walk-through of service area; no items on floor or workbench overnight || 2×
+IW.12 || Weekly inventory summary signed by GM || Summary — opening, GRN, sales, returns, damage, closing; GM signature || 2×
+
+
+=== TABLE 42 ===
+
+WARNING | सूचना | Inventory Weekly is where the GM most often surfaces "phantom" inventory variances — losses that the daily SOP did not catch because they happen on a slow cycle. The damage cupboard especially is a graveyard for forgotten loss; a 14-day rule is generous in our industry and most stores would benefit from a 7-day rule. If your store has more than 5 damage items aging past 14 days, treat it as a pattern problem, not individual oversights. | साप्ताहिक स्टॉक हीच जागा जिथे जीएम "भुताळ्या" स्टॉक तफावती सर्वाधिक उघड करतो — दैनंदिन SOP ने न पकडलेले तोटे कारण ते हळू चक्रावर होतात. विशेषतः खराब कपाट म्हणजे विसरलेल्या तोट्याची स्मशानभूमी; आपल्या उद्योगात १४-दिवस नियम उदार आहे आणि बहुतेक स्टोअरना ७-दिवस नियमाचा फायदा होईल. तुमच्या स्टोअरमध्ये १४ दिवसांपेक्षा जुनी ५ पेक्षा जास्त खराब आयटम असतील — हे वैयक्तिक चुक न मानता पॅटर्न समस्या म्हणून वागवा.
+
+
+=== TABLE 43 ===
+
+§ || Section | विभाग || What goes in | काय लिहायचे || Length | लांबी
+1 || Headline score || Weekly % score, band (Excellent/Good/Fair/Poor/Critical), and a one-line judgment || 2 lines
+2 || Trend vs last week || Score movement up/down with magnitude, plus the single biggest reason || 3 lines
+3 || Daily audit health || Daily-average score, distribution of bands across 7 days, any honesty flags || 5 lines
+4 || Critical findings || Any Critical-band component, any > ₹500 cash variance, any inventory variance > 1% || Per finding: 3 lines
+5 || New CAPs this week || List of new CAPs opened, owner, expected close date || Table format
+6 || CAP status update || All open CAPs from previous weeks — current status, days open, anticipated close || Table format
+7 || Recommendation || Specific action the Owner should consider this week (or 'no Owner action needed') || 2–4 lines
+
+
+=== TABLE 44 ===
+
+NOTE | टीप | Submit by Sunday 8 PM, not Monday morning. Sunday submissions get read Sunday evening. Monday morning submissions get filed away because the Owner's Monday morning is full of other things. The 8 PM Sunday window exists because that is when the Owner has reading time. Respect it. | रविवारी रात्री ८ पर्यंत सादर करा, सोमवारी सकाळी नाही. रविवारचे सादरीकरण रविवारी संध्याकाळी वाचले जाते. सोमवार सकाळचे सादरीकरण फाइलमध्ये जाते कारण मालकाची सोमवार सकाळ इतर गोष्टींनी भरलेली असते. रविवारी रात्री ८ ची खिडकी आहे कारण तेव्हा मालकाकडे वाचण्याचा वेळ असतो. त्याचा सन्मान करा.
+
+
+=== TABLE 45 ===
+
+NOTE | टीप | If you scored below 10 out of 12, re-read the relevant sections of Day 3 before Day 4. Day 4 builds on the trend-analysis and CAP-tracking concepts introduced in Day 3. | १२ पैकी १० पेक्षा कमी गुण आले — दिवस ४ आधी दिवस ३ चे संबंधित विभाग पुन्हा वाचा. दिवस ४ दिवस ३ मध्ये सादर केलेल्या कल-विश्लेषण आणि CAP-मागोवा संकल्पनांवर बांधलेला आहे.
+
+
+=== TABLE 46 ===
+
+BEST PRACTICE | उत्तम सराव | Day 3 complete. You have the structure of the weekly audit, the 7-day daily review process, every weekly-only checkpoint across Operations, Cash, Reporting/Service, and Inventory, and the report generation discipline. Tomorrow we move to Day 4 — Scoring, Analysis, and Corrective Action Plans, where the audit findings become the engine of operational improvement. | दिवस ३ संपला. साप्ताहिक ऑडिटची रचना, ७-दिवस दैनंदिन पुनरावलोकन प्रक्रिया, ऑपरेशन्स/रोख/रिपोर्टिंग-सर्व्हिस/स्टॉक यांच्यावरचा प्रत्येक साप्ताहिक-केवळ तपासणी बिंदू, आणि अहवाल निर्मिती शिस्त — तुमच्याकडे आहे. उद्या आपण दिवस ४ कडे जातो — स्कोअरिंग, विश्लेषण आणि कृती योजना — जिथे ऑडिट निष्कर्ष कार्यवाहक सुधारणेचे इंजिन बनतात.
+
+
+=== TABLE 47 ===
+
+WARNING | सूचना | NA must never be used to hide a Fail. If today the store DID receive a GRN but you did not verify whether it was entered into the system, that checkpoint is a Fail, not an NA. NA is for absence of the condition, not for absence of your effort. | नापास लपवण्यासाठी NA कधीही वापरू नका. आज स्टोअरला GRN आला होता पण सिस्टममध्ये नोंदला गेला का याची तुम्ही पडताळणी केली नाही — तर तो तपासणी बिंदू नापास आहे, NA नाही. NA अटीच्या अनुपस्थितीसाठी आहे, तुमच्या प्रयत्नाच्या अनुपस्थितीसाठी नाही.
+
+
+=== TABLE 48 ===
+
+NOTE | टीप | The 5 Whys should take 8 to 12 minutes. Less than 8 means you are skipping; more than 15 means you are wandering. Time-bound the exercise; if it is genuinely taking longer than 15 minutes, the audit finding probably has multiple root causes and needs separate 5-Whys passes for each. | "पाच का?" ८ ते १२ मिनिटे घेतले पाहिजेत. ८ पेक्षा कमी म्हणजे तुम्ही वगळताय; १५ पेक्षा जास्त म्हणजे भटकताय. वेळ बांधा; १५ मिनिटांपेक्षा खरोखर जास्त लागत असेल — ऑडिट निष्कर्षात कदाचित अनेक मूळ कारणे आहेत आणि प्रत्येकासाठी वेगळे "पाच का?" लागतील.
+
+
+=== TABLE 49 ===
+
+WARNING | सूचना | Every Fail produces a CAP. Even a single-checkpoint, low-severity Fail. The CAP for a minor Fail can be lightweight — three lines is fine — but it must exist. The principle is no Fail without a corresponding plan to fix the underlying issue. Letting Fails accumulate without CAPs is what "audit fatigue" looks like in practice; it always precedes a Critical-band collapse by two to three months. | प्रत्येक नापास एक CAP तयार करते. एकल-तपासणी बिंदूचे, कमी-गंभीर नापासही. किरकोळ नापासाची CAP हलकी असू शकते — तीन ओळी ठीक — पण ती असली पाहिजे. तत्व: मूळ प्रश्न ठीक करण्याच्या जुळणाऱ्या योजनेशिवाय कोणतेही नापास नाही. CAP शिवाय नापास जमा होणे हीच प्रत्यक्षात "ऑडिट थकवा" दिसते; ती "क्रिटिकल" पट्टी कोसळण्याच्या दोन-तीन महिने आधी नेहमी येते.
+
+
+=== TABLE 50 ===
+
+# || Field | क्षेत्र || What goes here | येथे काय येते
+1 || CAP ID || Auto-generated, sequential. Example: CAP-2026-W22-03 (Week 22, third CAP of the week)
+2 || Date opened || Date the auditor opened the CAP — same day as the finding, not later
+3 || Originating finding || One sentence: which audit, which day or week, which checkpoint failed
+4 || Problem statement || Single sentence stating what failed, in operational terms
+5 || Root cause (5 Whys outcome) || One or two sentences from the 5 Whys exercise
+6 || Action steps || 3 to 5 numbered steps — each a single concrete action with a verb
+7 || Responsible (CAP Owner) || Named person — Store Manager, GM, or specific CRO
+8 || Deadline || Specific date — never "as soon as possible". 7 days default unless otherwise justified
+9 || Verification method || Which audit checkpoint will be re-run to confirm closure — by name
+10 || Status || Open / Done / Verified / Closed / Aged. Updated by the responsible person and the auditor
+
+
+=== TABLE 51 ===
+
+Field | क्षेत्र || Entry | नोंद
+CAP ID || CAP-2026-W22-01
+Date opened || Week 22, Saturday (weekly audit day)
+Originating finding || SOP 1.4 Fail on Tue, Wed, Fri (Week 22). Three-day pattern in single week.
+Problem statement || CROs not wearing hand gloves when handling display watches in afternoon shift, against grooming standard.
+Root cause (5 Whys) || Hand gloves stocked only at one counter; afternoon CROs at the other counter walked away to retrieve them, then forgot. No replenishment SOP for the second counter.
+Action steps || 1. Stock hand gloves at both counters (today). | 2. Add "hand glove count check" to the morning opening checklist (this week). | 3. Brief all CROs on the requirement at Monday's training (next Monday). | 4. Verify implementation in next weekly audit's spot check.
+Responsible (CAP Owner) || Store Manager
+Deadline || Friday, Week 23 (7 days)
+Verification method || GM spot check on checkpoint 1.4 on each of Mon/Wed/Fri Week 23
+Status timeline || Sat W22: Opened | Tue W23: Done (all action steps complete) | Fri W23: Verified (1.4 passed Mon, Wed, Fri) | Sat W23: Closed by GM at weekly audit
+
+
+=== TABLE 52 ===
+
+NOTE | टीप | If you scored below 10 out of 12, re-read the relevant Day 4 sections before starting Day 5. Day 5 is application and certification — Day 4 concepts get tested there in live scenarios. | १२ पैकी १० पेक्षा कमी गुण आले — दिवस ५ सुरू करण्यापूर्वी संबंधित दिवस ४ विभाग पुन्हा वाचा. दिवस ५ म्हणजे प्रत्यक्ष वापर आणि प्रमाणपत्र — दिवस ४ च्या संकल्पना तेथे प्रत्यक्ष परिस्थितींत तपासल्या जातात.
+
+
+=== TABLE 53 ===
+
+BEST PRACTICE | उत्तम सराव | Day 4 complete. You now hold all four conceptual layers of the audit programme — daily mastery (Day 2), weekly mastery (Day 3), and the analytical layer (Day 4) of scoring, root-cause analysis, CAPs, trends, and escalation. Tomorrow we put it all together in Day 5 — Practical Application & Certification. | दिवस ४ संपला. आता तुमच्याकडे ऑडिट कार्यक्रमाचे चारही संकल्पनात्मक स्तर आहेत — दैनंदिन प्रभुत्व (दिवस २), साप्ताहिक प्रभुत्व (दिवस ३), आणि विश्लेषणात्मक स्तर (दिवस ४) — स्कोअरिंग, मूळ कारण विश्लेषण, CAP, कल, आणि एस्केलेशन. उद्या आपण सर्व एकत्र करू दिवस ५ मध्ये — प्रत्यक्ष वापर आणि प्रमाणपत्र.
+
+
+=== TABLE 54 ===
+
+Variable | चल || Value | मूल्य
+Date || Wednesday, Week 24, 4th of the month
+Weather || Rain since 5 PM; foot traffic dropped to 60% of typical Wednesday
+CROs on duty || Two morning (Priya, Rohan), two afternoon (Suresh, Kavita)
+Opening cash float || ₹5,000
+POS cash sales || ₹38,400
+POS card/UPI sales || ₹1,02,300
+Refunds || Nil
+GRN received || 1 box (6 Casio MTP series watches)
+Service intakes || 3 new intakes; 2 pickups
+Customer walk-ins (logged) || 47 (down from typical 70+)
+NPS calls made || 22 (target is 28–30)
+
+
+=== TABLE 55 ===
+
+F# || Checkpoint | तपासणी बिंदू || Score | गुण || Why | का
+F1 || 1.4 (hand gloves) || Fail (-1 wt) || Hand gloves are required when handling display watches; "caught and corrected" does not change today's Fail
+F2 || 2.1 / 2.2 (Sales Buddy photos) || Pass (+2 wt) || 10:43 is within 10:30 ± 15 min tolerance; 9:08 is within 9:15 ± 15 min tolerance
+F3 || 3.x (NPS calls) || Fail (-1 wt) || 22 calls falls below the 28-call lower bound. Rain is a circumstance, not a reason — log it but do not waive the checkpoint
+F4 || 4.x (Customer Data) || Pass with note (+1 wt) || Refusals are logged as legitimate exceptions; 41/47 captured = 87%, within the 85% pass threshold (assuming 2 partials are counted half)
+F5 || 5.x (Display pricing) || Fail (-1 wt) || Old price cards on display are a customer-facing accuracy issue; three pieces qualify as a Fail, not a Pass-with-comment
+F6 || 6.5 (Cash variance) || Pass with note (+2 wt) || ₹60 over is just over the ₹50 threshold, but countersignature is present and explanation logged. Borderline — many auditors would call this a Fail. Acceptable as Pass-with-note if next-day check shows no pattern
+F7 || 6.11 (Override countersignature) || Fail (-2 wt) || Missing Store Manager countersignature on a ₹2,300 refund is a clear Fail — every override needs two signatures, no exceptions
+F8 || 6.9 (Petty cash receipts) || Fail (-2 wt) || ₹200 withdrawal without original receipt is not acceptable. "Vendor did not give one" is the CRO's problem to solve before withdrawing, not the auditor's problem to accept
+F9 || 7.1 (Cycle count) || Pass (+2 wt) || System and physical match exactly. Clean
+F10 || 7.3 (GRN entry) || Pass (+2 wt) || GRN register, system entry, box codes — all aligned
+F11 || 7.8 (FIFO) || Fail (-2 wt) || FIFO violation on H-11 is unambiguous; rotate the tray immediately and record the Fail
+F12 || 8.x (Service Intake) || Pass (+1 wt) || All three intakes properly documented; both pickups handled; overdue pickup followed up within timeframe
+
+
+=== TABLE 56 ===
+
+WARNING | सूचना | This audit lands exactly on the 90% boundary — Good band, but only just. Three of the six Fails are Cash-related (F7, F8) and one Inventory (F11) — meaning the critical SOPs are where the issues sit. Even though the overall percentage is acceptable, the pattern of critical-SOP failures means today's audit should produce CAPs for at least F7, F8, F11, and a verbal correction for F1. A Pass band does not mean a quiet evening for the Store Manager. | हे ऑडिट ठीक ९०% सीमेवर — चांगले पट्टी, पण फक्त काठावर. सहा नापासांपैकी तीन रोख-संबंधित (F७, F८) आणि एक स्टॉक (F११) — म्हणजे अत्यावश्यक एसओपी तेथेच त्रास. एकूण टक्केवारी स्वीकार्य असली तरी अत्यावश्यक-एसओपी अपयशांचा पॅटर्न म्हणजे आजच्या ऑडिटने F७, F८, F११ साठी CAP तयार केल्या पाहिजेत, आणि F१ साठी तोंडी सुधारणा. पास पट्टी म्हणजे स्टोअर मॅनेजरसाठी शांत संध्याकाळ नव्हे.
+
+
+=== TABLE 57 ===
+
+Day | दिवस || Compliance % | अनुपालन % || Notable findings | उल्लेखनीय निष्कर्ष
+Monday || 92.2 || Clean day. One Display Fail on planogram order
+Tuesday || 91.1 || One Cash variance ₹45 over; one NPS Fail (24 calls)
+Wednesday || 90.0 || From Section 5.1 — six Fails, three Cash-related
+Thursday || 88.8 || Two Display Fails (price cards); one Service Intake follow-up missing
+Friday || 93.3 || Best day of week; clean Cash and Inventory
+Saturday || 89.7 || Same Display planogram issue as Monday — recurring
+Sunday || 91.4 || One Sales Buddy late upload (closing photo at 9:32 PM)
+
+
+=== TABLE 58 ===
+
+# || Score | गुण || Why | का
+O.1 || Pass || Training conducted, signed, topic noted
+O.2 || Pass || Equipment issue identified, vendor ticket raised, repair completed within the week
+O.3 || Pass || Misalignment found and corrected; not a Fail because action was taken at audit moment
+O.4 || Fail || Expired item in first-aid kit and no replacement = clear Fail on O.4
+O.5 || Fail || AMC missed; rescheduled does not retroactively make this Pass for the week it was due
+O.6 || Pass || Consumables stocked
+O.7 || Fail || 18-day overdue invoice is well beyond reasonable; Fail on O.7
+O.8 || Pass || All current
+O.9 || Pass || Clean
+O.10 || Pass || All addressed
+
+
+=== TABLE 59 ===
+
+# || Score | गुण || Why | का
+CW.1 || Pass (2) || Bank reconciled cleanly
+CW.2 || Pass (2) || Safe count matches system
+CW.3 || Pass (2) || All 6 deposits have stamped slips
+CW.4 || Fail (0) || Missing receipt for ₹200 = Fail (already noted in daily audit, but recurs in weekly view as a process issue)
+CW.5 || Fail (0) || Missing countersignature on the ₹2,300 refund = clear Fail
+CW.6 || Pass (2) || GST reconciled
+CW.7 || Pass (2) || Net +₹75 within ±₹200 threshold
+CW.8 || Fail (0) || Suresh refund rate 5.2% exceeds 5% threshold; pattern requires investigation
+
+
+=== TABLE 60 ===
+
+# || Score | गुण || Why | का
+RS.1 || Pass || Submitted within Sunday deadline
+RS.2 || Pass (forward-looking) || Will be done Monday — assume on time unless evidence shows otherwise
+RS.3 || Pass || Dispatch list balanced
+RS.4 || Pass || All logged
+RS.5 || Pass with note || Closure rate: 9/12 = 75%. Below 80% threshold, but 3 still-open are not yet aged. Borderline — call as Fail if strict, Pass-with-note if generous
+RS.6 || Fail || 156 calls vs target 180–210 = below target. Clear Fail
+
+
+=== TABLE 61 ===
+
+# || Score | गुण || Why | का
+IW.1 || Pass (2) || 0.35% variance is below the 2% Owner-escalation threshold; still note and investigate, but Pass on the checkpoint
+IW.2 || Pass (2) || All GRNs closed
+IW.3 || Pass (2) || Both damages dispositioned with documentation
+IW.4 || Pass (2) || All intakes accounted for
+IW.5 || Pass (2) || No abnormal clustering
+IW.6 || Pass (2) || Aging report generated; 8 items flagged
+IW.7 || Pass (2) || 3 items flagged for Owner review
+IW.8 || Pass (2) || Write-off GM-signed
+IW.9 || Pass (2) || None to track
+IW.10 || Pass with note (2) || Velocity report generated; Police brand decline is a finding but not a checkpoint Fail
+IW.11 || Fail (0) || 14 of 16 trays rotated = 87.5%. Below 100% requirement for fortnight
+IW.12 || Pass (2) || Reconciled with documentation
+
+
+=== TABLE 62 ===
+
+Component | घटक || Earned | मिळवले || Possible | शक्य
+Daily-audit average || 61.8 || 68
+Operations Weekly || 7 || 10
+Cash Weekly ★ || 10 || 16
+Reporting & Service Weekly || 4 || 6
+Inventory Weekly ★ || 22 || 24
+TOTAL || 104.8 || 124
+
+
+=== TABLE 63 ===
+
+WARNING | सूचना | This simulated week is calibrated to look healthy on the dailies (90%+ average) while hiding serious issues in the weekly-only checks. That is exactly the failure mode the weekly audit exists to expose. A GM who only looks at the daily-average number would have called this week Good; the full weekly audit calls it Poor. The discipline of running every weekly-only checkpoint is what separates a real weekly audit from a check-the-box weekly audit. | हा अनुकरण आठवडा दैनंदिनवर निरोगी (९०%+ सरासरी) दिसण्यासाठी कॅलिब्रेट केलेला आहे — आणि साप्ताहिक-केवळ तपासणीत गंभीर समस्या लपवतो. हीच नेमकी अपयश पद्धत आहे ज्यासाठी साप्ताहिक ऑडिट अस्तित्वात आहे. फक्त दैनंदिन-सरासरी आकड्याकडे पाहणारा जीएम या आठवड्याला "चांगले" म्हणाला असता; पूर्ण साप्ताहिक ऑडिट त्याला "वाईट" म्हणते. प्रत्येक साप्ताहिक-केवळ तपासणी बिंदू चालवण्याची शिस्तच खऱ्या साप्ताहिक ऑडिटला चेक-द-बॉक्स साप्ताहिक ऑडिटपासून वेगळी करते.
+
+
+=== TABLE 64 ===
+
+Field | क्षेत्र || Entry | नोंद
+CAP ID || CAP-2026-W24-01
+Date opened || Saturday afternoon, Week 24
+Originating finding || POS override of ₹2,300 refund processed Wed 3:42 PM without Store Manager countersignature. CW.5 Fail; pattern with Suresh's elevated refund rate (CW.8)
+Problem statement || Cash override procedure being completed with only one signature instead of two; risk of unauthorised refunds processed without verification
+5 Whys || Why 1: SM countersignature missing → SM was at the other counter at 3:42 PM and Suresh did not wait | Why 2: Suresh did not wait → he believed customer was leaving and refund had to be processed immediately | Why 3: Customer perceived to be leaving → no procedure for handling refunds when SM is briefly unavailable | Why 4: No procedure for SM-unavailable refund → original SOP assumed SM always at the cash counter | Why 5: SOP assumed SM at cash counter → SOP written for single-counter store, never updated for combo-store reality with two counters
+Root cause || Cash override SOP is calibrated for a single-counter store and does not address the realistic case of SM being at the other counter during a refund request
+Action steps || 1. Update Cash override SOP to include "if SM not at counter, CRO must call SM via in-store mobile and SM provides countersignature within 5 minutes; if 5 min not possible, customer waits or returns next day" (this week) | 2. Brief Suresh and all CROs on updated procedure at Monday training (Week 25) | 3. Place updated SOP card at both cash registers (Week 25) | 4. GM spot check during next 2 weekly audits to confirm two-signature compliance on all overrides
+Responsible || Store Manager
+Deadline || Friday, Week 25 (7 days)
+Verification method || GM spot check on all overrides in Week 25 daily audits; weekly audit Week 25 confirms CW.5 Pass
+
+
+=== TABLE 65 ===
+
+BEST PRACTICE | उत्तम सराव | Notice what this CAP does NOT do. It does not blame Suresh. It does not say "train CRO to remember to wait." Both of those framings would put a band-aid on a single incident without preventing recurrence. The 5 Whys instead reveals that the SOP itself is the root cause — written for a different store configuration. Fix the SOP, and Suresh's behaviour becomes correct by default. That is the difference between a CAP that closes once and a CAP that keeps re-opening every month. | ही CAP काय करत नाही ते लक्षात घ्या. सुरेशला दोष देत नाही. "वाट पाहायला सीआरओला प्रशिक्षित करा" असे म्हणत नाही. ती दोन्ही चौकटी एका घटनेवर बँडेज लावतील, पुनरावृत्ती टाळणार नाहीत. "पाच का?" त्याऐवजी उघड करतात की एसओपी स्वतःच मूळ कारण — वेगळ्या स्टोअर कॉन्फिगरेशनसाठी लिहिले गेले. एसओपी ठीक करा, आणि सुरेशचे वर्तन डीफॉल्टनेच बरोबर होते. एका वेळी बंद होणाऱ्या CAP आणि दर महिन्याला पुन्हा उघडणाऱ्या CAP मधला हाच फरक.
+
+
+=== TABLE 66 ===
+
+NOTE | टीप | Scenarios B and C are the two non-escalations in this set, and both are the most instructive. B teaches that a momentarily-breached threshold that resolves within the day does not require escalation, but does require careful documentation. C teaches that a just-below-threshold finding may not require escalation per the seven triggers, but may demand the same level of GM-level investigation. Discipline is knowing the difference; instinct is what tells you when to override the rule by escalating anyway. Trust the triggers, but learn to recognize when the trigger missed something the rule book did not anticipate. | B आणि C हे या संचातले दोन गैर-एस्केलेशन, आणि दोन्ही सर्वात शिकवणारे. B शिकवते — दिवसभरात सुटणारी क्षणी मोडलेली मर्यादा एस्केलेशन मागत नाही, पण काळजीपूर्वक कागदपत्र मागते. C शिकवते — मर्यादेच्या किंचित खाली निष्कर्ष सात ट्रिगरनुसार एस्केलेशन मागत नसेल, पण तितक्याच जीएम-स्तरीय तपासाची मागणी करू शकतो. फरक जाणणे म्हणजे शिस्त; नियमपुस्तकाने अंदाज न केलेले काही ट्रिगर चुकवते हे ओळखणे म्हणजे प्रवृत्ती. ट्रिगरवर विश्वास ठेवा, पण नियमाला ओव्हरराइड कधी करायचे ते शिका.
+
+
+=== TABLE 67 ===
+
+WARNING | सूचना | Treat this as a real exam. Take it in a single sitting; do not pause to look anything up. The point is to confirm you can run the programme without supervision — looking things up during the test simulates running the programme with the workbook open beside you, which is not how operational reality works. | ही खरी परीक्षा माना. एका बैठकीत द्या; काही पाहण्यासाठी थांबू नका. मुद्दा हाच — पर्यवेक्षणाशिवाय कार्यक्रम चालवू शकता याची पुष्टी. चाचणीदरम्यान पाहणे म्हणजे शेजारी उघडे पुस्तक ठेवून कार्यक्रम चालवण्याचे अनुकरण — कार्यवाहक वास्तव असे काम करत नाही.
+
+
+=== TABLE 68 ===
+
+NOTE | टीप | Score yourself honestly. Mark each answer as correct (1 point) or incorrect (0). Partial credit (0.5) for answers that capture the main idea but miss specifics. Total over 50. Passing: 40+. If below 40, do not certify — re-read the days corresponding to the questions you missed and re-take in 48 hours. | स्वतःचे प्रामाणिकपणे मूल्यांकन करा. प्रत्येक उत्तराला बरोबर (१ गुण) किंवा चूक (०) म्हणून खूण करा. मुख्य कल्पना पकडणारी पण विशिष्टता चुकवणारी उत्तरे — अर्धा गुण (०.५). एकूण ५० पैकी. उत्तीर्ण: ४०+. ४० खाली — प्रमाणपत्र देऊ नका; चुकलेल्या प्रश्नांशी संबंधित दिवस पुन्हा वाचा आणि ४८ तासांत पुन्हा प्रयत्न करा.
+
+
+=== TABLE 69 ===
+
+NOTE | टीप | Recertification: After twelve months, retake the 50-question certification test. The audit programme will evolve over the year — checkpoint thresholds may shift, new SOPs may join, retired ones may go. The recertification keeps you current. The discipline of recertifying is itself part of the audit programme's discipline of recurring verification. | पुनर्प्रमाणन: बारा महिन्यांनंतर ५०-प्रश्न प्रमाणपत्र चाचणी पुन्हा द्या. वर्षभरात ऑडिट कार्यक्रम विकसित होईल — तपासणी बिंदू मर्यादा बदलू शकतात, नवीन एसओपी जोडले जाऊ शकतात, निवृत्त झालेले काढले जाऊ शकतात. पुनर्प्रमाणन तुम्हाला सद्यःस्थितीत ठेवते. पुनर्प्रमाणित होण्याची शिस्त ही स्वतःच ऑडिट कार्यक्रमाच्या आवर्ती-पडताळणी शिस्तीचा भाग आहे.
+
+
+=== TABLE 70 ===
+
+BEST PRACTICE | उत्तम सराव | Day 5 complete. The workbook ends here. The audit programme begins tomorrow. Apply what you learned at tomorrow's closing — and at every closing thereafter, week after week, month after month. The discipline of doing this every day is what separates a store that lasts from a store that closes. | दिवस ५ संपला. पुस्तक इथे संपते. ऑडिट कार्यक्रम उद्यापासून सुरू होतो. उद्याच्या बंदोबस्ताला शिकलेले लागू करा — आणि त्यानंतर प्रत्येक बंदोबस्ताला, आठवडा-आठवडा, महिना-महिना. हे रोज करण्याची शिस्तच टिकणाऱ्या स्टोअर आणि बंद होणाऱ्या स्टोअरमधला फरक आहे.
+
+
+=== TABLE 71 ===
+
+Appendix | परिशिष्ट || Contents | सामग्री || Use | वापर
+A.1 || Daily Audit Score Sheet Template || Print 31 copies per month for Store Manager
+A.2 || Weekly Audit Score Sheet Template || Print 5 copies per month for GM
+A.3 || CAP Template || Print 10 copies per month; one per finding
+A.4 || Rating Scale Reference Card || Wall poster in back office
+A.5 || Escalation Checklist || GM and Owner reference; printed card in audit folder
+A.6 || Strong vs Weak Evidence Quick Reference || Wall poster in back office and at GM desk
+A.7 || Bilingual Glossary (EN–MR) || 60+ audit terms; distributed to all CROs
+
+
+=== TABLE 72 ===
+
+Day | दिवस || Compliance % | अनुपालन % || Spot check Pass? | स्पॉट चेक पास? || Notes | टिपा
+Monday || ____ || Y / N || ____________________________
+Tuesday || ____ || Y / N || ____________________________
+Wednesday || ____ || Y / N || ____________________________
+Thursday || ____ || Y / N || ____________________________
+Friday || ____ || Y / N || ____________________________
+Saturday || ____ || Y / N || ____________________________
+Sunday || ____ || Y / N || ____________________________
+
+
+=== TABLE 73 ===
+
+Component | घटक || Earned | मिळवले || Possible | शक्य
+Daily-audit average || _____ || 68
+Operations Weekly || _____ || 10
+Cash Weekly ★ || _____ || 16
+Reporting & Service Weekly || _____ || 6
+Inventory Weekly ★ || _____ || 24
+TOTAL || _____ || 124
+
+
+=== TABLE 74 ===
+
+Band | पट्टी || Range | श्रेणी || Action | कृती || Who acts | कोण कृती करतो
+EXCELLENT | उत्कृष्ट || 95% – 100% || Reward; document practice for replication || SM records; GM cites in weekly report
+GOOD | चांगले || 90% – 94.9% || Note minor fixes for next day; no CAP needed || SM verbal with relevant CRO
+FAIR | बरे || 85% – 89.9% || Written CAP required || SM opens; GM reviews at weekly
+POOR | वाईट || 80% – 84.9% || Urgent CAP + escalate one tier up || SM opens; same-day GM escalation
+CRITICAL | अत्यावश्यक || Below 80% || Same-day escalation; full root-cause analysis || Owner involved regardless of tier
+
+
+=== TABLE 75 ===
+
+Tier | स्तर || Auditor | ऑडिटर || Target % | लक्ष्य % || Total points | एकूण गुण || Pts to pass | पास होण्यासाठी गुण
+Tier 1 daily || Store Manager || 90%+ || 90 weighted || 81+ weighted
+Tier 2 weekly || GM || 92%+ || 124 weighted || 114+ weighted
+Tier 3 monthly || Owner || 95%+ || (strategic — qualitative) || —
+
+
+=== TABLE 76 ===
+
+WARNING | सूचना | Always score with one decimal place. "90" is ambiguous — could be 90.0 (Good) or 89.7 (Fair) rounded up. The single most common scoring error is writing 90 when the math gave 89.7. | नेहमी एका दशांश स्थानासह गुण लिहा. "९०" अस्पष्ट — ९०.० (चांगले) किंवा ८९.७ (बरे) वर गोलाकार असू शकते. सर्वात सामान्य स्कोअरिंग चूक: गणिताने ८९.७ दिले असताना ९० लिहिणे.
+
+
+=== TABLE 77 ===
+
+# || Trigger | ट्रिगर || Threshold | मर्यादा || Escalate to | कोणाकडे || When | कधी
+1 || Daily audit Critical band || < 80% || GM (Owner if Cash/Inv) || Same night
+2 || Same checkpoint repeated Fail || 5+ days in a week || GM (Pattern CAP) || At weekly audit
+3 || Single-day cash variance || > ₹500 || GM (regardless of explanation) || Same day
+4 || Inventory variance || > 2% of stock value || Owner directly || Same day
+5 || Theft / security / legal || Any indication || Owner directly || Immediate
+6 || Customer complaint || Not store-resolvable || Owner directly || Same day
+7 || Declining trend || 3+ consecutive weeks || Owner || At third week's audit
+
+
+=== TABLE 78 ===
+
+English || Marathi | मराठी || Meaning | अर्थ
+Audit || ऑडिट || Independent check of standard vs reality
+Auditor || ऑडिटर || Person conducting the audit
+Compliance || अनुपालन || Meeting the SOP standard
+Checkpoint || तपासणी बिंदू || Single item being audited
+SOP || एसओपी || Standard Operating Procedure
+Tier || स्तर || Audit level (daily/weekly/monthly)
+Store Manager || स्टोअर मॅनेजर || Tier 1 auditor; conducts daily audit
+GM || जीएम (जनरल मॅनेजर) || Tier 2 auditor; conducts weekly audit
+CRO || सीआरओ || Customer Relationship Officer
+Owner || मालक || Tier 3 auditor; conducts monthly audit
+Pass || पास || Checkpoint meets standard
+Fail || नापास || Checkpoint does not meet standard
+NA / Not Applicable || NA / लागू नाही || Checkpoint genuinely does not apply
+Weighted score || वजनी गुण || Score adjusted for SOP weight
+Raw checkpoint || कच्चा तपासणी बिंदू || Unweighted count of checkpoint
+Band || पट्टी || Compliance category (Excellent/Good/Fair/Poor/Critical)
+Evidence || पुरावा || Proof supporting an audit finding
+Strong evidence || मजबूत पुरावा || Independent, dated, preserved proof
+Weak evidence || दुर्बल पुरावा || Verbal, memory, or unsigned — not acceptable
+Finding || निष्कर्ष || Named outcome of an audit
+Variance || तफावत || Difference between expected and actual
+Reconciliation || ताळमेळ || Process of matching two sets of records
+Cash reconciliation || रोख ताळमेळ || Match POS, register, and physical cash
+Petty cash || फुटकळ रोख || Small-amount cash for minor expenses
+Safe / vault || तिजोरी || Secure cash and high-value storage
+Override || ओव्हरराइड || Manual exception to standard POS flow
+Refund || परतावा || Money returned to customer
+GRN || GRN (वस्तू प्राप्ती नोंद) || Goods Received Note
+Stock movement || स्टॉक हालचाल || Change in inventory recorded in system
+Cycle count || चक्र-मोजणी || Daily count of one stock tray
+FIFO || FIFO (पहिल्या आत, पहिल्या बाहेर) || First In, First Out — sell oldest first
+Display / planogram || डिस्प्ले / प्लानोग्राम || Standard layout of brand zone
+Aging report || एजिंग अहवाल || Report of stock by time-in-store
+Slow-moving stock || हळू-विक्री स्टॉक || Items not sold in 90+ days
+Write-off || राइट-ऑफ || Item formally removed from stock as loss
+Service intake || सर्व्हिस इनटेक || Customer watch accepted for repair
+Order ID || ऑर्डर आयडी || Unique system-generated ID per intake
+Pickup || पिकअप || Customer collection of repaired watch
+Grooming || ग्रूमिंग || CRO personal appearance standards
+NPS || एनपीएस (नेट प्रमोटर स्कोर) || Customer satisfaction measurement
+DPDP || DPDP (डिजिटल वैयक्तिक डेटा संरक्षण) || Indian data privacy regulation
+Sales Buddy || सेल्स बडी || Titan's daily compliance photo app
+Planogram || प्लानोग्राम || Diagram of correct display layout
+CAP || कृती योजना (CAP) || Corrective Action Plan
+Plan / Do / Verify / Close || योजना / अंमलबजावणी / पडताळणी / बंद || Four phases of the CAP cycle
+Root cause || मूळ कारण || Underlying reason for a finding
+5 Whys || पाच का? || Technique to drill from symptom to root cause
+Aged CAP || जुनी CAP || CAP whose deadline passed without verification
+Escalation || एस्केलेशन || Moving an issue to the next audit tier
+Trigger || ट्रिगर || Condition that requires escalation
+Pattern || पॅटर्न || Repeated finding across days or weeks
+Slow slide || हळू घसरण || Gradual decline across 3+ weeks
+Single-SOP decay || एक-एसओपी क्षय || One SOP failing repeatedly while overall stays healthy
+Day-of-week clustering || दिवस-गठ्ठा || Failures concentrated on specific days
+Spot check || स्पॉट चेक || Targeted re-verification of evidence
+Verification || पडताळणी || Confirming evidence still supports finding
+Weekly report || साप्ताहिक अहवाल || GM's submission to Owner after weekly audit
+Critical SOP || अत्यावश्यक एसओपी || Cash and Inventory — double-weighted
+Tolerance window || सूट खिडकी || Allowable variance around a standard time/value
+Daily audit folder || दैनंदिन ऑडिट फोल्डर || Monthly file of all daily audit sheets
+High-value stock || उच्च-मूल्य स्टॉक || Items above ₹25,000 — separate handling
+Verbal confirmation || तोंडी पुष्टी || Statement without supporting evidence
+Countersignature || काऊंटर सही || Second authorising signature required for some actions
+Closing time || बंदोबस्ताची वेळ || End of business day; cash counted, audit done
+Opening time || उघडण्याची वेळ || Start of business day; float ready, photo uploaded
+
+
+=== TABLE 79 ===
+
+BEST PRACTICE | उत्तम सराव | End of Appendices. The workbook is now complete. Print the appendix pages relevant to your role, post the wall posters, distribute the glossary to your CRO team, and begin tomorrow. | परिशिष्टे समाप्त. पुस्तक आता पूर्ण. तुमच्या भूमिकेशी संबंधित परिशिष्ट पाने छापा, भिंत पोस्टर लावा, तुमच्या सीआरओ टीमला शब्दकोश वाटा, आणि उद्या सुरुवात करा.
+
