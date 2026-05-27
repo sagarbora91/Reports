@@ -20,7 +20,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+        # No npm cache — we don't commit package-lock.json, so the cache
+        # key can't be computed. Install is fast (~10s) without caching.
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
