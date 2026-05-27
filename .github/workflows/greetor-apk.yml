@@ -1,0 +1,101 @@
+name: Build Greetor APK
+
+on:
+  push:
+    branches: [main, capacitor]
+    paths:
+      - 'greetor/**'
+      - '.github/workflows/greetor-apk.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'greetor/**'
+      - '.github/workflows/greetor-apk.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Saagar Greetor debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: greetor
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Install fonts for SVG rasterization
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-liberation fonts-dejavu fontconfig
+          fc-cache -f
+
+      - name: Rasterize brand SVG sources to PNG
+        run: npm run build-assets
+        continue-on-error: true
+
+      - name: Add or sync Android platform
+        run: |
+          if [ ! -d "android" ]; then
+            echo "Generating android/ from scratch"
+            npx cap add android
+          else
+            echo "android/ exists, syncing"
+            npx cap sync android
+          fi
+
+      - name: Generate Android icon & splash variants
+        run: npx capacitor-assets generate --android
+        continue-on-error: true
+
+      - name: Stamp version code and name from CI run number
+        run: |
+          BUILD_NUM="${{ github.run_number }}"
+          VERSION_NAME="0.1.${BUILD_NUM}"
+          echo "Stamping versionCode=${BUILD_NUM}, versionName=${VERSION_NAME}"
+          sed -i "s/versionCode 1/versionCode ${BUILD_NUM}/" android/app/build.gradle
+          sed -i "s/versionName \"1.0\"/versionName \"${VERSION_NAME}\"/" android/app/build.gradle
+          grep -E 'versionCode|versionName' android/app/build.gradle
+
+      - name: Sync Capacitor after asset + version updates
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: greetor/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: saagar-greetor-${{ github.sha }}
+          path: greetor/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "### Saagar Greetor APK ready" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Version: **0.1.${{ github.run_number }}** (versionCode ${{ github.run_number }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Download artifact: **saagar-greetor-${{ github.sha }}** from the Artifacts panel above." >> $GITHUB_STEP_SUMMARY
+          echo "Standalone app — separate from Saagar Audit. Install both APKs to get audit + non-purchase capture as two icons." >> $GITHUB_STEP_SUMMARY

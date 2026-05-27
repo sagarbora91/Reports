@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2732 2732">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1f3a"/>
+      <stop offset="1" stop-color="#071529"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e0b85d"/>
+      <stop offset="1" stop-color="#c99a2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="2732" height="2732" fill="url(#bg)"/>
+  <text x="1366" y="1330" text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="320" font-weight="bold"
+        fill="url(#gold)">Saagar</text>
+  <rect x="966" y="1390" width="800" height="6" rx="3" fill="url(#gold)"/>
+  <text x="1366" y="1510" text-anchor="middle"
+        font-family="Arial, sans-serif"
+        font-size="120" font-weight="bold"
+        letter-spacing="18"
+        fill="url(#gold)">GREETOR</text>
+  <text x="1366" y="1640" text-anchor="middle"
+        font-family="Arial, sans-serif"
+        font-size="48" font-weight="normal"
+        letter-spacing="6"
+        fill="#d7deea" opacity="0.65">Non-Purchase Walk-in Capture</text>
+</svg>

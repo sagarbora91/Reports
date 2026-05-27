@@ -1,0 +1,25 @@
+{
+  "name": "saagar-greetor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Saagar Greetor — Non-Purchase walk-in capture for Tanishq / Titan World / Helios. Sister app to Saagar Audit.",
+  "scripts": {
+    "sync": "cap sync android",
+    "open-android": "cap open android",
+    "build-assets": "node scripts/build-assets.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/app": "^6.0.2",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/keyboard": "^6.0.3",
+    "@capacitor/local-notifications": "^6.1.1",
+    "@capacitor/splash-screen": "^6.0.3",
+    "@capacitor/status-bar": "^6.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^6.1.2",
+    "sharp": "^0.33.5"
+  }
+}
