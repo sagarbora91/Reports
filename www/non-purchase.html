@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Non-Purchase Capture App | Tanishq • Titan World • Helios</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap" rel="stylesheet">
   <style>
     :root {
       --navy: #0b1f3a;
@@ -41,60 +44,93 @@
       padding: 22px;
     }
 
-    .topbar {
-      background: linear-gradient(135deg, var(--navy), #071529);
+    .app-topbar {
+      background: var(--navy);
       color: var(--white);
-      border-radius: 24px;
-      box-shadow: var(--shadow);
-      padding: 22px 26px;
-      display: grid;
-      grid-template-columns: 1.4fr auto;
-      gap: 16px;
-      align-items: center;
+      padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
       position: sticky;
-      top: 12px;
+      top: 0;
       z-index: 20;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
     }
 
-    .brand-block h1 {
-      margin: 0 0 4px;
-      font-size: 24px;
-      letter-spacing: 0.2px;
+    .brand { display: flex; align-items: baseline; gap: 10px; }
+    .brand-serif {
+      font-family: 'DM Serif Display', Georgia, 'Times New Roman', serif;
+      font-size: 26px;
+      color: var(--gold-2);
+      letter-spacing: 0.3px;
+    }
+    .brand-sans {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--white);
+      opacity: 0.85;
+    }
+    .topbar-sub {
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.65);
     }
 
-    .brand-block p {
-      margin: 0;
-      color: #d7deea;
+    .app-tabs {
+      background: #132b4c;
+      display: flex;
+      border-bottom: 1px solid #1c3a66;
+      position: sticky;
+      top: 50px;
+      z-index: 19;
+    }
+    .app-tab {
+      flex: 1;
+      text-align: center;
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
       font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 14px 6px;
+      border-bottom: 3px solid transparent;
+      transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+    .app-tab:hover { color: var(--white); background: rgba(255,255,255,0.04); }
+    .app-tab.active {
+      color: var(--gold-2);
+      border-bottom-color: var(--gold-2);
+    }
+    @media (max-width: 380px) {
+      .app-tab { font-size: 12px; padding: 12px 4px; }
     }
 
-    .sync-row {
-      margin-top: 8px;
+    .register-actions {
       display: flex;
-      align-items: center;
       gap: 8px;
-      font-size: 12px;
-      color: #d7deea;
-    }
-
-    .sync-dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 999px;
-      background: #6b7280;
-      box-shadow: 0 0 0 3px rgba(255,255,255,0.08);
-    }
-
-    .sync-dot.green { background: #34d399; }
-    .sync-dot.amber { background: #fbbf24; }
-    .sync-dot.red { background: #f87171; }
-
-    .top-actions {
-      display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      justify-content: flex-end;
+      margin-top: 8px;
     }
+    .register-actions button {
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+
+    .dedup-warn {
+      background: #fff8e1;
+      border: 1px solid #f4c674;
+      color: #6a4a00;
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .dedup-warn strong { color: #8a5a00; }
+    .dedup-warn .dedup-list { margin: 6px 0 0; padding-left: 18px; }
 
     button, .button {
       border: 0;
@@ -445,8 +481,6 @@
 
     @media (max-width: 1100px) {
       .layout { grid-template-columns: 1fr; }
-      .topbar { grid-template-columns: 1fr; }
-      .top-actions { justify-content: flex-start; }
       .dash { grid-template-columns: repeat(2, 1fr); }
       .filters { grid-template-columns: 1fr 1fr; }
       .insight-grid { grid-template-columns: 1fr; }
@@ -456,13 +490,12 @@
       .app-shell { padding: 12px; }
       .grid-2, .grid-3, .filters { grid-template-columns: 1fr; }
       .dash { grid-template-columns: 1fr; }
-      .topbar { position: static; }
       .form-actions { flex-direction: column; }
     }
 
     @media print {
       body { background: #fff; }
-      .topbar, .left-panel, .filters, .small-actions, .form-actions, .source-note { display: none !important; }
+      .app-topbar, .app-tabs, .left-panel, .filters, .small-actions, .form-actions, .source-note, .register-actions { display: none !important; }
       .app-shell { max-width: none; padding: 0; }
       .layout { display: block; margin: 0; }
       .card { box-shadow: none; border: 0; }
@@ -473,27 +506,23 @@
   </style>
 </head>
 <body>
-  <div class="app-shell">
-    <header class="topbar">
-      <div class="brand-block">
-        <h1>Non-Purchase Capture App</h1>
-        <p>Tanishq Jewellery • Titan World • Helios | Greetor walk-in intelligence, reason tracking and follow-up control</p>
-        <div class="sync-row">
-          <span class="sync-dot" id="syncDot"></span>
-          <span id="syncLabel">Local only — pick a OneDrive folder to auto-sync</span>
-        </div>
-      </div>
-      <div class="top-actions">
-        <a class="btn-light" href="index.html" style="text-decoration:none; display:inline-flex; align-items:center;">&larr; Audit App</a>
-        <button class="btn-light" type="button" id="connectFolderBtn">Connect OneDrive Folder</button>
-        <button class="btn-light" type="button" id="backupBtn">Download JSON Backup</button>
-        <button class="btn-light" type="button" id="restoreBtn">Restore JSON</button>
-        <input class="hidden" type="file" id="restoreInput" accept="application/json" />
-        <button class="btn-gold" type="button" id="exportBtn">Export CSV</button>
-        <button class="btn-light" type="button" onclick="window.print()">Print Report</button>
-      </div>
-    </header>
 
+  <header class="app-topbar">
+    <div class="brand">
+      <span class="brand-serif">Saagar</span>
+      <span class="brand-sans">AUDIT</span>
+    </div>
+    <span class="topbar-sub">Non-Purchase Capture</span>
+  </header>
+
+  <nav class="app-tabs" id="appTabs">
+    <a class="app-tab" href="index.html#audit">Audit</a>
+    <a class="app-tab active" href="non-purchase.html">Non-Purchase</a>
+    <a class="app-tab" href="index.html#history">History</a>
+    <a class="app-tab" href="index.html#settings">Settings</a>
+  </nav>
+
+  <div class="app-shell">
     <main class="layout">
       <section class="card left-panel">
         <div class="card-header">
@@ -561,6 +590,7 @@
               </select>
             </div>
           </div>
+          <div class="dedup-warn hidden" id="dedupWarn"></div>
 
           <div class="section-title">3. Interest Mapping</div>
           <div class="field">
@@ -736,6 +766,10 @@
           <div class="card-header">
             <h2>Non-Purchase Register</h2>
             <p>Search, filter, edit, export and print walk-in loss intelligence.</p>
+            <div class="register-actions">
+              <button class="btn-gold" type="button" id="exportBtn">Export CSV</button>
+              <button class="btn-secondary" type="button" onclick="window.print()">Print Report</button>
+            </div>
           </div>
 
           <div class="content-card">
@@ -814,6 +848,7 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="shell.js"></script>
   <script>
     const MASTER = {
       "Tanishq Jewellery": {
@@ -861,10 +896,7 @@
     };
 
     const STORAGE_KEY = "np_capture_v1_records";
-    const SYNC_FILENAME = "non_purchase_register.json";
-    const HANDLE_DB = "np_capture_handles";
-    const HANDLE_STORE = "handles";
-    const HANDLE_KEY = "syncFolder";
+    const DEDUP_WINDOW_DAYS = 7;
 
     const $ = (id) => document.getElementById(id);
 
@@ -876,7 +908,6 @@
     ];
 
     let records = loadRecords();
-    let folderHandle = null;
 
     function todayISO() {
       return new Date().toISOString().slice(0, 10);
@@ -903,7 +934,6 @@
 
     function saveRecords() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-      syncToFolder();
     }
 
     function toast(message) {
@@ -1086,6 +1116,7 @@
           <td>${statusPill(r.leadStatus)}</td>
           <td>
             <div class="small-actions">
+              ${/^\d{10}$/.test(r.mobile || "") ? `<button class="btn-secondary" type="button" onclick="whatsappCustomer('${r.recordId}')" title="Open WhatsApp">WA</button>` : ""}
               <button class="btn-secondary" type="button" onclick="editRecord('${r.recordId}')">Edit</button>
               <button class="btn-danger" type="button" onclick="deleteRecord('${r.recordId}')">Delete</button>
             </div>
@@ -1167,6 +1198,22 @@
       toast("Entry deleted.");
     };
 
+    // Open WhatsApp chat with the customer. India numbers, so prefix 91.
+    // Pre-fills a polite, brand-aware greeting that the user can edit.
+    window.whatsappCustomer = function(id) {
+      const r = records.find(x => x.recordId === id);
+      if (!r || !/^\d{10}$/.test(r.mobile || "")) return;
+      const storeLabel = r.store || "our store";
+      const name = (r.customerName || "").trim();
+      const greeting = name ? `Hello ${name}, ` : "Hello, ";
+      const followUp = r.followDate
+        ? ` We had noted to follow up around ${r.followDate}.`
+        : "";
+      const msg = `${greeting}this is from ${storeLabel}.${followUp} Thank you for visiting us — do let me know if you'd like any help with your selection.`;
+      const url = `https://wa.me/91${r.mobile}?text=${encodeURIComponent(msg)}`;
+      window.open(url, "_blank", "noopener");
+    };
+
     function escapeHTML(str) {
       return String(str ?? "").replace(/[&<>"']/g, m => ({
         "&": "&amp;",
@@ -1218,164 +1265,109 @@
       toast("CSV export downloaded.");
     });
 
-    $("backupBtn").addEventListener("click", () => {
-      download(`non_purchase_backup_${todayISO()}.json`, JSON.stringify(records, null, 2), "application/json");
-      toast("JSON backup downloaded.");
+    // ----- Duplicate-mobile warning (within last DEDUP_WINDOW_DAYS) -----
+
+    function dedupMatches(mobile, excludeId) {
+      if (!/^\d{10}$/.test(mobile)) return [];
+      const cutoff = Date.now() - DEDUP_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+      return records.filter(r => {
+        if (excludeId && r.recordId === excludeId) return false;
+        if (r.mobile !== mobile) return false;
+        const t = new Date(r.createdAt || `${r.visitDate}T${r.visitTime || "00:00"}`).getTime();
+        return !isNaN(t) && t >= cutoff;
+      });
+    }
+
+    function daysAgo(iso) {
+      const t = new Date(iso).getTime();
+      if (isNaN(t)) return "";
+      const d = Math.round((Date.now() - t) / (24 * 60 * 60 * 1000));
+      if (d <= 0) return "today";
+      if (d === 1) return "yesterday";
+      return `${d} days ago`;
+    }
+
+    function updateDedupWarn() {
+      const warn = $("dedupWarn");
+      if (!warn) return;
+      const matches = dedupMatches($("mobile").value.trim(), $("recordId").value);
+      if (!matches.length) {
+        warn.classList.add("hidden");
+        warn.innerHTML = "";
+        return;
+      }
+      const items = matches.slice(0, 3).map(m => `
+        <li>${escapeHTML(m.visitDate)} (${daysAgo(m.createdAt || m.visitDate)}) ·
+            ${escapeHTML(m.store || "")} · ${escapeHTML(m.reason || "no reason")}
+            · <em>${escapeHTML(m.customerName || "unnamed")}</em></li>
+      `).join("");
+      warn.innerHTML = `
+        <strong>Repeat visit?</strong> This mobile was logged ${matches.length} time${matches.length > 1 ? "s" : ""} in the last ${DEDUP_WINDOW_DAYS} days.
+        <ul class="dedup-list">${items}</ul>
+        You can still save — just confirm it's a fresh visit, not a duplicate entry.
+      `;
+      warn.classList.remove("hidden");
+    }
+
+    $("mobile").addEventListener("blur", updateDedupWarn);
+    $("mobile").addEventListener("input", () => {
+      if ($("mobile").value.length === 10) updateDedupWarn();
+      else { $("dedupWarn").classList.add("hidden"); }
     });
 
-    $("restoreBtn").addEventListener("click", () => $("restoreInput").click());
+    // ----- Follow-up reminders -----
+    //
+    // After every save/delete we (a) schedule for the just-touched record,
+    // (b) sweep the full register so reminders survive across sessions.
 
-    $("restoreInput").addEventListener("change", async function() {
-      const file = this.files[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const imported = JSON.parse(text);
-        if (!Array.isArray(imported)) throw new Error("Invalid backup file");
-        if (!confirm(`Restore ${imported.length} records? This will replace current local data.`)) return;
-        records = imported;
-        saveRecords();
-        render();
-        toast("Backup restored successfully.");
-      } catch (err) {
-        toast("Could not restore file. Please select a valid JSON backup.");
-      } finally {
-        this.value = "";
+    async function syncFollowupReminders() {
+      if (!window.SaagarShell) return;
+      for (const r of records) {
+        try { await window.SaagarShell.scheduleFollowupReminder(r); } catch (_) {}
+      }
+    }
+
+    // Patch save handler so it also schedules a reminder for the saved record.
+    const _origSubmit = form.onsubmit;
+    form.addEventListener("submit", async function () {
+      // submit already wrote the record by the time this fires; pick the most
+      // recent (records.unshift puts it at index 0 for new ones).
+      const just = records[0];
+      if (window.SaagarShell && just) {
+        try { await window.SaagarShell.scheduleFollowupReminder(just); } catch (_) {}
       }
     });
 
-    // ----- OneDrive / folder auto-sync via File System Access API -----
-
-    function openHandleDB() {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(HANDLE_DB, 1);
-        req.onupgradeneeded = () => req.result.createObjectStore(HANDLE_STORE);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
-    }
-
-    async function storeHandle(handle) {
-      const db = await openHandleDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(HANDLE_STORE, "readwrite");
-        tx.objectStore(HANDLE_STORE).put(handle, HANDLE_KEY);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    }
-
-    async function readHandle() {
-      const db = await openHandleDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(HANDLE_STORE, "readonly");
-        const req = tx.objectStore(HANDLE_STORE).get(HANDLE_KEY);
-        req.onsuccess = () => resolve(req.result || null);
-        req.onerror = () => reject(req.error);
-      });
-    }
-
-    async function clearHandle() {
-      const db = await openHandleDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(HANDLE_STORE, "readwrite");
-        tx.objectStore(HANDLE_STORE).delete(HANDLE_KEY);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    }
-
-    function setSyncStatus(state, label) {
-      const dot = $("syncDot");
-      const lbl = $("syncLabel");
-      dot.classList.remove("green", "amber", "red");
-      if (state) dot.classList.add(state);
-      lbl.textContent = label;
-    }
-
-    async function ensurePermission(handle, mode = "readwrite") {
-      if (!handle) return false;
-      const opts = { mode };
-      const current = await handle.queryPermission(opts);
-      if (current === "granted") return true;
-      const next = await handle.requestPermission(opts);
-      return next === "granted";
-    }
-
-    async function writeRegisterFile() {
-      if (!folderHandle) return;
-      const ok = await ensurePermission(folderHandle, "readwrite");
-      if (!ok) {
-        setSyncStatus("amber", "Folder linked but permission not granted — click Connect to re-grant.");
-        return;
+    // Wrap deleteRecord so cancelling a record also cancels its reminder.
+    const _origDelete = window.deleteRecord;
+    window.deleteRecord = async function (id) {
+      if (window.SaagarShell) {
+        try { await window.SaagarShell.cancelFollowupReminder(id); } catch (_) {}
       }
-      const fileHandle = await folderHandle.getFileHandle(SYNC_FILENAME, { create: true });
-      const writable = await fileHandle.createWritable();
-      await writable.write(JSON.stringify(records, null, 2));
-      await writable.close();
-      setSyncStatus("green", `Auto-synced to ${folderHandle.name} • ${SYNC_FILENAME}`);
-    }
-
-    let syncTimer = null;
-    function syncToFolder() {
-      if (!folderHandle) return;
-      clearTimeout(syncTimer);
-      syncTimer = setTimeout(() => {
-        writeRegisterFile().catch(err => {
-          console.warn("Sync failed:", err);
-          setSyncStatus("red", "Sync failed — check folder access");
-        });
-      }, 250);
-    }
-
-    async function connectFolder() {
-      if (!window.showDirectoryPicker) {
-        toast("Folder sync needs Edge or Chrome on desktop. Use Download JSON Backup instead.");
-        return;
-      }
-      try {
-        const handle = await window.showDirectoryPicker({ mode: "readwrite", id: "np-onedrive-folder" });
-        folderHandle = handle;
-        await storeHandle(handle);
-        await writeRegisterFile();
-        toast(`Connected to "${handle.name}". Future saves will auto-sync.`);
-      } catch (err) {
-        if (err.name !== "AbortError") {
-          toast("Could not connect folder: " + err.message);
-        }
-      }
-    }
-
-    async function tryReconnect() {
-      if (!window.showDirectoryPicker) {
-        setSyncStatus(null, "Folder sync not supported in this browser — use Edge or Chrome.");
-        return;
-      }
-      try {
-        const handle = await readHandle();
-        if (!handle) {
-          setSyncStatus(null, "Local only — pick a OneDrive folder to auto-sync");
-          return;
-        }
-        folderHandle = handle;
-        const perm = await handle.queryPermission({ mode: "readwrite" });
-        if (perm === "granted") {
-          setSyncStatus("green", `Auto-syncing to ${handle.name} • ${SYNC_FILENAME}`);
-        } else {
-          setSyncStatus("amber", `Linked to ${handle.name} — click Connect to re-grant access`);
-        }
-      } catch (err) {
-        console.warn("Reconnect failed:", err);
-        setSyncStatus("red", "Could not restore folder link");
-      }
-    }
-
-    $("connectFolderBtn").addEventListener("click", connectFolder);
+      return _origDelete(id);
+    };
 
     initDefaults();
     onStoreChange();
     render();
-    tryReconnect();
+    syncFollowupReminders();
+
+    // Capacitor boot — status bar / splash / hardware back / keyboard.
+    if (window.SaagarShell) {
+      window.SaagarShell.boot({
+        onBack: () => {
+          // If the form has unsaved input (editing or partially filled), confirm.
+          const dirty = $("mobile").value || $("customerName").value || $("reason").value;
+          if ($("recordId").value || dirty) {
+            if (!confirm("Discard the current entry?")) return true;
+            resetForm();
+            $("dedupWarn").classList.add("hidden");
+            return true;
+          }
+          return false;
+        },
+      });
+    }
   </script>
 </body>
 </html>
