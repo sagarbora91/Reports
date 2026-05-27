@@ -1,1546 +1,2205 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Saagar Greetor | Non-Purchase Capture</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1f3a">
+  <title>Saagar Greetor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --navy: #0b1f3a;
-      --navy-2: #132b4c;
-      --gold: #c99a2e;
-      --gold-2: #e0b85d;
-      --cream: #fff8ea;
-      --white: #ffffff;
-      --soft: #f4f6f8;
-      --line: #dfe5ec;
-      --ink: #1f2937;
-      --muted: #6b7280;
-      --green: #168a51;
-      --orange: #c77912;
-      --red: #ba2d2d;
-      --shadow: 0 18px 45px rgba(11,31,58,0.12);
-      --radius: 18px;
-    }
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0b1f3a;
+  --navy-mid: #132b4c;
+  --navy-light: #1c3a66;
+  --gold: #c99a2e;
+  --gold-light: #e0b85d;
+  --white: #ffffff;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-500: #6b7280;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --green: #168a51;
+  --green-pale: #eaf8f1;
+  --amber: #c77912;
+  --amber-pale: #fff8e1;
+  --red: #ba2d2d;
+  --red-pale: #fff0f0;
+  --shadow-sm: 0 1px 3px rgba(11,31,58,0.08);
+  --shadow: 0 4px 12px rgba(11,31,58,0.10);
+  --shadow-lg: 0 18px 45px rgba(11,31,58,0.18);
+  --radius: 14px;
+  --radius-sm: 10px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --bnav-height: 64px;
+  --topbar-height: 52px;
+}
 
-    * { box-sizing: border-box; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--gray-800);
+  background: var(--gray-50);
+  overscroll-behavior: none;
+}
+input, select, textarea, button {
+  font-family: inherit;
+  font-size: 16px; /* prevents iOS zoom on focus */
+}
 
-    body {
-      margin: 0;
-      font-family: "Segoe UI", Arial, sans-serif;
-      color: var(--ink);
-      background:
-        radial-gradient(circle at top left, rgba(201,154,46,0.18), transparent 30%),
-        linear-gradient(135deg, #f9fafb 0%, #fff8ea 42%, #edf2f7 100%);
-      min-height: 100vh;
-    }
+/* ===================== App shell ===================== */
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  padding: calc(var(--safe-top) + 8px) 16px 8px;
+  background: var(--navy);
+  color: var(--white);
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.brand { display: flex; align-items: baseline; gap: 8px; }
+.brand-serif {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 24px;
+  color: var(--gold-light);
+  letter-spacing: 0.3px;
+}
+.brand-sans {
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  color: var(--white);
+  opacity: 0.85;
+  font-weight: 700;
+}
+.user-pill {
+  border: 0;
+  background: rgba(255,255,255,0.16);
+  color: var(--white);
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+main#screen {
+  padding: 14px 14px calc(var(--bnav-height) + var(--safe-bottom) + 14px);
+  min-height: calc(100vh - var(--topbar-height) - var(--bnav-height) - var(--safe-top) - var(--safe-bottom));
+}
+.bottomnav {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  padding-bottom: var(--safe-bottom);
+  background: var(--white);
+  border-top: 1px solid var(--gray-200);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  z-index: 9;
+  box-shadow: 0 -2px 10px rgba(11,31,58,0.06);
+}
+.bnav-btn {
+  background: transparent; border: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 2px;
+  color: var(--gray-500);
+  cursor: pointer;
+  padding: 10px 4px;
+  font-size: 11px; font-weight: 700;
+  min-height: var(--bnav-height);
+  letter-spacing: 0.3px;
+}
+.bnav-icon { font-size: 22px; line-height: 1; }
+.bnav-btn.active { color: var(--navy); }
+body.savebar-open .bottomnav { display: none; }
 
-    .app-shell {
-      max-width: 1380px;
-      margin: 0 auto;
-      padding: 22px;
-    }
+/* ===================== Sections / cards ===================== */
+.card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-sm);
+}
+.card h2, .card h3 { margin: 0 0 8px; color: var(--navy); }
+.card h2 { font-family: 'DM Serif Display', Georgia, serif; font-size: 20px; }
+.card h3 { font-size: 15px; }
+.card-muted { color: var(--gray-500); font-size: 13px; }
 
-    .app-topbar {
-      background: var(--navy);
-      color: var(--white);
-      padding: max(12px, env(safe-area-inset-top)) 16px 12px;
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 12px;
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    }
+/* ===================== Wizard ===================== */
+.wizard {
+  padding-bottom: calc(80px + var(--safe-bottom));
+}
+.wizard-head {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.wizard-progress {
+  display: flex; gap: 4px;
+  margin-bottom: 10px;
+}
+.wizard-dot {
+  flex: 1; height: 5px;
+  background: var(--gray-200);
+  border-radius: 999px;
+}
+.wizard-dot.done { background: var(--green); }
+.wizard-dot.current { background: var(--gold); }
+.wizard-step-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gray-500);
+}
+.wizard-title {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 22px;
+  color: var(--navy);
+  margin: 4px 0 0;
+}
 
-    .brand { display: flex; align-items: baseline; gap: 10px; }
-    .brand-serif {
-      font-family: 'DM Serif Display', Georgia, 'Times New Roman', serif;
-      font-size: 26px;
-      color: var(--gold-2);
-      letter-spacing: 0.3px;
-    }
-    .brand-sans {
-      font-size: 11px;
-      letter-spacing: 3px;
-      color: var(--white);
-      opacity: 0.85;
-    }
-    .topbar-sub {
-      font-size: 11px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.65);
-    }
+/* ===================== Fields ===================== */
+.field {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-sm);
+}
+.field-label {
+  display: block;
+  font-size: 13px;
+  color: var(--gray-700);
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: 0.2px;
+}
+.field-label.required::after { content: ' *'; color: var(--red); }
+.field-hint {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-top: 6px;
+}
+.field input[type="text"],
+.field input[type="tel"],
+.field input[type="number"],
+.field input[type="date"],
+.field input[type="time"],
+.field input[type="password"],
+.field select,
+.field textarea {
+  width: 100%;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  background: var(--white);
+  color: var(--gray-800);
+  font-size: 16px;
+  outline: none;
+  min-height: 44px;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201,154,46,0.15);
+}
+.field textarea { min-height: 90px; resize: vertical; }
 
-    .app-tabs {
-      background: #132b4c;
-      display: flex;
-      border-bottom: 1px solid #1c3a66;
-      position: sticky;
-      top: 50px;
-      z-index: 19;
-    }
-    .app-tab {
-      flex: 1;
-      text-align: center;
-      color: rgba(255,255,255,0.7);
-      text-decoration: none;
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 14px 6px;
-      border-bottom: 3px solid transparent;
-      transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-    }
-    .app-tab:hover { color: var(--white); background: rgba(255,255,255,0.04); }
-    .app-tab.active {
-      color: var(--gold-2);
-      border-bottom-color: var(--gold-2);
-    }
-    @media (max-width: 380px) {
-      .app-tab { font-size: 12px; padding: 12px 4px; }
-    }
+.chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  color: var(--gray-700);
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 40px;
+  min-width: 56px;
+  display: inline-flex; align-items: center; justify-content: center;
+  user-select: none;
+}
+.chip.selected {
+  background: var(--navy);
+  color: var(--white);
+  border-color: var(--navy);
+}
+.chip-more {
+  background: transparent;
+  border: 1px dashed var(--gray-300);
+  color: var(--gray-500);
+}
 
-    .register-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-    }
-    .register-actions button {
-      padding: 8px 12px;
-      font-size: 12px;
-    }
+/* ===================== Save bar ===================== */
+.savebar {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  padding: 10px 14px calc(10px + var(--safe-bottom));
+  background: var(--white);
+  border-top: 1px solid var(--gray-200);
+  display: grid; gap: 10px;
+  grid-template-columns: 1fr 1fr;
+  z-index: 11;
+  box-shadow: 0 -4px 16px rgba(11,31,58,0.10);
+}
+.savebar.single-btn { grid-template-columns: 1fr; }
 
-    .dedup-warn {
-      background: #fff8e1;
-      border: 1px solid #f4c674;
-      color: #6a4a00;
-      border-radius: 12px;
-      padding: 10px 12px;
-      margin-bottom: 12px;
-      font-size: 12px;
-      line-height: 1.45;
-    }
-    .dedup-warn strong { color: #8a5a00; }
-    .dedup-warn .dedup-list { margin: 6px 0 0; padding-left: 18px; }
+/* ===================== Buttons ===================== */
+.btn {
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  padding: 14px 16px;
+  min-height: 48px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  color: #1a1102;
+  box-shadow: 0 6px 14px rgba(201,154,46,0.30);
+}
+.btn-primary:active { transform: translateY(1px); }
+.btn-secondary {
+  background: var(--white);
+  color: var(--navy);
+  border: 1px solid var(--gray-300);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--navy);
+  border: 0;
+}
+.btn-danger {
+  background: var(--red);
+  color: var(--white);
+}
+.btn-full { width: 100%; }
+.btn[disabled] { opacity: 0.45; pointer-events: none; }
 
-    .settings-dialog {
-      border: 0;
-      border-radius: 16px;
-      padding: 0;
-      max-width: 560px;
-      width: 92%;
-      box-shadow: 0 30px 80px rgba(11,31,58,0.35);
-    }
-    .settings-dialog::backdrop {
-      background: rgba(11,31,58,0.55);
-      backdrop-filter: blur(2px);
-    }
-    .settings-dialog form { padding: 0; }
-    .settings-dialog header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 18px;
-      background: var(--navy);
-      color: var(--white);
-      border-radius: 16px 16px 0 0;
-    }
-    .settings-dialog header h2 {
-      margin: 0; color: var(--gold-2);
-      font-family: 'DM Serif Display', Georgia, serif;
-      font-size: 22px; letter-spacing: 0.3px;
-    }
-    .dialog-close {
-      background: rgba(255,255,255,0.1);
-      color: #fff; border: 0; border-radius: 8px;
-      width: 32px; height: 32px; font-size: 16px; cursor: pointer;
-    }
-    .settings-section {
-      padding: 16px 18px;
-      border-bottom: 1px solid var(--line);
-    }
-    .settings-section:last-child { border-bottom: 0; }
-    .settings-section h3 {
-      margin: 0 0 6px; color: var(--navy); font-size: 15px;
-    }
-    .settings-section .muted { font-size: 12px; }
-    .row-spread {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    }
+/* ===================== Today screen ===================== */
+.today-hero {
+  background: linear-gradient(135deg, var(--navy), #071529);
+  color: var(--white);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.today-count {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 48px;
+  color: var(--gold-light);
+  line-height: 1;
+}
+.today-label {
+  font-size: 11px; letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+  margin-top: 4px;
+}
+.today-meta { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 6px; }
 
-    button, .button {
-      border: 0;
-      border-radius: 12px;
-      padding: 10px 14px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
-      font-size: 13px;
-    }
+.entry-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-sm);
+}
+.entry-row { display: flex; align-items: center; gap: 10px; }
+.entry-name { font-weight: 700; color: var(--navy); flex: 1; font-size: 15px; }
+.entry-mobile { font-size: 13px; color: var(--gray-500); font-variant-numeric: tabular-nums; }
+.entry-meta {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--gray-700);
+  display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+}
+.entry-actions { display: flex; gap: 6px; margin-top: 10px; }
+.entry-action {
+  background: var(--gray-100);
+  border: 0;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  cursor: pointer;
+  min-height: 38px;
+  flex: 1;
+}
+.entry-action.wa { background: #25D366; color: var(--white); }
+.entry-action.delete { background: var(--red-pale); color: var(--red); flex: 0 0 60px; }
 
-    button:hover { transform: translateY(-1px); }
+.empty-state {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--gray-500);
+}
+.empty-state .icon { font-size: 48px; opacity: 0.4; }
+.empty-state h3 { margin: 12px 0 4px; color: var(--navy); }
 
-    .btn-gold {
-      color: #16120a;
-      background: linear-gradient(135deg, var(--gold-2), var(--gold));
-      box-shadow: 0 8px 18px rgba(201,154,46,0.25);
-    }
+/* ===================== Pills ===================== */
+.pill {
+  display: inline-flex; align-items: center;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.pill-hot { background: var(--red-pale); color: var(--red); }
+.pill-warm { background: var(--amber-pale); color: var(--amber); }
+.pill-cold, .pill-open { background: var(--gray-100); color: var(--gray-700); }
+.pill-converted { background: var(--green-pale); color: var(--green); }
+.pill-closed { background: var(--gray-100); color: var(--gray-500); }
 
-    .btn-light {
-      background: rgba(255,255,255,0.14);
-      color: var(--white);
-      border: 1px solid rgba(255,255,255,0.22);
-    }
+/* ===================== Settings ===================== */
+.settings-section {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.settings-section h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: var(--navy);
+}
+.settings-section p { margin: 0 0 12px; font-size: 13px; color: var(--gray-500); }
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--gray-100);
+}
+.settings-row:first-of-type { border-top: 0; }
 
-    .btn-danger {
-      background: #fff1f1;
-      color: var(--red);
-      border: 1px solid #ffd1d1;
-    }
+.role-pill {
+  display: inline-block;
+  background: var(--navy);
+  color: var(--white);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-left: 6px;
+}
+.role-pill.OWNER { background: var(--gold); color: #1a1102; }
+.role-pill.MANAGER { background: var(--navy); }
+.role-pill.GREETOR { background: var(--gray-700); }
+.role-pill.inactive { background: var(--gray-300); color: var(--gray-700); }
 
-    .btn-secondary {
-      background: var(--soft);
-      color: var(--navy);
-      border: 1px solid var(--line);
-    }
+.user-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0;
+  border-top: 1px solid var(--gray-100);
+}
+.user-row:first-of-type { border-top: 0; }
+.user-row .info { flex: 1; }
+.user-row .info .name { font-weight: 700; color: var(--navy); }
+.user-row .info .meta { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
 
-    .layout {
-      display: grid;
-      grid-template-columns: 390px minmax(0, 1fr);
-      gap: 20px;
-      margin-top: 20px;
-      align-items: start;
-    }
+/* ===================== Modals ===================== */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(11,31,58,0.55);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  display: flex; align-items: flex-end;
+}
+.modal {
+  background: var(--white);
+  width: 100%;
+  border-radius: 20px 20px 0 0;
+  padding: 20px 16px calc(16px + var(--safe-bottom));
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 -20px 60px rgba(11,31,58,0.30);
+}
+.modal-handle {
+  width: 40px; height: 4px;
+  background: var(--gray-300);
+  border-radius: 999px;
+  margin: 0 auto 12px;
+}
+.modal h2 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  color: var(--navy);
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+.modal h3 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  color: var(--navy);
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+.modal-actions {
+  display: grid; gap: 10px; grid-template-columns: 1fr 1fr;
+  margin-top: 16px;
+}
+.modal-actions.single { grid-template-columns: 1fr; }
 
-    .card {
-      background: rgba(255,255,255,0.92);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.7);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
+/* ===================== Toast ===================== */
+.toast {
+  position: fixed;
+  left: 50%; transform: translateX(-50%) translateY(80px);
+  bottom: calc(var(--bnav-height) + var(--safe-bottom) + 12px);
+  background: var(--navy);
+  color: var(--white);
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(11,31,58,0.35);
+  opacity: 0;
+  transition: all 0.2s ease;
+  z-index: 999;
+  max-width: 90vw;
+  text-align: center;
+}
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
 
-    .card-header {
-      padding: 16px 18px;
-      background: linear-gradient(135deg, var(--cream), #ffffff);
-      border-bottom: 1px solid var(--line);
-    }
+/* ===================== Auth ===================== */
+body.locked { overflow: hidden; }
+#auth-screen {
+  position: fixed; inset: 0;
+  background: linear-gradient(180deg, var(--navy), #071529);
+  color: var(--white);
+  z-index: 5000;
+  padding: calc(var(--safe-top) + 24px) 20px calc(var(--safe-bottom) + 20px);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+.auth-brand {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.auth-brand .main {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 38px;
+  color: var(--gold-light);
+  line-height: 1;
+}
+.auth-brand .sub {
+  font-size: 11px;
+  letter-spacing: 4px;
+  opacity: 0.8;
+  margin-top: 6px;
+  font-weight: 700;
+}
+.auth-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 12px;
+}
+.auth-card h2 {
+  margin: 0 0 12px;
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 22px;
+  color: var(--white);
+}
+.auth-card p { font-size: 13px; opacity: 0.8; margin: 0 0 12px; }
+.auth-card label {
+  display: block;
+  font-size: 11px;
+  opacity: 0.7;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.auth-card input, .auth-card select {
+  width: 100%;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.20);
+  color: var(--white);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 16px;
+  margin-bottom: 10px;
+  outline: none;
+  min-height: 44px;
+}
+.auth-card select option { background: var(--navy); color: var(--white); }
+.pin-dots {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin: 18px 0 14px;
+}
+.pin-dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--gold-light);
+}
+.pin-dot.filled { background: var(--gold-light); }
+.pin-dots.shake { animation: shake 0.3s; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+.pin-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.pin-key {
+  background: rgba(255,255,255,0.10);
+  color: var(--white);
+  border: 0;
+  border-radius: var(--radius);
+  font-size: 24px;
+  font-weight: 600;
+  padding: 16px;
+  cursor: pointer;
+  min-height: 58px;
+}
+.pin-key:active { background: rgba(255,255,255,0.22); transform: translateY(1px); }
+.pin-key.action {
+  background: rgba(201,154,46,0.18);
+  color: var(--gold-light);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.auth-error {
+  background: rgba(186,45,45,0.18);
+  border: 1px solid rgba(186,45,45,0.4);
+  color: #ffb4b4;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+.auth-btn-row { display: grid; gap: 10px; margin-top: 12px; }
 
-    .card-header h2, .card-header h3 {
-      margin: 0;
-      color: var(--navy);
-      font-size: 17px;
-    }
+/* ===================== Dedup ===================== */
+.dedup-row {
+  background: var(--gray-100);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.dedup-row strong { color: var(--navy); }
+.dedup-row .meta { color: var(--gray-500); font-size: 12px; margin-top: 2px; }
 
-    .card-header p {
-      margin: 4px 0 0;
-      color: var(--muted);
-      font-size: 12px;
-    }
+/* ===================== Utility ===================== */
+.hidden { display: none !important; }
+.muted { color: var(--gray-500); }
+.tiny { font-size: 11px; }
+.row-spread { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.spacer-8 { height: 8px; }
+.spacer-12 { height: 12px; }
+.spacer-24 { height: 24px; }
 
-    form {
-      padding: 18px;
-    }
-
-    .section-title {
-      margin: 16px 0 10px;
-      padding: 8px 10px;
-      border-left: 4px solid var(--gold);
-      background: #fffaf0;
-      color: var(--navy);
-      font-size: 13px;
-      font-weight: 800;
-      border-radius: 8px;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-    }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-bottom: 12px;
-    }
-
-    label {
-      font-size: 12px;
-      font-weight: 800;
-      color: #334155;
-    }
-
-    input, select, textarea {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 10px 11px;
-      background: #fff;
-      color: var(--ink);
-      font: inherit;
-      font-size: 13px;
-      outline: none;
-    }
-
-    input:focus, select:focus, textarea:focus {
-      border-color: var(--gold);
-      box-shadow: 0 0 0 3px rgba(201,154,46,0.16);
-    }
-
-    textarea {
-      min-height: 76px;
-      resize: vertical;
-    }
-
-    .required::after {
-      content: " *";
-      color: var(--red);
-    }
-
-    .form-actions {
-      position: sticky;
-      bottom: 0;
-      background: linear-gradient(180deg, rgba(255,255,255,0.82), #fff);
-      padding-top: 12px;
-      display: flex;
-      gap: 10px;
-      border-top: 1px solid var(--line);
-    }
-
-    .form-actions button {
-      flex: 1;
-    }
-
-    .dash {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 12px;
-      margin-bottom: 18px;
-    }
-
-    .metric {
-      padding: 16px;
-      border-radius: 16px;
-      background: linear-gradient(135deg, #ffffff, #f8fafc);
-      border: 1px solid var(--line);
-      box-shadow: 0 10px 24px rgba(15,23,42,0.06);
-    }
-
-    .metric span {
-      font-size: 11px;
-      font-weight: 800;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .5px;
-    }
-
-    .metric strong {
-      display: block;
-      margin-top: 5px;
-      color: var(--navy);
-      font-size: 26px;
-    }
-
-    .content-card {
-      padding: 18px;
-    }
-
-    .filters {
-      display: grid;
-      grid-template-columns: 1.2fr 1fr 1fr 1fr auto;
-      gap: 10px;
-      margin-bottom: 14px;
-      align-items: end;
-    }
-
-    .table-wrap {
-      overflow: auto;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: #fff;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 1160px;
-    }
-
-    th, td {
-      padding: 11px 10px;
-      border-bottom: 1px solid var(--line);
-      text-align: left;
-      font-size: 12px;
-      vertical-align: top;
-    }
-
-    th {
-      position: sticky;
-      top: 0;
-      background: var(--navy);
-      color: #fff;
-      z-index: 5;
-      font-size: 11px;
-      letter-spacing: .4px;
-      text-transform: uppercase;
-    }
-
-    tr:hover td { background: #fffaf0; }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      border-radius: 999px;
-      padding: 4px 8px;
-      font-size: 11px;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-
-    .pill.green { background: #eaf8f1; color: var(--green); }
-    .pill.orange { background: #fff5e5; color: var(--orange); }
-    .pill.red { background: #fff0f0; color: var(--red); }
-    .pill.navy { background: #edf4ff; color: var(--navy); }
-
-    .small-actions {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .small-actions button {
-      padding: 7px 8px;
-      font-size: 11px;
-    }
-
-    .insight-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-top: 18px;
-    }
-
-    .list-box {
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 14px;
-    }
-
-    .list-box h3 {
-      margin: 0 0 10px;
-      color: var(--navy);
-      font-size: 14px;
-    }
-
-    .bar-row {
-      display: grid;
-      grid-template-columns: 160px 1fr 34px;
-      gap: 10px;
-      align-items: center;
-      font-size: 12px;
-      margin: 8px 0;
-    }
-
-    .bar {
-      height: 9px;
-      background: #edf2f7;
-      border-radius: 999px;
-      overflow: hidden;
-    }
-
-    .bar > i {
-      display: block;
-      height: 100%;
-      background: linear-gradient(90deg, var(--gold), var(--navy));
-      border-radius: 999px;
-    }
-
-    .note {
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .source-note {
-      background: #f8fafc;
-      border: 1px dashed #cbd5e1;
-      border-radius: 14px;
-      padding: 12px;
-      margin-top: 14px;
-      font-size: 11px;
-      color: #64748b;
-      line-height: 1.55;
-    }
-
-    .empty {
-      text-align: center;
-      padding: 32px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .toast {
-      position: fixed;
-      right: 22px;
-      bottom: 22px;
-      background: var(--navy);
-      color: #fff;
-      padding: 12px 16px;
-      border-radius: 14px;
-      box-shadow: var(--shadow);
-      transform: translateY(120px);
-      opacity: 0;
-      transition: all .25s ease;
-      z-index: 999;
-      font-size: 13px;
-      max-width: 360px;
-    }
-
-    .toast.show {
-      transform: translateY(0);
-      opacity: 1;
-    }
-
-    .hidden { display: none !important; }
-
-    @media (max-width: 1100px) {
-      .layout { grid-template-columns: 1fr; }
-      .dash { grid-template-columns: repeat(2, 1fr); }
-      .filters { grid-template-columns: 1fr 1fr; }
-      .insight-grid { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 640px) {
-      .app-shell { padding: 12px; }
-      .grid-2, .grid-3, .filters { grid-template-columns: 1fr; }
-      .dash { grid-template-columns: 1fr; }
-      .form-actions { flex-direction: column; }
-    }
-
-    @media print {
-      body { background: #fff; }
-      .app-topbar, .app-tabs, .left-panel, .filters, .small-actions, .form-actions, .source-note, .register-actions { display: none !important; }
-      .app-shell { max-width: none; padding: 0; }
-      .layout { display: block; margin: 0; }
-      .card { box-shadow: none; border: 0; }
-      th { background: #111 !important; color: #fff !important; }
-      .dash { grid-template-columns: repeat(5, 1fr); }
-      @page { size: A4 landscape; margin: 10mm; }
-    }
-  </style>
+@media print {
+  body { background: white; }
+  .topbar, .bottomnav, .savebar, .toast, #modal-root, #auth-screen { display: none !important; }
+}
+</style>
 </head>
-<body>
+<body class="locked">
 
-  <header class="app-topbar">
+  <header class="topbar">
     <div class="brand">
       <span class="brand-serif">Saagar</span>
       <span class="brand-sans">GREETOR</span>
     </div>
-    <button class="topbar-sub" id="openSettingsBtn" type="button"
-            style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);color:#fff;cursor:pointer;border-radius:8px;padding:6px 10px">
-      ⚙ Settings
+    <button class="user-pill" id="userPill" data-action="user-pill" aria-label="User menu">
+      <span id="userInitials">··</span>
     </button>
   </header>
 
-  <div class="app-shell">
-    <main class="layout">
-      <section class="card left-panel">
-        <div class="card-header">
-          <h2>Greetor Entry Form</h2>
-          <p>Capture every non-purchase walk-in before the customer leaves.</p>
-        </div>
+  <main id="screen"></main>
 
-        <form id="entryForm" autocomplete="off">
-          <input type="hidden" id="recordId" />
+  <nav class="bottomnav" id="bottomnav">
+    <button class="bnav-btn active" data-screen="capture">
+      <span class="bnav-icon">＋</span>
+      <span>CAPTURE</span>
+    </button>
+    <button class="bnav-btn" data-screen="today">
+      <span class="bnav-icon">📋</span>
+      <span>TODAY</span>
+    </button>
+    <button class="bnav-btn" data-screen="settings">
+      <span class="bnav-icon">⚙</span>
+      <span>SETTINGS</span>
+    </button>
+  </nav>
 
-          <div class="section-title">1. Visit Details</div>
-          <div class="grid-2">
-            <div class="field">
-              <label class="required" for="store">Store Format</label>
-              <select id="store" required>
-                <option value="">Select</option>
-                <option value="Tanishq Jewellery">Tanishq Jewellery</option>
-                <option value="Titan World">Titan World</option>
-                <option value="Helios">Helios</option>
-              </select>
-            </div>
-            <div class="field">
-              <label class="required" for="visitDate">Visit Date</label>
-              <input type="date" id="visitDate" required />
-            </div>
-          </div>
-
-          <div class="grid-2">
-            <div class="field">
-              <label class="required" for="visitTime">Visit Time</label>
-              <input type="time" id="visitTime" required />
-            </div>
-            <div class="field">
-              <label for="source">Walk-in Source</label>
-              <select id="source">
-                <option>Walk-in</option>
-                <option>Reference</option>
-                <option>Repeat Customer</option>
-                <option>Digital Lead</option>
-                <option>Phone Enquiry Converted to Visit</option>
-                <option>Festival / Campaign Walk-in</option>
-                <option>Other</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="section-title">2. Customer Details</div>
-          <div class="field">
-            <label for="customerName">Customer Name</label>
-            <input type="text" id="customerName" placeholder="Optional, but recommended" />
-          </div>
-          <div class="grid-2">
-            <div class="field">
-              <label class="required" for="mobile">Mobile Number</label>
-              <input type="tel" id="mobile" maxlength="10" placeholder="10 digit mobile" required />
-            </div>
-            <div class="field">
-              <label for="customerType">Customer Type</label>
-              <select id="customerType">
-                <option>New Customer</option>
-                <option>Existing Customer</option>
-                <option>Family of Existing Customer</option>
-                <option>Corporate / Bulk</option>
-                <option>Tourist / Outstation</option>
-              </select>
-            </div>
-          </div>
-          <div class="dedup-warn hidden" id="dedupWarn"></div>
-
-          <div class="section-title">3. Interest Mapping</div>
-          <div class="field">
-            <label class="required" for="category">Category Interested In</label>
-            <select id="category" required>
-              <option value="">Select store first</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="subCategory">Sub-Category / Product Type</label>
-            <select id="subCategory">
-              <option value="">Select category first</option>
-            </select>
-          </div>
-
-          <div class="field" id="brandField">
-            <label for="brand">Brand</label>
-            <select id="brand">
-              <option value="">Select store first</option>
-            </select>
-          </div>
-
-          <div class="grid-2">
-            <div class="field">
-              <label for="gender">For Whom</label>
-              <select id="gender">
-                <option>Women</option>
-                <option>Men</option>
-                <option>Unisex</option>
-                <option>Kids / Teens</option>
-                <option>Couple</option>
-                <option>Family Purchase</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="occasion">Occasion / Purpose</label>
-              <select id="occasion">
-                <option>Daily Use</option>
-                <option>Office / Workwear</option>
-                <option>Casual Wear</option>
-                <option>Modern Wear</option>
-                <option>Traditional Wear</option>
-                <option>Wedding</option>
-                <option>Engagement</option>
-                <option>Festival</option>
-                <option>Birthday / Anniversary</option>
-                <option>Gifting</option>
-                <option>Luxury / Self Reward</option>
-                <option>Just Browsing</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid-2">
-            <div class="field">
-              <label for="budget">Budget Range</label>
-              <select id="budget">
-                <option>Not Discussed</option>
-                <option>Below ₹5,000</option>
-                <option>₹5,000 - ₹10,000</option>
-                <option>₹10,000 - ₹25,000</option>
-                <option>₹25,000 - ₹50,000</option>
-                <option>₹50,000 - ₹1,00,000</option>
-                <option>₹1,00,000 - ₹2,50,000</option>
-                <option>₹2,50,000 - ₹5,00,000</option>
-                <option>Above ₹5,00,000</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="urgency">Buying Timeline</label>
-              <select id="urgency">
-                <option>Same Day</option>
-                <option>Within 2-3 Days</option>
-                <option>Within 1 Week</option>
-                <option>Within 1 Month</option>
-                <option>Not Sure</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="section-title">4. Store Handling</div>
-          <div class="grid-2">
-            <div class="field">
-              <label for="greetor">Greetor Name</label>
-              <input type="text" id="greetor" list="staffList" placeholder="Type a name or pick from list" />
-            </div>
-            <div class="field">
-              <label for="cro">CRO / Sales Staff</label>
-              <input type="text" id="cro" list="staffList" placeholder="Type a name or pick from list" />
-            </div>
-          </div>
-          <datalist id="staffList"></datalist>
-
-          <div class="section-title">5. Non-Purchase Reason</div>
-          <div class="field">
-            <label class="required" for="reason">Primary Reason</label>
-            <select id="reason" required>
-              <option value="">Select</option>
-              <option>Price perceived high</option>
-              <option>Discount / offer expectation</option>
-              <option>Design not available</option>
-              <option>Size / fit not available</option>
-              <option>Preferred brand not available</option>
-              <option>Preferred colour / dial / metal not available</option>
-              <option>Stock unavailable in store</option>
-              <option>Customer comparing with other store / online</option>
-              <option>Family decision pending</option>
-              <option>Customer was only browsing</option>
-              <option>Payment / finance issue</option>
-              <option>Exchange / valuation dissatisfaction</option>
-              <option>Delivery timeline issue</option>
-              <option>Service / repair query only</option>
-              <option>Staff handling / waiting time issue</option>
-              <option>Customer left in hurry</option>
-              <option>Other</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="competitor">Competitor / Comparison Mentioned</label>
-            <input type="text" id="competitor" placeholder="Example: Online, local jeweller, Ethos, Just In Time, another Titan store" />
-          </div>
-
-          <div class="field">
-            <label for="remarks">Remarks / Exact Customer Words</label>
-            <textarea id="remarks" placeholder="Write the reason in the customer's words wherever possible."></textarea>
-          </div>
-
-          <div class="section-title">6. Follow-up Control</div>
-          <div class="grid-2">
-            <div class="field">
-              <label for="followUp">Follow-up Required?</label>
-              <select id="followUp">
-                <option>Yes</option>
-                <option>No</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="leadStatus">Lead Status</label>
-              <select id="leadStatus">
-                <option>Open</option>
-                <option>Hot</option>
-                <option>Warm</option>
-                <option>Cold</option>
-                <option>Closed - Not Interested</option>
-                <option>Converted Later</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid-2">
-            <div class="field">
-              <label for="followDate">Follow-up Date</label>
-              <input type="date" id="followDate" />
-            </div>
-            <div class="field">
-              <label for="followTime">Follow-up Time</label>
-              <input type="time" id="followTime" />
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button class="btn-gold" type="submit" id="saveBtn">Save Entry</button>
-            <button class="btn-secondary" type="button" id="resetBtn">Reset</button>
-          </div>
-        </form>
-      </section>
-
-      <section>
-        <div class="dash" id="dashboard"></div>
-
-        <section class="card">
-          <div class="card-header">
-            <h2>Non-Purchase Register</h2>
-            <p>Search, filter, edit, export and print walk-in loss intelligence.</p>
-            <div class="register-actions">
-              <button class="btn-gold" type="button" id="exportBtn">Export CSV</button>
-              <button class="btn-secondary" type="button" onclick="window.print()">Print Report</button>
-            </div>
-          </div>
-
-          <div class="content-card">
-            <div class="filters">
-              <div class="field">
-                <label for="searchBox">Search</label>
-                <input id="searchBox" type="search" placeholder="Name, mobile, category, brand, reason, staff..." />
-              </div>
-              <div class="field">
-                <label for="filterStore">Store</label>
-                <select id="filterStore">
-                  <option value="">All Stores</option>
-                  <option>Tanishq Jewellery</option>
-                  <option>Titan World</option>
-                  <option>Helios</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="filterStatus">Lead Status</label>
-                <select id="filterStatus">
-                  <option value="">All Statuses</option>
-                  <option>Open</option>
-                  <option>Hot</option>
-                  <option>Warm</option>
-                  <option>Cold</option>
-                  <option>Closed - Not Interested</option>
-                  <option>Converted Later</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="filterDate">Visit Date</label>
-                <input id="filterDate" type="date" />
-              </div>
-              <button class="btn-secondary" type="button" id="clearFilters">Clear</button>
-            </div>
-
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date / Time</th>
-                    <th>Store</th>
-                    <th>Customer</th>
-                    <th>Interest</th>
-                    <th>Budget</th>
-                    <th>Reason</th>
-                    <th>Staff</th>
-                    <th>Follow-up</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="recordsBody"></tbody>
-              </table>
-            </div>
-
-            <div class="insight-grid">
-              <div class="list-box">
-                <h3>Top Non-Purchase Reasons</h3>
-                <div id="reasonInsights"></div>
-              </div>
-              <div class="list-box">
-                <h3>Category Demand Without Purchase</h3>
-                <div id="categoryInsights"></div>
-              </div>
-            </div>
-
-            <div class="source-note">
-              App category master is prepared from public website category/brand structures for Tanishq, Titan and Helios as checked on 27 May 2026. Store teams should periodically review the dropdown masters because brand availability, assortment, offers and website taxonomy can change.
-            </div>
-          </div>
-        </section>
-      </section>
-    </main>
-  </div>
-
-  <div class="toast" id="toast"></div>
-
-  <dialog id="settingsDialog" class="settings-dialog">
-    <form method="dialog">
-      <header>
-        <h2>Settings</h2>
-        <button type="submit" value="cancel" class="dialog-close" aria-label="Close">✕</button>
-      </header>
-
-      <section class="settings-section">
-        <h3>Staff master</h3>
-        <p class="muted" id="staffSummary">No staff imported yet — Greetor and CRO fields will accept any typed name.</p>
-        <button type="button" class="btn-gold" id="importStaffBtn">Import staff from Audit backup</button>
-        <button type="button" class="btn-secondary" id="clearStaffBtn" style="margin-left:8px">Clear list</button>
-        <input type="file" id="staffImportInput" accept="application/json,.json" hidden />
-        <p class="tiny muted" style="margin-top:8px">
-          In the Saagar Audit app, tap <strong>Settings → Back up to Google Drive</strong>, share the JSON file to this device, then pick it here. We only read the staff (CRO) list — your audit data isn't touched.
-        </p>
-      </section>
-
-      <section class="settings-section">
-        <h3>Daily reminders</h3>
-        <label class="row-spread" style="cursor:pointer">
-          <span><strong>Follow-up reminders</strong> <span class="muted">(local notifications)</span></span>
-          <span class="muted" id="notifStatus">Granted on first save</span>
-        </label>
-      </section>
-
-      <section class="settings-section">
-        <h3>About</h3>
-        <p class="muted">Saagar Greetor &middot; v0.1.0 &middot; standalone non-purchase walk-in capture for Tanishq / Titan World / Helios.</p>
-      </section>
-    </form>
-  </dialog>
+  <div id="auth-screen"></div>
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" hidden></div>
 
   <script src="shell.js"></script>
   <script>
-    const MASTER = {
-      "Tanishq Jewellery": {
-        categories: {
-          "All Jewellery": ["Earrings", "Pendants", "Finger Rings", "Mangalsutra", "Chains", "Nose Pin", "Necklaces", "Necklace Set", "Bangles", "Bracelets", "Pendants & Earring Set"],
-          "Gold Jewellery": ["Gold Bangles", "Gold Bracelets", "Gold Earrings", "Gold Chains", "Gold Necklaces", "Gold Rings", "Gold Mangalsutra", "Gold Coins / Bars"],
-          "Diamond Jewellery": ["Diamond Rings", "Diamond Earrings", "Diamond Mangalsutra", "Diamond Necklace", "Diamond Bracelet", "Diamond Bangles", "Diamond Pendant"],
-          "Platinum Jewellery": ["Platinum Rings", "Platinum Bands", "Platinum Chains", "Platinum Pendants"],
-          "Silver Jewellery": ["Silver Rings", "Silver Chains", "Silver Gifts", "Silver Accessories"],
-          "Gemstone Jewellery": ["Ruby", "Emerald", "Sapphire", "Pearl", "Mixed Gemstone"],
-          "Bridal / Wedding": ["Bridal Set", "Wedding Necklace", "Wedding Bangles", "Engagement Ring", "Mangalsutra"],
-          "Coins / Bars": ["Gold Coin", "Gold Biscuit", "Religious Motif Coin", "Gifting Coin"],
-          "Service / Exchange Query": ["Gold Exchange", "Old Gold Valuation", "Repair Query", "Polish / Cleaning", "Scheme Query"]
-        },
-        brands: ["Tanishq", "Mia by Tanishq", "Not Brand Specific"],
-        defaultBrand: "Tanishq"
-      },
-      "Titan World": {
-        categories: {
-          "Analog Watches": ["Men", "Women", "Unisex", "Couple", "Kids", "Dress", "Daily Use", "Office / Workwear", "Fashion", "Statement", "Wedding / Gifting"],
-          "Smart Watches": ["Titan Smart", "Fastrack Smart", "BT Calling", "AMOLED", "Fitness / Health", "GPS / Sports", "Women Smartwatch"],
-          "Clocks": ["Wall Clock", "Table Clock", "Alarm Clock", "Decorative Clock", "Gift Clock"],
-          "Fragrances": ["Men", "Women", "Unisex", "Gift Set", "Skinn / Perfume Query"],
-          "Audio Accessories": ["Earbuds", "Headphones", "Audio Accessory Query"],
-          "Watch Accessories": ["Strap", "Battery", "Gift Box", "Warranty Query", "Service Query"],
-          "Corporate / Bulk": ["Corporate Gifting", "Bulk Watches", "Employee Gift", "Festival Gift"]
-        },
-        brands: ["Titan", "Fastrack", "Sonata", "Poze", "Raga", "Tommy Hilfiger", "SF", "Kenneth Cole", "Zoop", "Vyb", "Anne Klein", "Police", "Xylys", "Edge", "Nebula", "Ducati", "Roamer", "Cerruti 1881", "Not Brand Specific"],
-        defaultBrand: "Titan"
-      },
-      "Helios": {
-        categories: {
-          "Premium / Luxury Watches": ["Men", "Women", "Unisex", "Couple", "Dress", "Luxury", "Premium", "Collector Interest"],
-          "Analog Watches": ["Three Hand", "Multifunction", "Chronograph", "Automatic", "Quartz", "Dress Watch"],
-          "Digital Watches": ["Digital", "Hybrid", "G-Shock Style", "Sports Digital"],
-          "Smart Watches / Fitness": ["Smartwatch", "Fitness Band", "GPS Watch", "Health Tracking", "Outdoor / Sports"],
-          "Sports / Adventure": ["Diver Style", "Field / Outdoor", "Rugged", "Water Resistance Query", "Travel Watch"],
-          "Fashion Watches": ["Designer Fashion", "Stone / Embellished", "Minimal", "Statement"],
-          "Service / Warranty Query": ["Battery", "Strap", "Warranty", "Authenticity", "Repair", "Box / Tag Query"],
-          "Corporate / Bulk": ["Corporate Gifting", "Bulk Premium Watches", "VIP Gift", "Wedding Gift"]
-        },
-        brands: ["Aigner", "Alexander Shorokhoff", "Amazfit", "Anne Klein", "Armani Exchange", "Auguste Reymond", "Balmain", "Baume et Mercier", "Boss", "Calvin Klein", "Casio", "Cerruti 1881", "Charriol", "Citizen", "Concord", "Daniel Wellington", "Diesel", "Ebel", "Edge", "Emporio Armani", "Fitbit", "Fossil", "Frederique Constant", "G-Shock", "Garmin", "GC", "Guess", "Herbelin", "Just Cavalli", "Kenneth Cole", "King Seiko", "Michael Kors", "Milus", "Movado", "Police", "Rado", "Raga", "Roamer", "Roberto Cavalli", "Seiko", "SevenFriday", "Swarovski", "Tissot", "Titan", "Titan Smart", "Tommy Hilfiger", "U Boat", "Versace", "Victorinox", "Xylys", "Not Brand Specific"],
-        defaultBrand: "Not Brand Specific"
-      }
+"use strict";
+
+// =====================================================================
+// Constants + helpers
+// =====================================================================
+
+const STATE_KEY = "saagar_greetor_v2";
+const LEGACY_RECORDS_KEY = "np_capture_v1_records";
+const STAFF_KEY = "saagar_greetor_staff_v1";
+const DEDUP_DAYS = 7;
+
+const STORES = ["Tanishq Jewellery", "Titan World", "Helios"];
+
+const $ = (id) => document.getElementById(id);
+
+function uuid()  { return "g" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function uid()   { return "NP-" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,4).toUpperCase(); }
+function today() { return new Date().toISOString().slice(0, 10); }
+function nowTime() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+function fmtDateLong(iso) {
+  try {
+    return new Date(iso).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  } catch { return iso; }
+}
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+}
+function initials(name) {
+  return String(name || "??").trim().split(/\s+/).slice(0,2).map(w => w[0]?.toUpperCase() || "").join("") || "??";
+}
+function daysAgo(iso) {
+  const t = new Date(iso).getTime();
+  if (isNaN(t)) return "";
+  const d = Math.round((Date.now() - t) / (24*60*60*1000));
+  if (d <= 0) return "today";
+  if (d === 1) return "yesterday";
+  return d + " days ago";
+}
+function toast(msg) {
+  const el = $("toast");
+  el.textContent = msg;
+  el.hidden = false;
+  el.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => { el.hidden = true; }, 200);
+  }, 2200);
+}
+
+// Mobile formatter: "98765 43210" while typing, raw is 10 digits
+function formatMobile(raw) {
+  const d = String(raw || "").replace(/\D/g, "").slice(0, 10);
+  if (d.length <= 5) return d;
+  return d.slice(0, 5) + " " + d.slice(5);
+}
+function rawMobile(s) { return String(s || "").replace(/\D/g, "").slice(0, 10); }
+function isValidMobile(raw) { return /^[6-9]\d{9}$/.test(raw); }
+
+// =====================================================================
+// Storage + migration
+// =====================================================================
+
+const Store = {
+  load() {
+    try {
+      const raw = localStorage.getItem(STATE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) { console.error("v2 store corrupt", e); }
+    // First load OR no v2 yet — migrate from v1 records array if any.
+    let records = [];
+    try {
+      const legacy = localStorage.getItem(LEGACY_RECORDS_KEY);
+      if (legacy) records = JSON.parse(legacy) || [];
+    } catch (_) {}
+    return {
+      users: [],
+      current_user_id: null,
+      my_store: null,
+      records: records,
+      reminder_enabled: true,
     };
+  },
+  save(s) { localStorage.setItem(STATE_KEY, JSON.stringify(s)); },
+};
 
-    const STORAGE_KEY = "np_capture_v1_records";
-    const STAFF_KEY = "saagar_greetor_staff_v1";
-    const DEDUP_WINDOW_DAYS = 7;
+// =====================================================================
+// Auth — PBKDF2 PIN, users, roles, lockout
+// =====================================================================
 
-    // ----- Staff master: imported from Saagar Audit's backup file -----
-    //
-    // Audit backup JSON contains state.cros = [{ id, name, counter }].
-    // We mirror that here so Greetor / CRO fields autocomplete from the
-    // same single source of truth. The backup also includes audit history
-    // and PINs — we deliberately drop everything except the cros array.
+async function hashPin(pin, salt) {
+  const enc = new TextEncoder();
+  const km = await crypto.subtle.importKey("raw", enc.encode(pin), { name: "PBKDF2" }, false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: enc.encode(salt), iterations: 100000, hash: "SHA-256" },
+    km, 256
+  );
+  return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2,"0")).join("");
+}
+async function verifyPin(pin, salt, expected) { return (await hashPin(pin, salt)) === expected; }
+function randomSalt() {
+  const a = new Uint8Array(16);
+  crypto.getRandomValues(a);
+  return Array.from(a).map(b => b.toString(16).padStart(2,"0")).join("");
+}
 
-    function loadStaff() {
-      try {
-        const raw = localStorage.getItem(STAFF_KEY);
-        return raw ? JSON.parse(raw) : { cros: [], imported_at: null };
-      } catch (_) { return { cros: [], imported_at: null }; }
-    }
-
-    function saveStaff(s) {
-      localStorage.setItem(STAFF_KEY, JSON.stringify(s));
-    }
-
-    function extractCrosFromBackup(parsed) {
-      // Unified format (older) — { _format: 'saagar_unified_v1', audit: { cros }, non_purchase }
-      if (parsed && parsed._format === 'saagar_unified_v1' && parsed.audit && Array.isArray(parsed.audit.cros)) {
-        return parsed.audit.cros;
-      }
-      // Audit-only format — { _format: 'saagar_audit_v1', cros, audits, users }
-      if (parsed && parsed._format === 'saagar_audit_v1' && Array.isArray(parsed.cros)) {
-        return parsed.cros;
-      }
-      // Best-effort fallback for any object with a top-level cros array.
-      if (parsed && Array.isArray(parsed.cros)) return parsed.cros;
-      throw new Error('No CRO list found — pick a Saagar Audit backup file.');
-    }
-
-    function refreshStaffDatalist() {
-      const dl = document.getElementById('staffList');
-      if (!dl) return;
-      const { cros } = loadStaff();
-      dl.innerHTML = cros.map(c => `
-        <option value="${c.name.replace(/"/g, '&quot;')}">${(c.counter || '').replace(/[<>]/g, '')}</option>
-      `).join('');
-    }
-
-    function refreshStaffSummary() {
-      const el = document.getElementById('staffSummary');
-      if (!el) return;
-      const { cros, imported_at } = loadStaff();
-      if (!cros.length) {
-        el.innerHTML = 'No staff imported yet — Greetor and CRO fields will accept any typed name.';
-        return;
-      }
-      const when = imported_at ? new Date(imported_at).toLocaleString('en-IN') : 'unknown';
-      const byCounter = cros.reduce((m, c) => { m[c.counter || '—'] = (m[c.counter || '—'] || 0) + 1; return m; }, {});
-      const breakdown = Object.entries(byCounter).map(([k, v]) => `${v} ${k}`).join(' · ');
-      el.innerHTML = `<strong>${cros.length} staff</strong> imported (${breakdown}). Last sync: ${when}.`;
-    }
-
-    const $ = (id) => document.getElementById(id);
-
-    const form = $("entryForm");
-    const fields = [
-      "recordId", "store", "visitDate", "visitTime", "source", "customerName", "mobile", "customerType",
-      "category", "subCategory", "brand", "gender", "occasion", "budget", "urgency", "greetor", "cro",
-      "reason", "competitor", "remarks", "followUp", "leadStatus", "followDate", "followTime"
-    ];
-
-    let records = loadRecords();
-
-    function todayISO() {
-      return new Date().toISOString().slice(0, 10);
-    }
-
-    function nowTime() {
-      const d = new Date();
-      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-    }
-
-    function initDefaults() {
-      $("visitDate").value = todayISO();
-      $("visitTime").value = nowTime();
-      if (!$("followDate").value) $("followDate").value = todayISO();
-    }
-
-    function loadRecords() {
-      try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-      } catch (e) {
-        return [];
-      }
-    }
-
-    function saveRecords() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    }
-
-    function toast(message) {
-      const t = $("toast");
-      t.textContent = message;
-      t.classList.add("show");
-      setTimeout(() => t.classList.remove("show"), 2600);
-    }
-
-    function populateSelect(selectEl, items, placeholder) {
-      selectEl.innerHTML = "";
-      const opt = document.createElement("option");
-      opt.value = "";
-      opt.textContent = placeholder || "Select";
-      selectEl.appendChild(opt);
-
-      items.forEach(item => {
-        const o = document.createElement("option");
-        o.value = item;
-        o.textContent = item;
-        selectEl.appendChild(o);
-      });
-    }
-
-    function onStoreChange() {
-      const store = $("store").value;
-      if (!store || !MASTER[store]) {
-        populateSelect($("category"), [], "Select store first");
-        populateSelect($("subCategory"), [], "Select category first");
-        populateSelect($("brand"), [], "Select store first");
-        return;
-      }
-
-      populateSelect($("category"), Object.keys(MASTER[store].categories), "Select category");
-      populateSelect($("brand"), MASTER[store].brands, "Select brand");
-      $("brand").value = MASTER[store].defaultBrand || "";
-      populateSelect($("subCategory"), [], "Select category first");
-    }
-
-    function onCategoryChange() {
-      const store = $("store").value;
-      const category = $("category").value;
-      const list = store && category && MASTER[store] ? MASTER[store].categories[category] || [] : [];
-      populateSelect($("subCategory"), list, list.length ? "Select sub-category" : "Select category first");
-    }
-
-    function getFormData() {
-      const data = {};
-      fields.forEach(id => data[id] = $(id).value.trim());
-      data.updatedAt = new Date().toISOString();
-      if (!data.recordId) {
-        data.recordId = "NP-" + Date.now().toString(36).toUpperCase();
-        data.createdAt = new Date().toISOString();
-      } else {
-        const existing = records.find(r => r.recordId === data.recordId);
-        data.createdAt = existing?.createdAt || new Date().toISOString();
-      }
-      return data;
-    }
-
-    function setFormData(data) {
-      fields.forEach(id => {
-        if ($(id)) $(id).value = data[id] || "";
-      });
-      onStoreChange();
-      $("category").value = data.category || "";
-      onCategoryChange();
-      $("subCategory").value = data.subCategory || "";
-      $("brand").value = data.brand || "";
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-
-    function resetForm() {
-      form.reset();
-      $("recordId").value = "";
-      initDefaults();
-      onStoreChange();
-      $("saveBtn").textContent = "Save Entry";
-      $("mobile").setCustomValidity("");
-    }
-
-    function validate(data) {
-      if (!data.store || !data.visitDate || !data.visitTime || !data.mobile || !data.category || !data.reason) {
-        toast("Please fill all required fields marked with *.");
-        return false;
-      }
-      if (!/^[6-9]\d{9}$/.test(data.mobile)) {
-        toast("Enter a valid 10-digit Indian mobile number.");
-        return false;
-      }
-      if (data.followUp === "Yes" && !data.followDate) {
-        toast("Please select a follow-up date.");
-        return false;
-      }
-      return true;
-    }
-
-    form.addEventListener("submit", function(e) {
-      e.preventDefault();
-      const data = getFormData();
-      if (!validate(data)) return;
-
-      const index = records.findIndex(r => r.recordId === data.recordId);
-      if (index >= 0) {
-        records[index] = data;
-        toast("Entry updated successfully.");
-      } else {
-        records.unshift(data);
-        toast("Non-purchase entry saved.");
-      }
-      saveRecords();
-      resetForm();
-      render();
-    });
-
-    $("resetBtn").addEventListener("click", resetForm);
-    $("store").addEventListener("change", onStoreChange);
-    $("category").addEventListener("change", onCategoryChange);
-
-    $("mobile").addEventListener("input", function() {
-      this.value = this.value.replace(/\D/g, "").slice(0, 10);
-    });
-
-    ["searchBox", "filterStore", "filterStatus", "filterDate"].forEach(id => {
-      $(id).addEventListener("input", renderTable);
-      $(id).addEventListener("change", renderTable);
-    });
-
-    $("clearFilters").addEventListener("click", () => {
-      $("searchBox").value = "";
-      $("filterStore").value = "";
-      $("filterStatus").value = "";
-      $("filterDate").value = "";
-      renderTable();
-    });
-
-    function filteredRecords() {
-      const q = $("searchBox").value.toLowerCase().trim();
-      const fs = $("filterStore").value;
-      const st = $("filterStatus").value;
-      const fd = $("filterDate").value;
-
-      return records.filter(r => {
-        const text = Object.values(r).join(" ").toLowerCase();
-        return (!q || text.includes(q))
-          && (!fs || r.store === fs)
-          && (!st || r.leadStatus === st)
-          && (!fd || r.visitDate === fd);
-      });
-    }
-
-    function statusPill(status) {
-      let cls = "navy";
-      if (status === "Hot") cls = "red";
-      if (status === "Warm") cls = "orange";
-      if (status === "Converted Later") cls = "green";
-      if (status === "Cold" || status === "Closed - Not Interested") cls = "navy";
-      return `<span class="pill ${cls}">${escapeHTML(status || "Open")}</span>`;
-    }
-
-    function renderTable() {
-      const body = $("recordsBody");
-      const data = filteredRecords();
-      if (!data.length) {
-        body.innerHTML = `<tr><td colspan="10"><div class="empty">No entries found. Start capturing non-purchase walk-ins from the form.</div></td></tr>`;
-        renderInsights(data);
-        return;
-      }
-
-      body.innerHTML = data.map(r => `
-        <tr>
-          <td><strong>${escapeHTML(r.visitDate || "")}</strong><br>${escapeHTML(r.visitTime || "")}</td>
-          <td>${escapeHTML(r.store || "")}</td>
-          <td><strong>${escapeHTML(r.customerName || "Unnamed")}</strong><br>${escapeHTML(r.mobile || "")}<br><span class="note">${escapeHTML(r.customerType || "")}</span></td>
-          <td><strong>${escapeHTML(r.category || "")}</strong><br>${escapeHTML(r.subCategory || "")}<br><span class="pill navy">${escapeHTML(r.brand || "NA")}</span></td>
-          <td>${escapeHTML(r.budget || "")}<br><span class="note">${escapeHTML(r.urgency || "")}</span></td>
-          <td><strong>${escapeHTML(r.reason || "")}</strong><br><span class="note">${escapeHTML(r.remarks || "").slice(0, 90)}${(r.remarks || "").length > 90 ? "..." : ""}</span></td>
-          <td>Greetor: ${escapeHTML(r.greetor || "-")}<br>CRO: ${escapeHTML(r.cro || "-")}</td>
-          <td>${escapeHTML(r.followUp || "No")}<br>${escapeHTML(r.followDate || "")} ${escapeHTML(r.followTime || "")}</td>
-          <td>${statusPill(r.leadStatus)}</td>
-          <td>
-            <div class="small-actions">
-              ${/^\d{10}$/.test(r.mobile || "") ? `<button class="btn-secondary" type="button" onclick="whatsappCustomer('${r.recordId}')" title="Open WhatsApp">WA</button>` : ""}
-              <button class="btn-secondary" type="button" onclick="editRecord('${r.recordId}')">Edit</button>
-              <button class="btn-danger" type="button" onclick="deleteRecord('${r.recordId}')">Delete</button>
-            </div>
-          </td>
-        </tr>
-      `).join("");
-
-      renderInsights(data);
-    }
-
-    function renderDashboard() {
-      const total = records.length;
-      const today = records.filter(r => r.visitDate === todayISO()).length;
-      const hot = records.filter(r => r.leadStatus === "Hot").length;
-      const follow = records.filter(r => r.followUp === "Yes" && r.leadStatus !== "Converted Later" && r.leadStatus !== "Closed - Not Interested").length;
-      const converted = records.filter(r => r.leadStatus === "Converted Later").length;
-
-      $("dashboard").innerHTML = [
-        ["Total Entries", total],
-        ["Today", today],
-        ["Hot Leads", hot],
-        ["Follow-ups", follow],
-        ["Converted Later", converted]
-      ].map(([label, val]) => `
-        <div class="metric">
-          <span>${label}</span>
-          <strong>${val}</strong>
-        </div>
-      `).join("");
-    }
-
-    function countsBy(data, key) {
-      return data.reduce((acc, r) => {
-        const k = r[key] || "Not Captured";
-        acc[k] = (acc[k] || 0) + 1;
-        return acc;
-      }, {});
-    }
-
-    function renderInsights(data) {
-      renderBars("reasonInsights", countsBy(data, "reason"));
-      renderBars("categoryInsights", countsBy(data, "category"));
-    }
-
-    function renderBars(targetId, counts) {
-      const entries = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 8);
-      const max = Math.max(...entries.map(e => e[1]), 1);
-      if (!entries.length) {
-        $(targetId).innerHTML = `<p class="note">No data yet.</p>`;
-        return;
-      }
-      $(targetId).innerHTML = entries.map(([name, count]) => `
-        <div class="bar-row">
-          <span title="${escapeHTML(name)}">${escapeHTML(name.length > 24 ? name.slice(0, 24) + "..." : name)}</span>
-          <div class="bar"><i style="width:${Math.max(8, (count / max) * 100)}%"></i></div>
-          <strong>${count}</strong>
-        </div>
-      `).join("");
-    }
-
-    function render() {
-      renderDashboard();
-      renderTable();
-    }
-
-    window.editRecord = function(id) {
-      const r = records.find(x => x.recordId === id);
-      if (!r) return;
-      setFormData(r);
-      $("saveBtn").textContent = "Update Entry";
-      toast("Loaded entry for editing.");
+const Users = {
+  listAll(s)    { return s.users.slice(); },
+  listActive(s) { return s.users.filter(u => u.is_active); },
+  byId(s, id)   { return s.users.find(u => u.id === id) || null; },
+  async create({ name, role, pin }) {
+    const state = Store.load();
+    const salt = randomSalt();
+    const u = {
+      id: uuid(), name, role,
+      pin_salt: salt, pin_hash: await hashPin(pin, salt),
+      created_at: new Date().toISOString(),
+      is_active: true,
     };
+    state.users.push(u);
+    Store.save(state);
+    return u;
+  },
+  async changePin(userId, newPin) {
+    const state = Store.load();
+    const u = Users.byId(state, userId);
+    if (!u) return false;
+    u.pin_salt = randomSalt();
+    u.pin_hash = await hashPin(newPin, u.pin_salt);
+    Store.save(state);
+    return true;
+  },
+  setActive(userId, active) {
+    const state = Store.load();
+    const u = Users.byId(state, userId);
+    if (!u) return;
+    u.is_active = !!active;
+    Store.save(state);
+  },
+  remove(userId) {
+    const state = Store.load();
+    state.users = state.users.filter(u => u.id !== userId);
+    Store.save(state);
+  },
+};
 
-    window.deleteRecord = function(id) {
-      if (!confirm("Delete this non-purchase entry?")) return;
-      records = records.filter(r => r.recordId !== id);
-      saveRecords();
-      render();
-      toast("Entry deleted.");
-    };
+const AuthSession = {
+  current(s) {
+    s = s || Store.load();
+    if (!s.current_user_id) return null;
+    const u = Users.byId(s, s.current_user_id);
+    return (u && u.is_active) ? u : null;
+  },
+  login(userId) {
+    const s = Store.load();
+    s.current_user_id = userId;
+    Store.save(s);
+  },
+  logout() {
+    const s = Store.load();
+    s.current_user_id = null;
+    Store.save(s);
+  },
+};
 
-    // Open WhatsApp chat with the customer. India numbers, so prefix 91.
-    // Pre-fills a polite, brand-aware greeting that the user can edit.
-    window.whatsappCustomer = function(id) {
-      const r = records.find(x => x.recordId === id);
-      if (!r || !/^\d{10}$/.test(r.mobile || "")) return;
-      const storeLabel = r.store || "our store";
-      const name = (r.customerName || "").trim();
-      const greeting = name ? `Hello ${name}, ` : "Hello, ";
-      const followUp = r.followDate
-        ? ` We had noted to follow up around ${r.followDate}.`
-        : "";
-      const msg = `${greeting}this is from ${storeLabel}.${followUp} Thank you for visiting us — do let me know if you'd like any help with your selection.`;
-      const url = `https://wa.me/91${r.mobile}?text=${encodeURIComponent(msg)}`;
-      window.open(url, "_blank", "noopener");
-    };
+function roleLabel(r) { return { OWNER: "Owner", MANAGER: "Manager", GREETOR: "Greetor" }[r] || r; }
+function canManageUsers(auth) { return auth && auth.role === "OWNER"; }
 
-    function escapeHTML(str) {
-      return String(str ?? "").replace(/[&<>"']/g, m => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#039;"
-      }[m]));
+const LoginGuard = {
+  attempts: 0,
+  lockedUntil: 0,
+  register(success) {
+    if (success) { this.attempts = 0; this.lockedUntil = 0; return; }
+    this.attempts++;
+    if (this.attempts >= 5) {
+      this.lockedUntil = Date.now() + 60 * 1000;
+      this.attempts = 0;
     }
+  },
+  isLocked() { return this.lockedUntil > Date.now(); },
+  secondsLeft() { return Math.max(0, Math.ceil((this.lockedUntil - Date.now()) / 1000)); },
+};
 
-    function toCSV(data) {
-      const headers = [
-        "Record ID", "Visit Date", "Visit Time", "Store", "Source", "Customer Name", "Mobile", "Customer Type",
-        "Category", "Sub Category", "Brand", "For Whom", "Occasion", "Budget", "Buying Timeline",
-        "Greetor", "CRO", "Primary Reason", "Competitor", "Remarks", "Follow-up Required", "Follow-up Date",
-        "Follow-up Time", "Lead Status", "Created At", "Updated At"
-      ];
+const PinBuf = {
+  value: "",
+  reset() { this.value = ""; },
+};
 
-      const keys = [
-        "recordId", "visitDate", "visitTime", "store", "source", "customerName", "mobile", "customerType",
-        "category", "subCategory", "brand", "gender", "occasion", "budget", "urgency",
-        "greetor", "cro", "reason", "competitor", "remarks", "followUp", "followDate",
-        "followTime", "leadStatus", "createdAt", "updatedAt"
-      ];
+// =====================================================================
+// MASTER taxonomy (store → categories → sub-categories, brands)
+// (User-editable masters live in Sprint 2; this is the v1 hardcoded one)
+// =====================================================================
 
-      const rows = data.map(r => keys.map(k => csvCell(r[k])).join(","));
-      return [headers.map(csvCell).join(","), ...rows].join("\n");
-    }
+const MASTER = {
+  "Tanishq Jewellery": {
+    categories: {
+      "All Jewellery": ["Earrings","Pendants","Finger Rings","Mangalsutra","Chains","Nose Pin","Necklaces","Necklace Set","Bangles","Bracelets","Pendants & Earring Set"],
+      "Gold Jewellery": ["Gold Bangles","Gold Bracelets","Gold Earrings","Gold Chains","Gold Necklaces","Gold Rings","Gold Mangalsutra","Gold Coins / Bars"],
+      "Diamond Jewellery": ["Diamond Rings","Diamond Earrings","Diamond Mangalsutra","Diamond Necklace","Diamond Bracelet","Diamond Bangles","Diamond Pendant"],
+      "Platinum Jewellery": ["Platinum Rings","Platinum Bands","Platinum Chains","Platinum Pendants"],
+      "Silver Jewellery": ["Silver Rings","Silver Chains","Silver Gifts","Silver Accessories"],
+      "Gemstone Jewellery": ["Ruby","Emerald","Sapphire","Pearl","Mixed Gemstone"],
+      "Bridal / Wedding": ["Bridal Set","Wedding Necklace","Wedding Bangles","Engagement Ring","Mangalsutra"],
+      "Coins / Bars": ["Gold Coin","Gold Biscuit","Religious Motif Coin","Gifting Coin"],
+      "Service / Exchange": ["Gold Exchange","Old Gold Valuation","Repair Query","Polish / Cleaning","Scheme Query"]
+    },
+    brands: ["Tanishq","Mia by Tanishq","Not Brand Specific"],
+    defaultBrand: "Tanishq"
+  },
+  "Titan World": {
+    categories: {
+      "Analog Watches": ["Men","Women","Unisex","Couple","Kids","Dress","Daily Use","Office / Workwear","Fashion","Statement","Wedding / Gifting"],
+      "Smart Watches": ["Titan Smart","Fastrack Smart","BT Calling","AMOLED","Fitness / Health","GPS / Sports","Women Smartwatch"],
+      "Clocks": ["Wall Clock","Table Clock","Alarm Clock","Decorative Clock","Gift Clock"],
+      "Fragrances": ["Men","Women","Unisex","Gift Set","Skinn / Perfume Query"],
+      "Audio": ["Earbuds","Headphones","Audio Accessory Query"],
+      "Accessories": ["Strap","Battery","Gift Box","Warranty Query","Service Query"],
+      "Corporate / Bulk": ["Corporate Gifting","Bulk Watches","Employee Gift","Festival Gift"]
+    },
+    brands: ["Titan","Fastrack","Sonata","Raga","Tommy Hilfiger","SF","Kenneth Cole","Zoop","Vyb","Anne Klein","Police","Xylys","Edge","Nebula","Ducati","Not Brand Specific"],
+    defaultBrand: "Titan"
+  },
+  "Helios": {
+    categories: {
+      "Premium / Luxury": ["Men","Women","Unisex","Couple","Dress","Luxury","Premium","Collector Interest"],
+      "Analog Watches": ["Three Hand","Multifunction","Chronograph","Automatic","Quartz","Dress Watch"],
+      "Digital Watches": ["Digital","Hybrid","G-Shock Style","Sports Digital"],
+      "Smart / Fitness": ["Smartwatch","Fitness Band","GPS Watch","Health Tracking","Outdoor / Sports"],
+      "Sports / Adventure": ["Diver Style","Field / Outdoor","Rugged","Water Resistance Query","Travel Watch"],
+      "Fashion": ["Designer Fashion","Stone / Embellished","Minimal","Statement"],
+      "Service / Warranty": ["Battery","Strap","Warranty","Authenticity","Repair","Box / Tag Query"],
+      "Corporate / Bulk": ["Corporate Gifting","Bulk Premium Watches","VIP Gift","Wedding Gift"]
+    },
+    brands: ["Casio","Citizen","Daniel Wellington","Diesel","Emporio Armani","Fossil","G-Shock","Garmin","Guess","Kenneth Cole","Michael Kors","Movado","Police","Rado","Seiko","Swarovski","Tissot","Titan","Titan Smart","Tommy Hilfiger","Versace","Victorinox","Xylys","Fitbit","Amazfit","Not Brand Specific"],
+    defaultBrand: "Not Brand Specific"
+  }
+};
 
-    function csvCell(value) {
-      const v = String(value ?? "");
-      return `"${v.replace(/"/g, '""')}"`;
-    }
+const SOURCES         = ["Walk-in","Reference","Repeat Customer","Digital Lead","Phone Enquiry","Festival / Campaign","Other"];
+const CUSTOMER_TYPES  = ["New Customer","Existing Customer","Family of Existing","Corporate / Bulk","Tourist / Outstation"];
+const FOR_WHOMS       = ["Women","Men","Unisex","Kids / Teens","Couple","Family"];
+const OCCASIONS       = ["Daily Use","Office","Casual","Modern","Traditional","Wedding","Engagement","Festival","Birthday","Gifting","Luxury","Just Browsing"];
+const BUDGETS         = ["Not discussed","Below ₹5k","₹5k-10k","₹10k-25k","₹25k-50k","₹50k-1L","₹1L-2.5L","₹2.5L-5L","Above ₹5L"];
+const TIMELINES       = ["Same day","2-3 days","Within a week","Within a month","Not sure"];
+const LEAD_STATUSES   = ["Open","Hot","Warm","Cold","Converted","Closed"];
 
-    function download(filename, content, type) {
-      const blob = new Blob([content], { type });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
+// Top 8 reasons get prominent chips; rest go behind "More reasons"
+const REASONS_TOP = [
+  "Price too high",
+  "Discount expected",
+  "Design not available",
+  "Size / fit issue",
+  "Only browsing",
+  "Comparing options",
+  "Decision pending",
+  "Stock out"
+];
+const REASONS_MORE = [
+  "Preferred brand not available",
+  "Preferred colour / metal not available",
+  "Payment / finance issue",
+  "Exchange / valuation issue",
+  "Delivery timeline issue",
+  "Service query only",
+  "Staff / waiting issue",
+  "Left in hurry",
+  "Other"
+];
+const ALL_REASONS = REASONS_TOP.concat(REASONS_MORE);
 
-    $("exportBtn").addEventListener("click", () => {
-      download(`non_purchase_register_${todayISO()}.csv`, toCSV(filteredRecords()), "text/csv;charset=utf-8");
-      toast("CSV export downloaded.");
-    });
+// =====================================================================
+// Staff master (imported from Audit backup)
+// =====================================================================
 
-    // ----- Duplicate-mobile warning (within last DEDUP_WINDOW_DAYS) -----
+function loadStaff() {
+  try {
+    const raw = localStorage.getItem(STAFF_KEY);
+    return raw ? JSON.parse(raw) : { cros: [], imported_at: null };
+  } catch (_) { return { cros: [], imported_at: null }; }
+}
+function saveStaff(s) { localStorage.setItem(STAFF_KEY, JSON.stringify(s)); }
+function extractCrosFromBackup(parsed) {
+  if (parsed && parsed._format === "saagar_unified_v1" && parsed.audit && Array.isArray(parsed.audit.cros)) return parsed.audit.cros;
+  if (parsed && parsed._format === "saagar_audit_v1" && Array.isArray(parsed.cros)) return parsed.cros;
+  if (parsed && Array.isArray(parsed.cros)) return parsed.cros;
+  throw new Error("No CRO list found in this backup file.");
+}
 
-    function dedupMatches(mobile, excludeId) {
-      if (!/^\d{10}$/.test(mobile)) return [];
-      const cutoff = Date.now() - DEDUP_WINDOW_DAYS * 24 * 60 * 60 * 1000;
-      return records.filter(r => {
-        if (excludeId && r.recordId === excludeId) return false;
-        if (r.mobile !== mobile) return false;
-        const t = new Date(r.createdAt || `${r.visitDate}T${r.visitTime || "00:00"}`).getTime();
-        return !isNaN(t) && t >= cutoff;
-      });
-    }
+// =====================================================================
+// Wizard state
+// =====================================================================
 
-    function daysAgo(iso) {
-      const t = new Date(iso).getTime();
-      if (isNaN(t)) return "";
-      const d = Math.round((Date.now() - t) / (24 * 60 * 60 * 1000));
-      if (d <= 0) return "today";
-      if (d === 1) return "yesterday";
-      return `${d} days ago`;
-    }
+const Wizard = {
+  step: 1,
+  data: emptyData(),
+  reset(initial) {
+    this.step = 1;
+    this.data = Object.assign(emptyData(), initial || {});
+  },
+  set(k, v) { this.data[k] = v; },
+  goto(step) { this.step = step; render(); },
+};
 
-    function updateDedupWarn() {
-      const warn = $("dedupWarn");
-      if (!warn) return;
-      const matches = dedupMatches($("mobile").value.trim(), $("recordId").value);
-      if (!matches.length) {
-        warn.classList.add("hidden");
-        warn.innerHTML = "";
-        return;
+function emptyData() {
+  return {
+    recordId: "",
+    store: "",
+    visitDate: today(),
+    visitTime: nowTime(),
+    source: "Walk-in",
+    mobile: "",
+    customerName: "",
+    customerType: "New Customer",
+    category: "",
+    subCategory: "",
+    brand: "",
+    gender: "",
+    occasion: "",
+    budget: "",
+    urgency: "",
+    greetor: "",
+    cro: "",
+    reason: "",
+    competitor: "",
+    remarks: "",
+    followUp: "No",
+    leadStatus: "Open",
+    followDate: "",
+    followTime: "09:00",
+  };
+}
+
+function stepIsValid(step, d) {
+  if (step === 1) return !!(d.store && d.visitDate && d.visitTime);
+  if (step === 2) return isValidMobile(d.mobile);
+  if (step === 3) return !!(d.category && d.brand);
+  if (step === 4) {
+    if (!d.reason) return false;
+    if (d.followUp === "Yes" && !d.followDate) return false;
+    return true;
+  }
+  return true;
+}
+
+// =====================================================================
+// App state
+// =====================================================================
+
+let currentScreen = "capture";
+let editingRecordId = null;
+
+// =====================================================================
+// Render — top-level
+// =====================================================================
+
+function render() {
+  const state = Store.load();
+
+  // Auth gate
+  if (state.users.length === 0) {
+    showAuthScreen(renderFirstTimeSetup());
+    return;
+  }
+  const auth = AuthSession.current(state);
+  if (!auth) {
+    showAuthScreen(renderLoginScreen(state));
+    return;
+  }
+
+  hideAuthScreen();
+  $("userInitials").textContent = initials(auth.name);
+
+  // Wizard auto-fills "my store" if set
+  if (currentScreen === "capture" && !Wizard.data.store && state.my_store) {
+    Wizard.data.store = state.my_store;
+  }
+  // Wizard auto-fills greetor name with current user
+  if (currentScreen === "capture" && !Wizard.data.greetor) {
+    Wizard.data.greetor = auth.name;
+  }
+
+  const screen = $("screen");
+  if (currentScreen === "capture")       screen.innerHTML = renderCapture(state, auth);
+  else if (currentScreen === "today")    screen.innerHTML = renderToday(state, auth);
+  else if (currentScreen === "settings") screen.innerHTML = renderSettings(state, auth);
+
+  // Bottom nav active
+  document.querySelectorAll(".bnav-btn").forEach(b =>
+    b.classList.toggle("active", b.dataset.screen === currentScreen)
+  );
+
+  // Bottom nav vs savebar
+  document.body.classList.toggle("savebar-open", !!screen.querySelector(".savebar"));
+}
+
+function switchScreen(name) {
+  currentScreen = name;
+  // If switching away from capture mid-wizard with edits, keep them so user
+  // can come back. If saving cleared the wizard, it stays clean.
+  render();
+}
+
+// =====================================================================
+// Auth screens
+// =====================================================================
+
+function showAuthScreen(html) {
+  document.body.classList.add("locked");
+  const el = $("auth-screen");
+  el.innerHTML = html;
+  el.style.display = "flex";
+}
+function hideAuthScreen() {
+  document.body.classList.remove("locked");
+  const el = $("auth-screen");
+  el.style.display = "none";
+  el.innerHTML = "";
+}
+
+function renderFirstTimeSetup() {
+  const stage = window._setupStage || "name";
+  if (stage === "name") {
+    return `
+      <div class="auth-brand">
+        <div class="main">Saagar</div>
+        <div class="sub">GREETOR · FIRST-TIME SETUP</div>
+      </div>
+      <div class="auth-card">
+        <h2>Welcome</h2>
+        <p>Set up the owner account. You'll add Managers and Greetors after.</p>
+        <label for="ownerName">YOUR NAME</label>
+        <input type="text" id="ownerName" placeholder="e.g. Sagar Bora" autocomplete="name">
+        <div id="setupErr" class="auth-error" hidden></div>
+        <button class="btn btn-primary btn-full" data-action="setup-name-next">Continue</button>
+      </div>
+    `;
+  }
+  if (stage === "pin" || stage === "confirm") {
+    const label = stage === "pin" ? "Choose a 4-digit PIN" : "Confirm your PIN";
+    return `
+      <div class="auth-brand">
+        <div class="main">${escapeHtml(window._setupOwnerName || "Owner")}</div>
+        <div class="sub">GREETOR · FIRST-TIME SETUP</div>
+      </div>
+      <div class="auth-card">
+        <h2>${label}</h2>
+        ${renderPinDots()}
+        <div id="setupErr" class="auth-error" hidden></div>
+        ${renderPinPad()}
+      </div>
+    `;
+  }
+  return "";
+}
+
+function renderLoginScreen(state) {
+  const active = Users.listActive(state);
+  const selected = window._loginUserId || (active[0] && active[0].id);
+  const locked = LoginGuard.isLocked();
+  return `
+    <div class="auth-brand">
+      <div class="main">Saagar</div>
+      <div class="sub">GREETOR</div>
+    </div>
+    <div class="auth-card">
+      <h2>Sign in</h2>
+      <label for="loginUser">USER</label>
+      <select id="loginUser">
+        ${active.map(u => `<option value="${u.id}" ${u.id === selected ? "selected" : ""}>${escapeHtml(u.name)} · ${roleLabel(u.role)}</option>`).join("")}
+      </select>
+      ${renderPinDots()}
+      ${locked
+        ? `<div class="auth-error">Too many wrong PINs. Try again in ${LoginGuard.secondsLeft()}s.</div>`
+        : `<div id="loginErr" class="auth-error" hidden></div>`
       }
-      const items = matches.slice(0, 3).map(m => `
-        <li>${escapeHTML(m.visitDate)} (${daysAgo(m.createdAt || m.visitDate)}) ·
-            ${escapeHTML(m.store || "")} · ${escapeHTML(m.reason || "no reason")}
-            · <em>${escapeHTML(m.customerName || "unnamed")}</em></li>
-      `).join("");
-      warn.innerHTML = `
-        <strong>Repeat visit?</strong> This mobile was logged ${matches.length} time${matches.length > 1 ? "s" : ""} in the last ${DEDUP_WINDOW_DAYS} days.
-        <ul class="dedup-list">${items}</ul>
-        You can still save — just confirm it's a fresh visit, not a duplicate entry.
-      `;
-      warn.classList.remove("hidden");
-    }
+      ${renderPinPad()}
+    </div>
+  `;
+}
 
-    $("mobile").addEventListener("blur", updateDedupWarn);
-    $("mobile").addEventListener("input", () => {
-      if ($("mobile").value.length === 10) updateDedupWarn();
-      else { $("dedupWarn").classList.add("hidden"); }
-    });
+function renderPinDots() {
+  const filled = PinBuf.value.length;
+  return `<div class="pin-dots">${[0,1,2,3].map(i => `<div class="pin-dot ${i < filled ? "filled" : ""}"></div>`).join("")}</div>`;
+}
 
-    // ----- Follow-up reminders -----
-    //
-    // After every save/delete we (a) schedule for the just-touched record,
-    // (b) sweep the full register so reminders survive across sessions.
+function renderPinPad() {
+  const keys = [["1","2","3"],["4","5","6"],["7","8","9"],["forgot","0","back"]];
+  return `<div class="pin-pad">
+    ${keys.flat().map(k => {
+      if (k === "back")   return `<button class="pin-key action" data-key="back">⌫</button>`;
+      if (k === "forgot") return `<button class="pin-key action" data-key="forgot">Forgot?</button>`;
+      return `<button class="pin-key" data-key="${k}">${k}</button>`;
+    }).join("")}
+  </div>`;
+}
 
-    async function syncFollowupReminders() {
-      if (!window.SaagarShell) return;
-      for (const r of records) {
-        try { await window.SaagarShell.scheduleFollowupReminder(r); } catch (_) {}
-      }
-    }
-
-    // Patch save handler so it also schedules a reminder for the saved record.
-    const _origSubmit = form.onsubmit;
-    form.addEventListener("submit", async function () {
-      // submit already wrote the record by the time this fires; pick the most
-      // recent (records.unshift puts it at index 0 for new ones).
-      const just = records[0];
-      if (window.SaagarShell && just) {
-        try { await window.SaagarShell.scheduleFollowupReminder(just); } catch (_) {}
-      }
-    });
-
-    // Wrap deleteRecord so cancelling a record also cancels its reminder.
-    const _origDelete = window.deleteRecord;
-    window.deleteRecord = async function (id) {
-      if (window.SaagarShell) {
-        try { await window.SaagarShell.cancelFollowupReminder(id); } catch (_) {}
-      }
-      return _origDelete(id);
-    };
-
-    // ----- Settings dialog + staff import wiring -----
-
-    const settingsDialog = document.getElementById('settingsDialog');
-    document.getElementById('openSettingsBtn').addEventListener('click', () => {
-      refreshStaffSummary();
-      try { settingsDialog.showModal(); } catch (_) { settingsDialog.setAttribute('open', ''); }
-    });
-
-    document.getElementById('importStaffBtn').addEventListener('click', () => {
-      document.getElementById('staffImportInput').click();
-    });
-
-    document.getElementById('staffImportInput').addEventListener('change', async function () {
-      const file = this.files && this.files[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const parsed = JSON.parse(text);
-        const cros = extractCrosFromBackup(parsed);
-        if (!cros.length) { toast('Backup contains no staff.'); return; }
-        if (!confirm(`Import ${cros.length} staff member(s) from this audit backup? Replaces any existing staff list.`)) return;
-        saveStaff({ cros, imported_at: new Date().toISOString() });
-        refreshStaffDatalist();
-        refreshStaffSummary();
-        toast(`Imported ${cros.length} staff.`);
-      } catch (err) {
-        console.error(err);
-        toast(err && err.message ? err.message : 'Could not read backup file.');
-      } finally {
-        this.value = '';
-      }
-    });
-
-    document.getElementById('clearStaffBtn').addEventListener('click', () => {
-      const { cros } = loadStaff();
-      if (!cros.length) { toast('Nothing to clear.'); return; }
-      if (!confirm(`Clear ${cros.length} imported staff? Greetor / CRO fields will fall back to free text.`)) return;
-      saveStaff({ cros: [], imported_at: null });
-      refreshStaffDatalist();
-      refreshStaffSummary();
-      toast('Staff list cleared.');
-    });
-
-    initDefaults();
-    onStoreChange();
+async function handlePinKey(k) {
+  if (k === "forgot") {
+    alert("Forgot PIN?\n\nAsk the Owner to reset it from Settings → Users.\n\nIf you ARE the Owner, you'll need to clear the app's data in Android Settings → Apps → Saagar Greetor → Storage. Restore a JSON backup afterwards to bring entries back.");
+    return;
+  }
+  if (LoginGuard.isLocked() && !document.querySelector("#ownerName")) return;
+  if (k === "back") {
+    if (PinBuf.value.length > 0) PinBuf.value = PinBuf.value.slice(0, -1);
     render();
-    refreshStaffDatalist();
-    syncFollowupReminders();
+    return;
+  }
+  if (!/^[0-9]$/.test(k)) return;
+  if (PinBuf.value.length >= 4) return;
+  PinBuf.value += k;
+  // Re-render the dots only to keep PIN entry snappy
+  const dots = document.querySelector(".pin-dots");
+  if (dots) {
+    [...dots.querySelectorAll(".pin-dot")].forEach((d, i) =>
+      d.classList.toggle("filled", PinBuf.value.length > i));
+  }
+  if (PinBuf.value.length === 4) setTimeout(onPinComplete, 80);
+}
 
-    // Capacitor boot — status bar / splash / hardware back / keyboard.
-    if (window.SaagarShell) {
-      window.SaagarShell.boot({
-        onBack: () => {
-          // If the form has unsaved input (editing or partially filled), confirm.
-          const dirty = $("mobile").value || $("customerName").value || $("reason").value;
-          if ($("recordId").value || dirty) {
-            if (!confirm("Discard the current entry?")) return true;
-            resetForm();
-            $("dedupWarn").classList.add("hidden");
-            return true;
-          }
-          return false;
-        },
-      });
+async function onPinComplete() {
+  const stage = window._setupStage;
+  const pin = PinBuf.value;
+  const isSetup = !!document.querySelector("#auth-screen .auth-brand .sub")?.textContent?.includes("FIRST-TIME SETUP");
+  if (isSetup) {
+    if (stage === "pin") {
+      window._setupPin = pin;
+      window._setupStage = "confirm";
+      PinBuf.reset();
+      render();
+      return;
     }
+    if (stage === "confirm") {
+      if (pin !== window._setupPin) {
+        PinBuf.value = "";
+        const err = $("setupErr");
+        if (err) { err.textContent = "PINs don't match. Try again."; err.hidden = false; }
+        render();
+        setTimeout(() => { window._setupStage = "pin"; PinBuf.reset(); render(); }, 500);
+        return;
+      }
+      const u = await Users.create({ name: window._setupOwnerName, role: "OWNER", pin });
+      AuthSession.login(u.id);
+      window._setupOwnerName = null;
+      window._setupPin = null;
+      window._setupStage = null;
+      PinBuf.reset();
+      toast("Welcome, " + u.name);
+      render();
+      return;
+    }
+  }
+  // Login
+  const select = document.getElementById("loginUser");
+  const userId = select ? select.value : window._loginUserId;
+  if (!userId) return;
+  const state = Store.load();
+  const u = Users.byId(state, userId);
+  if (!u) return;
+  const ok = await verifyPin(pin, u.pin_salt, u.pin_hash);
+  LoginGuard.register(ok);
+  if (ok) {
+    AuthSession.login(u.id);
+    PinBuf.reset();
+    render();
+  } else {
+    PinBuf.value = "";
+    const err = $("loginErr");
+    if (err) {
+      err.textContent = LoginGuard.isLocked()
+        ? `Locked for ${LoginGuard.secondsLeft()}s.`
+        : "Wrong PIN. Try again.";
+      err.hidden = false;
+    }
+    render();
+  }
+}
+
+// =====================================================================
+// CAPTURE (wizard)
+// =====================================================================
+
+function renderWizardHead(step) {
+  const titles = ["Visit", "Customer", "Interest", "Reason & follow-up"];
+  return `
+    <div class="wizard-head">
+      <div class="wizard-progress">
+        ${[1,2,3,4].map(i => {
+          const cls = i < step ? "done" : i === step ? "current" : "";
+          return `<div class="wizard-dot ${cls}"></div>`;
+        }).join("")}
+      </div>
+      <div class="wizard-step-label">Step ${step} of 4</div>
+      <h1 class="wizard-title">${titles[step-1]}</h1>
+    </div>
+  `;
+}
+
+function renderCapture(state, auth) {
+  const step = Wizard.step;
+  let body = "";
+  if (step === 1) body = renderStep1(state);
+  else if (step === 2) body = renderStep2(state);
+  else if (step === 3) body = renderStep3(state);
+  else if (step === 4) body = renderStep4(state);
+
+  const isLast = step === 4;
+  const nextLabel = isLast ? (editingRecordId ? "Update" : "Save") : "Next →";
+  const nextAction = isLast ? "save-record" : "wizard-next";
+  const nextDisabled = !stepIsValid(step, Wizard.data) ? "disabled" : "";
+
+  const saveBar = `
+    <div class="savebar">
+      ${step > 1
+        ? `<button class="btn btn-secondary" data-action="wizard-back">← Back</button>`
+        : `<button class="btn btn-secondary" data-action="wizard-reset">Reset</button>`}
+      <button class="btn btn-primary" data-action="${nextAction}" ${nextDisabled}>${nextLabel}</button>
+    </div>
+  `;
+
+  return `<div class="wizard">${renderWizardHead(step)}${body}</div>${saveBar}`;
+}
+
+function chipGroup(name, options, selected, opts) {
+  opts = opts || {};
+  const onSelect = opts.action || `set-wizard`;
+  return `<div class="chip-group">${options.map(opt =>
+    `<button class="chip ${opt === selected ? "selected" : ""}" data-action="${onSelect}" data-field="${name}" data-value="${escapeHtml(opt)}">${escapeHtml(opt)}</button>`
+  ).join("")}</div>`;
+}
+
+function renderStep1(state) {
+  const d = Wizard.data;
+  // Quick time chips: now / 15m / 30m / 1h ago
+  const tMinus = (mins) => {
+    const dt = new Date(); dt.setMinutes(dt.getMinutes() - mins);
+    return String(dt.getHours()).padStart(2,"0") + ":" + String(dt.getMinutes()).padStart(2,"0");
+  };
+  const timeChips = [
+    ["Just now", nowTime()],
+    ["15 min", tMinus(15)],
+    ["30 min", tMinus(30)],
+    ["1 hour", tMinus(60)],
+  ];
+  return `
+    <div class="field">
+      <label class="field-label required">Store</label>
+      ${chipGroup("store", STORES, d.store)}
+      ${state.my_store ? `<p class="field-hint">Default is your store — change here for a one-off entry.</p>` : `<p class="field-hint">Pick a store. Set "my store" in Settings to skip this each time.</p>`}
+    </div>
+
+    <div class="field">
+      <label class="field-label required" for="visitDateIn">Visit date</label>
+      <input id="visitDateIn" type="date" value="${d.visitDate}" max="${today()}" data-wizard-field="visitDate">
+    </div>
+
+    <div class="field">
+      <label class="field-label required" for="visitTimeIn">Visit time</label>
+      <div class="chip-group" style="margin-bottom:10px">
+        ${timeChips.map(([label, val]) => `<button class="chip ${val === d.visitTime ? "selected" : ""}" data-action="set-wizard" data-field="visitTime" data-value="${val}">${label}</button>`).join("")}
+      </div>
+      <input id="visitTimeIn" type="time" value="${d.visitTime}" data-wizard-field="visitTime">
+    </div>
+
+    <div class="field">
+      <label class="field-label">Walk-in source</label>
+      ${chipGroup("source", SOURCES, d.source)}
+    </div>
+  `;
+}
+
+function renderStep2(state) {
+  const d = Wizard.data;
+  return `
+    <div class="field">
+      <label class="field-label required" for="mobileInput">Mobile number</label>
+      <input id="mobileInput" type="tel" inputmode="numeric"
+             value="${formatMobile(d.mobile)}"
+             placeholder="98765 43210"
+             autocomplete="off">
+      <p class="field-hint">10-digit Indian mobile. Used to spot repeat visits.</p>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="customerNameIn">Customer name</label>
+      <input id="customerNameIn" type="text" value="${escapeHtml(d.customerName)}"
+             data-wizard-field="customerName" placeholder="Optional, but recommended">
+    </div>
+
+    <div class="field">
+      <label class="field-label">Customer type</label>
+      ${chipGroup("customerType", CUSTOMER_TYPES, d.customerType)}
+    </div>
+  `;
+}
+
+function renderStep3(state) {
+  const d = Wizard.data;
+  const store = MASTER[d.store];
+  if (!store) {
+    return `<div class="field"><p class="muted">Pick a store in step 1 first.</p></div>`;
+  }
+  const categories = Object.keys(store.categories);
+  const subCats = d.category ? (store.categories[d.category] || []) : [];
+  const brands = store.brands;
+
+  return `
+    <div class="field">
+      <label class="field-label required">Category</label>
+      ${chipGroup("category", categories, d.category)}
+    </div>
+
+    ${subCats.length ? `
+    <div class="field">
+      <label class="field-label">Sub-category</label>
+      ${chipGroup("subCategory", subCats, d.subCategory)}
+    </div>` : ""}
+
+    <div class="field">
+      <label class="field-label required">Brand</label>
+      ${chipGroup("brand", brands, d.brand || store.defaultBrand)}
+    </div>
+
+    <div class="field">
+      <label class="field-label">For whom</label>
+      ${chipGroup("gender", FOR_WHOMS, d.gender)}
+    </div>
+
+    <div class="field">
+      <label class="field-label">Occasion</label>
+      ${chipGroup("occasion", OCCASIONS, d.occasion)}
+    </div>
+
+    <div class="field">
+      <label class="field-label">Budget</label>
+      ${chipGroup("budget", BUDGETS, d.budget)}
+    </div>
+
+    <div class="field">
+      <label class="field-label">Buying timeline</label>
+      ${chipGroup("urgency", TIMELINES, d.urgency)}
+    </div>
+  `;
+}
+
+function renderStep4(state) {
+  const d = Wizard.data;
+  const moreOpen = !!window._reasonsMoreOpen || REASONS_MORE.includes(d.reason);
+  const visibleReasons = moreOpen ? ALL_REASONS : REASONS_TOP;
+  const staff = loadStaff();
+  const staffOptions = staff.cros.length
+    ? staff.cros.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.counter || "")}</option>`).join("")
+    : "";
+
+  return `
+    <div class="field">
+      <label class="field-label required">Primary reason</label>
+      ${chipGroup("reason", visibleReasons, d.reason)}
+      ${!moreOpen ? `<button class="chip chip-more" data-action="reasons-more" style="margin-top:8px">+ More reasons</button>` : ""}
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="croField">CRO / sales staff (optional)</label>
+      <input id="croField" type="text" list="staffList" value="${escapeHtml(d.cro)}" data-wizard-field="cro" placeholder="${staff.cros.length ? "Pick from list or type" : "Type name (import staff in Settings)"}">
+      ${staffOptions ? `<datalist id="staffList">${staffOptions}</datalist>` : ""}
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="competitorIn">Competitor mentioned</label>
+      <input id="competitorIn" type="text" value="${escapeHtml(d.competitor)}" data-wizard-field="competitor" placeholder="e.g. online, local jeweller, another Titan store">
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="remarksIn">Remarks</label>
+      <textarea id="remarksIn" data-wizard-field="remarks" placeholder="Customer's exact words if you can">${escapeHtml(d.remarks)}</textarea>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Follow-up needed?</label>
+      ${chipGroup("followUp", ["Yes","No"], d.followUp)}
+    </div>
+
+    ${d.followUp === "Yes" ? `
+    <div class="field">
+      <label class="field-label">Lead status</label>
+      ${chipGroup("leadStatus", LEAD_STATUSES, d.leadStatus)}
+    </div>
+
+    <div class="field">
+      <label class="field-label required" for="followDateIn">Follow-up date</label>
+      <input id="followDateIn" type="date" value="${d.followDate || today()}" min="${today()}" data-wizard-field="followDate">
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="followTimeIn">Follow-up time</label>
+      <input id="followTimeIn" type="time" value="${d.followTime || "09:00"}" data-wizard-field="followTime">
+      <p class="field-hint">A reminder fires on your phone at this time.</p>
+    </div>
+    ` : ""}
+  `;
+}
+
+// =====================================================================
+// TODAY screen
+// =====================================================================
+
+function renderToday(state, auth) {
+  const todayStr = today();
+  const todayRecs = state.records.filter(r => r.visitDate === todayStr);
+  const myRecs = auth.role === "GREETOR"
+    ? todayRecs.filter(r => r.createdByUserId === auth.id)
+    : todayRecs;
+  const hotCount = state.records.filter(r => r.leadStatus === "Hot").length;
+  const followCount = state.records.filter(r => r.followUp === "Yes" && !["Converted","Closed"].includes(r.leadStatus)).length;
+
+  return `
+    <div class="today-hero">
+      <div>
+        <div class="today-count">${myRecs.length}</div>
+        <div class="today-label">${auth.role === "GREETOR" ? "My captures today" : "Captures today"}</div>
+        <div class="today-meta">${hotCount} hot · ${followCount} follow-ups pending</div>
+      </div>
+      <button class="btn btn-primary" data-action="goto-capture">+ New</button>
+    </div>
+
+    ${myRecs.length === 0
+      ? `<div class="empty-state">
+           <div class="icon">📭</div>
+           <h3>Nothing captured today</h3>
+           <p class="muted">Tap + New, or hit Capture in the bottom bar.</p>
+         </div>`
+      : myRecs.map(r => renderEntryCard(r, auth)).join("")
+    }
+
+    ${myRecs.length > 0 ? `
+      <div class="spacer-12"></div>
+      <button class="btn btn-secondary btn-full" data-action="goto-capture">+ Capture another</button>
+    ` : ""}
+  `;
+}
+
+function renderEntryCard(r, auth) {
+  const status = r.leadStatus || "Open";
+  const statusCls = ({
+    Hot: "pill-hot", Warm: "pill-warm", Cold: "pill-cold",
+    Open: "pill-open", Converted: "pill-converted", Closed: "pill-closed"
+  })[status] || "pill-open";
+
+  const phone = r.mobile && /^\d{10}$/.test(r.mobile);
+  return `
+    <div class="entry-card">
+      <div class="entry-row">
+        <div class="entry-name">${escapeHtml(r.customerName || "Unnamed")}</div>
+        <span class="pill ${statusCls}">${escapeHtml(status)}</span>
+      </div>
+      <div class="entry-mobile">${phone ? `+91 ${r.mobile.slice(0,5)} ${r.mobile.slice(5)}` : "no mobile"}</div>
+      <div class="entry-meta">
+        <span>${escapeHtml(r.store || "")}</span>
+        <span>·</span>
+        <span>${escapeHtml(r.category || "")}</span>
+        ${r.brand ? `<span>·</span><span>${escapeHtml(r.brand)}</span>` : ""}
+      </div>
+      <div class="entry-meta">
+        <strong style="color:var(--navy)">${escapeHtml(r.reason || "(no reason)")}</strong>
+        ${r.followUp === "Yes" && r.followDate ? `· follow ${escapeHtml(r.followDate)}` : ""}
+      </div>
+      <div class="entry-actions">
+        ${phone ? `<button class="entry-action wa" data-action="wa-customer" data-id="${escapeHtml(r.recordId)}">WhatsApp</button>` : ""}
+        <button class="entry-action" data-action="edit-entry" data-id="${escapeHtml(r.recordId)}">Edit</button>
+        <button class="entry-action delete" data-action="delete-entry" data-id="${escapeHtml(r.recordId)}">×</button>
+      </div>
+    </div>
+  `;
+}
+
+// =====================================================================
+// SETTINGS screen
+// =====================================================================
+
+function renderSettings(state, auth) {
+  const staff = loadStaff();
+  return `
+    <div class="settings-section">
+      <h3>My account</h3>
+      <div class="settings-row">
+        <div>
+          <div style="font-weight:700;color:var(--navy)">${escapeHtml(auth.name)}</div>
+          <div class="muted" style="font-size:12px">${escapeHtml(roleLabel(auth.role))}</div>
+        </div>
+        <button class="btn btn-secondary" data-action="change-pin">Change PIN</button>
+      </div>
+      <div class="spacer-8"></div>
+      <button class="btn btn-ghost btn-full" data-action="logout">Sign out</button>
+    </div>
+
+    <div class="settings-section">
+      <h3>My store</h3>
+      <p>Set your default store — Capture wizard pre-fills it.</p>
+      ${chipGroup("my_store", ["(none)"].concat(STORES), state.my_store || "(none)", { action: "set-my-store" })}
+    </div>
+
+    ${canManageUsers(auth) ? `
+    <div class="settings-section">
+      <h3>Users <span class="muted tiny">(${state.users.length})</span></h3>
+      <p>Add Managers and Greetors. Each gets their own PIN.</p>
+      ${Users.listAll(state).map(u => `
+        <div class="user-row">
+          <div class="info">
+            <div class="name">${escapeHtml(u.name)} <span class="role-pill ${u.is_active ? u.role : "inactive"}">${u.is_active ? roleLabel(u.role) : "INACTIVE"}</span></div>
+            <div class="meta">Added ${new Date(u.created_at).toLocaleDateString("en-IN")}${u.id === auth.id ? " · that's you" : ""}</div>
+          </div>
+          ${u.id === auth.id ? "" : `<button class="entry-action" data-action="user-menu" data-id="${u.id}">⋯</button>`}
+        </div>
+      `).join("")}
+      <div class="spacer-8"></div>
+      <button class="btn btn-secondary btn-full" data-action="add-user">+ Add user</button>
+    </div>` : ""}
+
+    <div class="settings-section">
+      <h3>Staff master</h3>
+      <p>
+        ${staff.cros.length
+          ? `<strong>${staff.cros.length} staff imported.</strong> Last sync: ${staff.imported_at ? new Date(staff.imported_at).toLocaleString("en-IN") : "—"}.`
+          : "No staff imported yet. CRO field will accept any typed name."}
+      </p>
+      <button class="btn btn-primary btn-full" data-action="import-staff">Import staff from Audit backup</button>
+      ${staff.cros.length ? `<div class="spacer-8"></div><button class="btn btn-ghost btn-full" data-action="clear-staff">Clear staff list</button>` : ""}
+    </div>
+
+    <div class="settings-section">
+      <h3>Data</h3>
+      <p>${state.records.length} entry(ies) on this device. Back up to share to Drive / OneDrive / WhatsApp.</p>
+      <button class="btn btn-secondary btn-full" data-action="backup-json">Back up JSON</button>
+      <div class="spacer-8"></div>
+      <button class="btn btn-ghost btn-full" data-action="restore-json">Restore from backup</button>
+      ${canManageUsers(auth) ? `
+        <div class="spacer-12"></div>
+        <button class="btn btn-ghost btn-full" data-action="erase-all" style="color:var(--red)">Erase all data</button>
+      ` : ""}
+    </div>
+
+    <div class="settings-section">
+      <h3>About</h3>
+      <p>Saagar Greetor · v0.2.0 · phone-first non-purchase walk-in capture.</p>
+    </div>
+  `;
+}
+
+// =====================================================================
+// Modals
+// =====================================================================
+
+function openModal(html) {
+  const root = $("modal-root");
+  root.innerHTML = `<div class="modal-backdrop" data-modal-backdrop><div class="modal" data-modal><div class="modal-handle"></div>${html}</div></div>`;
+}
+function closeModal() { $("modal-root").innerHTML = ""; }
+
+function dedupMatchesFor(mobile) {
+  if (!isValidMobile(mobile)) return [];
+  const cutoff = Date.now() - DEDUP_DAYS * 24*60*60*1000;
+  const state = Store.load();
+  return state.records.filter(r => {
+    if (r.mobile !== mobile) return false;
+    if (editingRecordId && r.recordId === editingRecordId) return false;
+    const t = new Date(r.createdAt || `${r.visitDate}T${r.visitTime || "00:00"}`).getTime();
+    return !isNaN(t) && t >= cutoff;
+  });
+}
+
+function showDedupModal(matches) {
+  const top = matches.slice(0, 4);
+  openModal(`
+    <h2>Possible repeat visit</h2>
+    <p class="muted">This mobile was logged ${matches.length} time${matches.length>1?"s":""} in the last ${DEDUP_DAYS} days.</p>
+    ${top.map(m => `
+      <div class="dedup-row">
+        <strong>${escapeHtml(m.customerName || "Unnamed")}</strong>
+        <div class="meta">${escapeHtml(m.visitDate)} (${daysAgo(m.createdAt || m.visitDate)}) · ${escapeHtml(m.store || "")} · ${escapeHtml(m.reason || "no reason")}</div>
+      </div>`).join("")}
+    <div class="modal-actions">
+      <button class="btn btn-secondary" data-action="dedup-open-existing" data-id="${escapeHtml(top[0].recordId)}">Open most recent</button>
+      <button class="btn btn-primary" data-action="dedup-continue-new">New visit, continue</button>
+    </div>
+  `);
+}
+
+function addUserModal() {
+  openModal(`
+    <h2>Add user</h2>
+    <div class="field"><label class="field-label">Name</label>
+      <input id="newUserName" type="text" placeholder="e.g. Anu Patil">
+    </div>
+    <div class="field"><label class="field-label">Role</label>
+      <div class="chip-group">
+        <button class="chip" data-action="pick-new-role" data-role="MANAGER">Manager</button>
+        <button class="chip selected" data-action="pick-new-role" data-role="GREETOR">Greetor</button>
+      </div>
+      <input type="hidden" id="newUserRole" value="GREETOR">
+    </div>
+    <div class="field"><label class="field-label">4-digit PIN</label>
+      <input id="newUserPin" type="tel" inputmode="numeric" maxlength="4" placeholder="••••">
+    </div>
+    <div class="field"><label class="field-label">Confirm PIN</label>
+      <input id="newUserPinC" type="tel" inputmode="numeric" maxlength="4" placeholder="••••">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="save-new-user">Add</button>
+    </div>
+  `);
+}
+
+function userMenuModal(userId) {
+  const state = Store.load();
+  const u = Users.byId(state, userId);
+  if (!u) return;
+  openModal(`
+    <h2>${escapeHtml(u.name)}</h2>
+    <p class="muted">${escapeHtml(roleLabel(u.role))} · ${u.is_active ? "active" : "inactive"}</p>
+    <div class="modal-actions single">
+      <button class="btn btn-secondary" data-action="user-reset-pin" data-id="${u.id}">Reset PIN</button>
+      ${u.is_active
+        ? `<button class="btn btn-secondary" data-action="user-deactivate" data-id="${u.id}">Deactivate</button>`
+        : `<button class="btn btn-secondary" data-action="user-activate" data-id="${u.id}">Activate</button>`}
+      <button class="btn btn-danger" data-action="user-remove" data-id="${u.id}">Remove user</button>
+      <button class="btn btn-ghost" data-action="modal-cancel">Close</button>
+    </div>
+  `);
+}
+
+function changePinModal() {
+  openModal(`
+    <h2>Change my PIN</h2>
+    <div class="field"><label class="field-label">Current PIN</label>
+      <input id="curPin" type="tel" inputmode="numeric" maxlength="4" placeholder="••••">
+    </div>
+    <div class="field"><label class="field-label">New PIN</label>
+      <input id="newPin" type="tel" inputmode="numeric" maxlength="4" placeholder="••••">
+    </div>
+    <div class="field"><label class="field-label">Confirm new PIN</label>
+      <input id="newPinC" type="tel" inputmode="numeric" maxlength="4" placeholder="••••">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="save-pin-change">Save</button>
+    </div>
+  `);
+}
+
+function resetPinModal(userId) {
+  const state = Store.load();
+  const u = Users.byId(state, userId);
+  if (!u) return;
+  openModal(`
+    <h2>Reset PIN for ${escapeHtml(u.name)}</h2>
+    <p class="muted">Set a new 4-digit PIN. They'll use this to sign in next time.</p>
+    <div class="field"><label class="field-label">New PIN</label>
+      <input id="resetPinNew" type="tel" inputmode="numeric" maxlength="4">
+    </div>
+    <div class="field"><label class="field-label">Confirm new PIN</label>
+      <input id="resetPinC" type="tel" inputmode="numeric" maxlength="4">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="save-reset-pin" data-id="${u.id}">Save new PIN</button>
+    </div>
+  `);
+}
+
+// =====================================================================
+// Save / edit / delete
+// =====================================================================
+
+function saveRecord() {
+  const state = Store.load();
+  const auth = AuthSession.current(state);
+  if (!auth) { toast("Sign in first"); return; }
+  const d = Wizard.data;
+  if (!stepIsValid(4, d) || !stepIsValid(3, d) || !stepIsValid(2, d) || !stepIsValid(1, d)) {
+    toast("Some required fields are missing.");
+    return;
+  }
+  const now = new Date().toISOString();
+  const existing = editingRecordId ? state.records.find(r => r.recordId === editingRecordId) : null;
+  const rec = {
+    recordId: existing ? existing.recordId : uid(),
+    createdAt: existing ? existing.createdAt : now,
+    updatedAt: now,
+    createdByUserId: existing ? existing.createdByUserId : auth.id,
+    createdByName: existing ? existing.createdByName : auth.name,
+    store: d.store,
+    visitDate: d.visitDate,
+    visitTime: d.visitTime,
+    source: d.source,
+    mobile: d.mobile,
+    customerName: d.customerName,
+    customerType: d.customerType,
+    category: d.category,
+    subCategory: d.subCategory,
+    brand: d.brand,
+    gender: d.gender,
+    occasion: d.occasion,
+    budget: d.budget,
+    urgency: d.urgency,
+    greetor: d.greetor || auth.name,
+    cro: d.cro,
+    reason: d.reason,
+    competitor: d.competitor,
+    remarks: d.remarks,
+    followUp: d.followUp,
+    leadStatus: d.leadStatus,
+    followDate: d.followUp === "Yes" ? d.followDate : "",
+    followTime: d.followUp === "Yes" ? d.followTime : "",
+  };
+  if (existing) {
+    const i = state.records.findIndex(r => r.recordId === existing.recordId);
+    state.records[i] = rec;
+  } else {
+    state.records.unshift(rec);
+  }
+  Store.save(state);
+
+  if (window.SaagarShell && window.SaagarShell.scheduleFollowupReminder) {
+    window.SaagarShell.scheduleFollowupReminder(rec);
+  }
+  toast(existing ? "Updated." : "Saved.");
+  editingRecordId = null;
+  Wizard.reset();
+  switchScreen("today");
+}
+
+function editRecord(recordId) {
+  const state = Store.load();
+  const r = state.records.find(x => x.recordId === recordId);
+  if (!r) return;
+  editingRecordId = recordId;
+  Wizard.reset(r);
+  switchScreen("capture");
+}
+
+function deleteRecord(recordId) {
+  if (!confirm("Delete this entry?")) return;
+  const state = Store.load();
+  state.records = state.records.filter(r => r.recordId !== recordId);
+  Store.save(state);
+  if (window.SaagarShell && window.SaagarShell.cancelFollowupReminder) {
+    window.SaagarShell.cancelFollowupReminder(recordId);
+  }
+  toast("Entry deleted.");
+  render();
+}
+
+function waCustomer(recordId) {
+  const state = Store.load();
+  const r = state.records.find(x => x.recordId === recordId);
+  if (!r || !/^\d{10}$/.test(r.mobile)) return;
+  const storeLabel = r.store || "our store";
+  const name = (r.customerName || "").trim();
+  const greeting = name ? `Hello ${name}, ` : "Hello, ";
+  const fu = r.followDate ? ` We had noted to follow up around ${r.followDate}.` : "";
+  const msg = `${greeting}this is from ${storeLabel}.${fu} Thank you for visiting us — do let me know if you'd like help with your selection.`;
+  const url = `https://wa.me/91${r.mobile}?text=${encodeURIComponent(msg)}`;
+  window.open(url, "_blank", "noopener");
+}
+
+// =====================================================================
+// Backup / restore (full state)
+// =====================================================================
+
+function backupJson() {
+  const payload = {
+    _format: "saagar_greetor_v2",
+    _exported_at: new Date().toISOString(),
+    state: Store.load(),
+    staff: loadStaff(),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const file = new File([blob], `saagar_greetor_${today()}.json`, { type: "application/json" });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: "Saagar Greetor backup" }).catch(() => {});
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function restoreJson() {
+  const input = document.createElement("input");
+  input.type = "file"; input.accept = "application/json,.json";
+  input.addEventListener("change", async () => {
+    const file = input.files[0]; if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (parsed && parsed._format === "saagar_greetor_v2" && parsed.state) {
+        if (!confirm("Replace current data with this backup?")) return;
+        Store.save(parsed.state);
+        if (parsed.staff) saveStaff(parsed.staff);
+        toast("Backup restored.");
+        render();
+        return;
+      }
+      // Legacy bare-array
+      if (Array.isArray(parsed)) {
+        if (!confirm(`Restore ${parsed.length} legacy records?`)) return;
+        const s = Store.load(); s.records = parsed; Store.save(s);
+        toast("Legacy records restored.");
+        render();
+        return;
+      }
+      toast("Unknown backup format.");
+    } catch (e) { toast("Could not read backup."); }
+  });
+  input.click();
+}
+
+// =====================================================================
+// Event handling
+// =====================================================================
+
+document.addEventListener("click", async (e) => {
+  // PIN pad (only when locked)
+  const k = e.target.closest("[data-key]");
+  if (k && document.body.classList.contains("locked")) {
+    await handlePinKey(k.dataset.key);
+    return;
+  }
+
+  // Bottom nav
+  const nav = e.target.closest(".bnav-btn");
+  if (nav) { switchScreen(nav.dataset.screen); return; }
+
+  // Modal backdrop
+  if (e.target.matches("[data-modal-backdrop]")) { closeModal(); return; }
+
+  const a = e.target.closest("[data-action]");
+  if (!a) return;
+  const action = a.dataset.action;
+
+  // ===== Setup flow =====
+  if (action === "setup-name-next") {
+    const name = $("ownerName").value.trim();
+    const err = $("setupErr");
+    if (name.length < 2) { err.textContent = "Enter your name (2+ characters)."; err.hidden = false; return; }
+    window._setupOwnerName = name;
+    window._setupStage = "pin";
+    PinBuf.reset();
+    render();
+    return;
+  }
+
+  // ===== Auth actions =====
+  if (action === "logout") {
+    if (!confirm("Sign out?")) return;
+    AuthSession.logout();
+    PinBuf.reset();
+    window._loginUserId = null;
+    render();
+    return;
+  }
+  if (action === "user-pill") {
+    // Quick tap for sign-out from main UI
+    if (!confirm("Sign out?")) return;
+    AuthSession.logout();
+    PinBuf.reset();
+    render();
+    return;
+  }
+
+  // ===== Modal close =====
+  if (action === "modal-cancel") { closeModal(); return; }
+
+  // ===== Wizard =====
+  if (action === "set-wizard") {
+    Wizard.set(a.dataset.field, a.dataset.value);
+    render();
+    return;
+  }
+  if (action === "reasons-more") {
+    window._reasonsMoreOpen = true;
+    render();
+    return;
+  }
+  if (action === "wizard-back") {
+    if (Wizard.step > 1) Wizard.goto(Wizard.step - 1);
+    return;
+  }
+  if (action === "wizard-next") {
+    const state = Store.load();
+    if (!stepIsValid(Wizard.step, Wizard.data)) {
+      toast("Fill required fields first.");
+      return;
+    }
+    // Step 2 → check dedup once mobile is entered
+    if (Wizard.step === 2) {
+      const matches = dedupMatchesFor(Wizard.data.mobile);
+      if (matches.length && !window._dedupSeen) {
+        window._dedupSeen = Wizard.data.mobile;
+        showDedupModal(matches);
+        return;
+      }
+    }
+    Wizard.goto(Wizard.step + 1);
+    return;
+  }
+  if (action === "wizard-reset") {
+    if (!confirm("Reset the current entry?")) return;
+    editingRecordId = null;
+    Wizard.reset();
+    window._dedupSeen = null;
+    window._reasonsMoreOpen = false;
+    render();
+    return;
+  }
+  if (action === "save-record") {
+    saveRecord();
+    window._dedupSeen = null;
+    window._reasonsMoreOpen = false;
+    return;
+  }
+  if (action === "goto-capture") {
+    editingRecordId = null;
+    Wizard.reset();
+    switchScreen("capture");
+    return;
+  }
+  if (action === "dedup-continue-new") {
+    closeModal();
+    Wizard.goto(Wizard.step + 1);
+    return;
+  }
+  if (action === "dedup-open-existing") {
+    closeModal();
+    editRecord(a.dataset.id);
+    return;
+  }
+
+  // ===== Today actions =====
+  if (action === "edit-entry") { editRecord(a.dataset.id); return; }
+  if (action === "delete-entry") { deleteRecord(a.dataset.id); return; }
+  if (action === "wa-customer") { waCustomer(a.dataset.id); return; }
+
+  // ===== Settings =====
+  if (action === "set-my-store") {
+    const state = Store.load();
+    state.my_store = a.dataset.value === "(none)" ? null : a.dataset.value;
+    Store.save(state);
+    toast(state.my_store ? `Default store: ${state.my_store}` : "Default store cleared.");
+    render();
+    return;
+  }
+  if (action === "import-staff") {
+    const input = document.createElement("input");
+    input.type = "file"; input.accept = "application/json,.json";
+    input.addEventListener("change", async () => {
+      const f = input.files[0]; if (!f) return;
+      try {
+        const parsed = JSON.parse(await f.text());
+        const cros = extractCrosFromBackup(parsed);
+        if (!cros.length) { toast("No staff in this backup."); return; }
+        if (!confirm(`Import ${cros.length} staff from this backup? Replaces existing list.`)) return;
+        saveStaff({ cros, imported_at: new Date().toISOString() });
+        toast(`Imported ${cros.length} staff.`);
+        render();
+      } catch (err) { toast(err.message || "Could not read backup."); }
+    });
+    input.click();
+    return;
+  }
+  if (action === "clear-staff") {
+    if (!confirm("Clear imported staff list?")) return;
+    saveStaff({ cros: [], imported_at: null });
+    toast("Staff list cleared.");
+    render();
+    return;
+  }
+  if (action === "backup-json") { backupJson(); return; }
+  if (action === "restore-json") { restoreJson(); return; }
+  if (action === "erase-all") {
+    if (!confirm("Erase ALL data on this device — users, entries, staff? This cannot be undone.")) return;
+    localStorage.removeItem(STATE_KEY);
+    localStorage.removeItem(LEGACY_RECORDS_KEY);
+    localStorage.removeItem(STAFF_KEY);
+    location.reload();
+    return;
+  }
+  if (action === "change-pin") { changePinModal(); return; }
+  if (action === "save-pin-change") {
+    const cur = $("curPin").value, np = $("newPin").value, npc = $("newPinC").value;
+    if (!/^\d{4}$/.test(cur)) { toast("Enter current 4-digit PIN."); return; }
+    if (!/^\d{4}$/.test(np)) { toast("New PIN must be 4 digits."); return; }
+    if (np !== npc) { toast("PINs don't match."); return; }
+    const me = AuthSession.current();
+    const ok = await verifyPin(cur, me.pin_salt, me.pin_hash);
+    if (!ok) { toast("Current PIN wrong."); return; }
+    await Users.changePin(me.id, np);
+    closeModal();
+    toast("PIN updated.");
+    return;
+  }
+
+  if (action === "add-user") { addUserModal(); return; }
+  if (action === "pick-new-role") {
+    document.querySelectorAll('[data-action="pick-new-role"]').forEach(c => c.classList.remove("selected"));
+    a.classList.add("selected");
+    $("newUserRole").value = a.dataset.role;
+    return;
+  }
+  if (action === "save-new-user") {
+    const name = $("newUserName").value.trim();
+    const role = $("newUserRole").value;
+    const pin = $("newUserPin").value, pinc = $("newUserPinC").value;
+    if (name.length < 2) { toast("Name too short."); return; }
+    if (!/^\d{4}$/.test(pin)) { toast("PIN must be 4 digits."); return; }
+    if (pin !== pinc) { toast("PINs don't match."); return; }
+    await Users.create({ name, role, pin });
+    closeModal();
+    toast(`${name} added as ${roleLabel(role)}.`);
+    render();
+    return;
+  }
+
+  if (action === "user-menu") { userMenuModal(a.dataset.id); return; }
+  if (action === "user-reset-pin") { resetPinModal(a.dataset.id); return; }
+  if (action === "save-reset-pin") {
+    const np = $("resetPinNew").value, npc = $("resetPinC").value;
+    if (!/^\d{4}$/.test(np)) { toast("PIN must be 4 digits."); return; }
+    if (np !== npc) { toast("PINs don't match."); return; }
+    await Users.changePin(a.dataset.id, np);
+    closeModal();
+    toast("PIN reset.");
+    return;
+  }
+  if (action === "user-deactivate") {
+    Users.setActive(a.dataset.id, false);
+    closeModal();
+    toast("User deactivated.");
+    render();
+    return;
+  }
+  if (action === "user-activate") {
+    Users.setActive(a.dataset.id, true);
+    closeModal();
+    toast("User activated.");
+    render();
+    return;
+  }
+  if (action === "user-remove") {
+    if (!confirm("Remove this user? Their entries stay, but they can't sign in again.")) return;
+    Users.remove(a.dataset.id);
+    closeModal();
+    toast("User removed.");
+    render();
+    return;
+  }
+});
+
+// Wizard text/date inputs sync to state
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  // Mobile auto-format
+  if (t.id === "mobileInput") {
+    const raw = rawMobile(t.value);
+    const formatted = formatMobile(raw);
+    if (t.value !== formatted) {
+      t.value = formatted;
+    }
+    Wizard.set("mobile", raw);
+    // Re-evaluate Next button state without full re-render
+    const next = document.querySelector('[data-action="wizard-next"]');
+    if (next) next.toggleAttribute("disabled", !stepIsValid(2, Wizard.data));
+    return;
+  }
+  const f = t.closest("[data-wizard-field]");
+  if (f) {
+    Wizard.set(f.dataset.wizardField, f.value);
+    // Live-enable Save/Next
+    const next = document.querySelector('[data-action="save-record"], [data-action="wizard-next"]');
+    if (next) next.toggleAttribute("disabled", !stepIsValid(Wizard.step, Wizard.data));
+    return;
+  }
+});
+
+// Keyboard support for PIN entry on auth screen
+document.addEventListener("keydown", (e) => {
+  if (!document.body.classList.contains("locked")) return;
+  if (document.activeElement && ["INPUT","SELECT","TEXTAREA"].includes(document.activeElement.tagName)) return;
+  if (e.key >= "0" && e.key <= "9") { handlePinKey(e.key); e.preventDefault(); return; }
+  if (e.key === "Backspace")        { handlePinKey("back"); e.preventDefault(); return; }
+});
+
+document.addEventListener("change", (e) => {
+  if (e.target.id === "loginUser") {
+    window._loginUserId = e.target.value;
+    PinBuf.reset();
+    render();
+  }
+});
+
+// =====================================================================
+// Sweep follow-up reminders for all open leads on every boot
+// =====================================================================
+function sweepReminders() {
+  if (!window.SaagarShell || !window.SaagarShell.scheduleFollowupReminder) return;
+  const state = Store.load();
+  state.records.forEach(r => {
+    try { window.SaagarShell.scheduleFollowupReminder(r); } catch (_) {}
+  });
+}
+
+// =====================================================================
+// Boot
+// =====================================================================
+
+render();
+sweepReminders();
+
+if (window.SaagarShell && window.SaagarShell.boot) {
+  window.SaagarShell.boot({
+    onBack: () => {
+      // 1. Modal open? Close it.
+      if ($("modal-root").innerHTML) { closeModal(); return true; }
+      // 2. On a wizard step > 1? Step back.
+      if (currentScreen === "capture" && Wizard.step > 1) {
+        Wizard.goto(Wizard.step - 1);
+        return true;
+      }
+      // 3. On Today / Settings? Go to Capture.
+      if (currentScreen !== "capture") {
+        switchScreen("capture");
+        return true;
+      }
+      // 4. Capture with no entry started? Default exit confirm.
+      return false;
+    },
+  });
+}
   </script>
 </body>
 </html>
