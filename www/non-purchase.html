@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Non-Purchase Capture App | Tanishq • Titan World • Helios</title>
+  <style>
+    :root {
+      --navy: #0b1f3a;
+      --navy-2: #132b4c;
+      --gold: #c99a2e;
+      --gold-2: #e0b85d;
+      --cream: #fff8ea;
+      --white: #ffffff;
+      --soft: #f4f6f8;
+      --line: #dfe5ec;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --green: #168a51;
+      --orange: #c77912;
+      --red: #ba2d2d;
+      --shadow: 0 18px 45px rgba(11,31,58,0.12);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(201,154,46,0.18), transparent 30%),
+        linear-gradient(135deg, #f9fafb 0%, #fff8ea 42%, #edf2f7 100%);
+      min-height: 100vh;
+    }
+
+    .app-shell {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 22px;
+    }
+
+    .topbar {
+      background: linear-gradient(135deg, var(--navy), #071529);
+      color: var(--white);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 22px 26px;
+      display: grid;
+      grid-template-columns: 1.4fr auto;
+      gap: 16px;
+      align-items: center;
+      position: sticky;
+      top: 12px;
+      z-index: 20;
+    }
+
+    .brand-block h1 {
+      margin: 0 0 4px;
+      font-size: 24px;
+      letter-spacing: 0.2px;
+    }
+
+    .brand-block p {
+      margin: 0;
+      color: #d7deea;
+      font-size: 13px;
+    }
+
+    .sync-row {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #d7deea;
+    }
+
+    .sync-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: #6b7280;
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.08);
+    }
+
+    .sync-dot.green { background: #34d399; }
+    .sync-dot.amber { background: #fbbf24; }
+    .sync-dot.red { background: #f87171; }
+
+    .top-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    button, .button {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+      font-size: 13px;
+    }
+
+    button:hover { transform: translateY(-1px); }
+
+    .btn-gold {
+      color: #16120a;
+      background: linear-gradient(135deg, var(--gold-2), var(--gold));
+      box-shadow: 0 8px 18px rgba(201,154,46,0.25);
+    }
+
+    .btn-light {
+      background: rgba(255,255,255,0.14);
+      color: var(--white);
+      border: 1px solid rgba(255,255,255,0.22);
+    }
+
+    .btn-danger {
+      background: #fff1f1;
+      color: var(--red);
+      border: 1px solid #ffd1d1;
+    }
+
+    .btn-secondary {
+      background: var(--soft);
+      color: var(--navy);
+      border: 1px solid var(--line);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 390px minmax(0, 1fr);
+      gap: 20px;
+      margin-top: 20px;
+      align-items: start;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.7);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 16px 18px;
+      background: linear-gradient(135deg, var(--cream), #ffffff);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .card-header h2, .card-header h3 {
+      margin: 0;
+      color: var(--navy);
+      font-size: 17px;
+    }
+
+    .card-header p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    form {
+      padding: 18px;
+    }
+
+    .section-title {
+      margin: 16px 0 10px;
+      padding: 8px 10px;
+      border-left: 4px solid var(--gold);
+      background: #fffaf0;
+      color: var(--navy);
+      font-size: 13px;
+      font-weight: 800;
+      border-radius: 8px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 800;
+      color: #334155;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 11px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      font-size: 13px;
+      outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(201,154,46,0.16);
+    }
+
+    textarea {
+      min-height: 76px;
+      resize: vertical;
+    }
+
+    .required::after {
+      content: " *";
+      color: var(--red);
+    }
+
+    .form-actions {
+      position: sticky;
+      bottom: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.82), #fff);
+      padding-top: 12px;
+      display: flex;
+      gap: 10px;
+      border-top: 1px solid var(--line);
+    }
+
+    .form-actions button {
+      flex: 1;
+    }
+
+    .dash {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .metric {
+      padding: 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #ffffff, #f8fafc);
+      border: 1px solid var(--line);
+      box-shadow: 0 10px 24px rgba(15,23,42,0.06);
+    }
+
+    .metric span {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 5px;
+      color: var(--navy);
+      font-size: 26px;
+    }
+
+    .content-card {
+      padding: 18px;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr 1fr auto;
+      gap: 10px;
+      margin-bottom: 14px;
+      align-items: end;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1160px;
+    }
+
+    th, td {
+      padding: 11px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      font-size: 12px;
+      vertical-align: top;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--navy);
+      color: #fff;
+      z-index: 5;
+      font-size: 11px;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+    }
+
+    tr:hover td { background: #fffaf0; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .pill.green { background: #eaf8f1; color: var(--green); }
+    .pill.orange { background: #fff5e5; color: var(--orange); }
+    .pill.red { background: #fff0f0; color: var(--red); }
+    .pill.navy { background: #edf4ff; color: var(--navy); }
+
+    .small-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .small-actions button {
+      padding: 7px 8px;
+      font-size: 11px;
+    }
+
+    .insight-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .list-box {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .list-box h3 {
+      margin: 0 0 10px;
+      color: var(--navy);
+      font-size: 14px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 160px 1fr 34px;
+      gap: 10px;
+      align-items: center;
+      font-size: 12px;
+      margin: 8px 0;
+    }
+
+    .bar {
+      height: 9px;
+      background: #edf2f7;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar > i {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold), var(--navy));
+      border-radius: 999px;
+    }
+
+    .note {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .source-note {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 14px;
+      padding: 12px;
+      margin-top: 14px;
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.55;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 32px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      background: var(--navy);
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      transform: translateY(120px);
+      opacity: 0;
+      transition: all .25s ease;
+      z-index: 999;
+      font-size: 13px;
+      max-width: 360px;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+      .topbar { grid-template-columns: 1fr; }
+      .top-actions { justify-content: flex-start; }
+      .dash { grid-template-columns: repeat(2, 1fr); }
+      .filters { grid-template-columns: 1fr 1fr; }
+      .insight-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .app-shell { padding: 12px; }
+      .grid-2, .grid-3, .filters { grid-template-columns: 1fr; }
+      .dash { grid-template-columns: 1fr; }
+      .topbar { position: static; }
+      .form-actions { flex-direction: column; }
+    }
+
+    @media print {
+      body { background: #fff; }
+      .topbar, .left-panel, .filters, .small-actions, .form-actions, .source-note { display: none !important; }
+      .app-shell { max-width: none; padding: 0; }
+      .layout { display: block; margin: 0; }
+      .card { box-shadow: none; border: 0; }
+      th { background: #111 !important; color: #fff !important; }
+      .dash { grid-template-columns: repeat(5, 1fr); }
+      @page { size: A4 landscape; margin: 10mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <h1>Non-Purchase Capture App</h1>
+        <p>Tanishq Jewellery • Titan World • Helios | Greetor walk-in intelligence, reason tracking and follow-up control</p>
+        <div class="sync-row">
+          <span class="sync-dot" id="syncDot"></span>
+          <span id="syncLabel">Local only — pick a OneDrive folder to auto-sync</span>
+        </div>
+      </div>
+      <div class="top-actions">
+        <a class="btn-light" href="index.html" style="text-decoration:none; display:inline-flex; align-items:center;">&larr; Audit App</a>
+        <button class="btn-light" type="button" id="connectFolderBtn">Connect OneDrive Folder</button>
+        <button class="btn-light" type="button" id="backupBtn">Download JSON Backup</button>
+        <button class="btn-light" type="button" id="restoreBtn">Restore JSON</button>
+        <input class="hidden" type="file" id="restoreInput" accept="application/json" />
+        <button class="btn-gold" type="button" id="exportBtn">Export CSV</button>
+        <button class="btn-light" type="button" onclick="window.print()">Print Report</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="card left-panel">
+        <div class="card-header">
+          <h2>Greetor Entry Form</h2>
+          <p>Capture every non-purchase walk-in before the customer leaves.</p>
+        </div>
+
+        <form id="entryForm" autocomplete="off">
+          <input type="hidden" id="recordId" />
+
+          <div class="section-title">1. Visit Details</div>
+          <div class="grid-2">
+            <div class="field">
+              <label class="required" for="store">Store Format</label>
+              <select id="store" required>
+                <option value="">Select</option>
+                <option value="Tanishq Jewellery">Tanishq Jewellery</option>
+                <option value="Titan World">Titan World</option>
+                <option value="Helios">Helios</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="required" for="visitDate">Visit Date</label>
+              <input type="date" id="visitDate" required />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label class="required" for="visitTime">Visit Time</label>
+              <input type="time" id="visitTime" required />
+            </div>
+            <div class="field">
+              <label for="source">Walk-in Source</label>
+              <select id="source">
+                <option>Walk-in</option>
+                <option>Reference</option>
+                <option>Repeat Customer</option>
+                <option>Digital Lead</option>
+                <option>Phone Enquiry Converted to Visit</option>
+                <option>Festival / Campaign Walk-in</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="section-title">2. Customer Details</div>
+          <div class="field">
+            <label for="customerName">Customer Name</label>
+            <input type="text" id="customerName" placeholder="Optional, but recommended" />
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label class="required" for="mobile">Mobile Number</label>
+              <input type="tel" id="mobile" maxlength="10" placeholder="10 digit mobile" required />
+            </div>
+            <div class="field">
+              <label for="customerType">Customer Type</label>
+              <select id="customerType">
+                <option>New Customer</option>
+                <option>Existing Customer</option>
+                <option>Family of Existing Customer</option>
+                <option>Corporate / Bulk</option>
+                <option>Tourist / Outstation</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="section-title">3. Interest Mapping</div>
+          <div class="field">
+            <label class="required" for="category">Category Interested In</label>
+            <select id="category" required>
+              <option value="">Select store first</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="subCategory">Sub-Category / Product Type</label>
+            <select id="subCategory">
+              <option value="">Select category first</option>
+            </select>
+          </div>
+
+          <div class="field" id="brandField">
+            <label for="brand">Brand</label>
+            <select id="brand">
+              <option value="">Select store first</option>
+            </select>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="gender">For Whom</label>
+              <select id="gender">
+                <option>Women</option>
+                <option>Men</option>
+                <option>Unisex</option>
+                <option>Kids / Teens</option>
+                <option>Couple</option>
+                <option>Family Purchase</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="occasion">Occasion / Purpose</label>
+              <select id="occasion">
+                <option>Daily Use</option>
+                <option>Office / Workwear</option>
+                <option>Casual Wear</option>
+                <option>Modern Wear</option>
+                <option>Traditional Wear</option>
+                <option>Wedding</option>
+                <option>Engagement</option>
+                <option>Festival</option>
+                <option>Birthday / Anniversary</option>
+                <option>Gifting</option>
+                <option>Luxury / Self Reward</option>
+                <option>Just Browsing</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="budget">Budget Range</label>
+              <select id="budget">
+                <option>Not Discussed</option>
+                <option>Below ₹5,000</option>
+                <option>₹5,000 - ₹10,000</option>
+                <option>₹10,000 - ₹25,000</option>
+                <option>₹25,000 - ₹50,000</option>
+                <option>₹50,000 - ₹1,00,000</option>
+                <option>₹1,00,000 - ₹2,50,000</option>
+                <option>₹2,50,000 - ₹5,00,000</option>
+                <option>Above ₹5,00,000</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="urgency">Buying Timeline</label>
+              <select id="urgency">
+                <option>Same Day</option>
+                <option>Within 2-3 Days</option>
+                <option>Within 1 Week</option>
+                <option>Within 1 Month</option>
+                <option>Not Sure</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="section-title">4. Store Handling</div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="greetor">Greetor Name</label>
+              <input type="text" id="greetor" placeholder="Name of entry person" />
+            </div>
+            <div class="field">
+              <label for="cro">CRO / Sales Staff</label>
+              <input type="text" id="cro" placeholder="Allocated staff" />
+            </div>
+          </div>
+
+          <div class="section-title">5. Non-Purchase Reason</div>
+          <div class="field">
+            <label class="required" for="reason">Primary Reason</label>
+            <select id="reason" required>
+              <option value="">Select</option>
+              <option>Price perceived high</option>
+              <option>Discount / offer expectation</option>
+              <option>Design not available</option>
+              <option>Size / fit not available</option>
+              <option>Preferred brand not available</option>
+              <option>Preferred colour / dial / metal not available</option>
+              <option>Stock unavailable in store</option>
+              <option>Customer comparing with other store / online</option>
+              <option>Family decision pending</option>
+              <option>Customer was only browsing</option>
+              <option>Payment / finance issue</option>
+              <option>Exchange / valuation dissatisfaction</option>
+              <option>Delivery timeline issue</option>
+              <option>Service / repair query only</option>
+              <option>Staff handling / waiting time issue</option>
+              <option>Customer left in hurry</option>
+              <option>Other</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="competitor">Competitor / Comparison Mentioned</label>
+            <input type="text" id="competitor" placeholder="Example: Online, local jeweller, Ethos, Just In Time, another Titan store" />
+          </div>
+
+          <div class="field">
+            <label for="remarks">Remarks / Exact Customer Words</label>
+            <textarea id="remarks" placeholder="Write the reason in the customer's words wherever possible."></textarea>
+          </div>
+
+          <div class="section-title">6. Follow-up Control</div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="followUp">Follow-up Required?</label>
+              <select id="followUp">
+                <option>Yes</option>
+                <option>No</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="leadStatus">Lead Status</label>
+              <select id="leadStatus">
+                <option>Open</option>
+                <option>Hot</option>
+                <option>Warm</option>
+                <option>Cold</option>
+                <option>Closed - Not Interested</option>
+                <option>Converted Later</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="followDate">Follow-up Date</label>
+              <input type="date" id="followDate" />
+            </div>
+            <div class="field">
+              <label for="followTime">Follow-up Time</label>
+              <input type="time" id="followTime" />
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn-gold" type="submit" id="saveBtn">Save Entry</button>
+            <button class="btn-secondary" type="button" id="resetBtn">Reset</button>
+          </div>
+        </form>
+      </section>
+
+      <section>
+        <div class="dash" id="dashboard"></div>
+
+        <section class="card">
+          <div class="card-header">
+            <h2>Non-Purchase Register</h2>
+            <p>Search, filter, edit, export and print walk-in loss intelligence.</p>
+          </div>
+
+          <div class="content-card">
+            <div class="filters">
+              <div class="field">
+                <label for="searchBox">Search</label>
+                <input id="searchBox" type="search" placeholder="Name, mobile, category, brand, reason, staff..." />
+              </div>
+              <div class="field">
+                <label for="filterStore">Store</label>
+                <select id="filterStore">
+                  <option value="">All Stores</option>
+                  <option>Tanishq Jewellery</option>
+                  <option>Titan World</option>
+                  <option>Helios</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="filterStatus">Lead Status</label>
+                <select id="filterStatus">
+                  <option value="">All Statuses</option>
+                  <option>Open</option>
+                  <option>Hot</option>
+                  <option>Warm</option>
+                  <option>Cold</option>
+                  <option>Closed - Not Interested</option>
+                  <option>Converted Later</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="filterDate">Visit Date</label>
+                <input id="filterDate" type="date" />
+              </div>
+              <button class="btn-secondary" type="button" id="clearFilters">Clear</button>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date / Time</th>
+                    <th>Store</th>
+                    <th>Customer</th>
+                    <th>Interest</th>
+                    <th>Budget</th>
+                    <th>Reason</th>
+                    <th>Staff</th>
+                    <th>Follow-up</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="recordsBody"></tbody>
+              </table>
+            </div>
+
+            <div class="insight-grid">
+              <div class="list-box">
+                <h3>Top Non-Purchase Reasons</h3>
+                <div id="reasonInsights"></div>
+              </div>
+              <div class="list-box">
+                <h3>Category Demand Without Purchase</h3>
+                <div id="categoryInsights"></div>
+              </div>
+            </div>
+
+            <div class="source-note">
+              App category master is prepared from public website category/brand structures for Tanishq, Titan and Helios as checked on 27 May 2026. Store teams should periodically review the dropdown masters because brand availability, assortment, offers and website taxonomy can change.
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const MASTER = {
+      "Tanishq Jewellery": {
+        categories: {
+          "All Jewellery": ["Earrings", "Pendants", "Finger Rings", "Mangalsutra", "Chains", "Nose Pin", "Necklaces", "Necklace Set", "Bangles", "Bracelets", "Pendants & Earring Set"],
+          "Gold Jewellery": ["Gold Bangles", "Gold Bracelets", "Gold Earrings", "Gold Chains", "Gold Necklaces", "Gold Rings", "Gold Mangalsutra", "Gold Coins / Bars"],
+          "Diamond Jewellery": ["Diamond Rings", "Diamond Earrings", "Diamond Mangalsutra", "Diamond Necklace", "Diamond Bracelet", "Diamond Bangles", "Diamond Pendant"],
+          "Platinum Jewellery": ["Platinum Rings", "Platinum Bands", "Platinum Chains", "Platinum Pendants"],
+          "Silver Jewellery": ["Silver Rings", "Silver Chains", "Silver Gifts", "Silver Accessories"],
+          "Gemstone Jewellery": ["Ruby", "Emerald", "Sapphire", "Pearl", "Mixed Gemstone"],
+          "Bridal / Wedding": ["Bridal Set", "Wedding Necklace", "Wedding Bangles", "Engagement Ring", "Mangalsutra"],
+          "Coins / Bars": ["Gold Coin", "Gold Biscuit", "Religious Motif Coin", "Gifting Coin"],
+          "Service / Exchange Query": ["Gold Exchange", "Old Gold Valuation", "Repair Query", "Polish / Cleaning", "Scheme Query"]
+        },
+        brands: ["Tanishq", "Mia by Tanishq", "Not Brand Specific"],
+        defaultBrand: "Tanishq"
+      },
+      "Titan World": {
+        categories: {
+          "Analog Watches": ["Men", "Women", "Unisex", "Couple", "Kids", "Dress", "Daily Use", "Office / Workwear", "Fashion", "Statement", "Wedding / Gifting"],
+          "Smart Watches": ["Titan Smart", "Fastrack Smart", "BT Calling", "AMOLED", "Fitness / Health", "GPS / Sports", "Women Smartwatch"],
+          "Clocks": ["Wall Clock", "Table Clock", "Alarm Clock", "Decorative Clock", "Gift Clock"],
+          "Fragrances": ["Men", "Women", "Unisex", "Gift Set", "Skinn / Perfume Query"],
+          "Audio Accessories": ["Earbuds", "Headphones", "Audio Accessory Query"],
+          "Watch Accessories": ["Strap", "Battery", "Gift Box", "Warranty Query", "Service Query"],
+          "Corporate / Bulk": ["Corporate Gifting", "Bulk Watches", "Employee Gift", "Festival Gift"]
+        },
+        brands: ["Titan", "Fastrack", "Sonata", "Poze", "Raga", "Tommy Hilfiger", "SF", "Kenneth Cole", "Zoop", "Vyb", "Anne Klein", "Police", "Xylys", "Edge", "Nebula", "Ducati", "Roamer", "Cerruti 1881", "Not Brand Specific"],
+        defaultBrand: "Titan"
+      },
+      "Helios": {
+        categories: {
+          "Premium / Luxury Watches": ["Men", "Women", "Unisex", "Couple", "Dress", "Luxury", "Premium", "Collector Interest"],
+          "Analog Watches": ["Three Hand", "Multifunction", "Chronograph", "Automatic", "Quartz", "Dress Watch"],
+          "Digital Watches": ["Digital", "Hybrid", "G-Shock Style", "Sports Digital"],
+          "Smart Watches / Fitness": ["Smartwatch", "Fitness Band", "GPS Watch", "Health Tracking", "Outdoor / Sports"],
+          "Sports / Adventure": ["Diver Style", "Field / Outdoor", "Rugged", "Water Resistance Query", "Travel Watch"],
+          "Fashion Watches": ["Designer Fashion", "Stone / Embellished", "Minimal", "Statement"],
+          "Service / Warranty Query": ["Battery", "Strap", "Warranty", "Authenticity", "Repair", "Box / Tag Query"],
+          "Corporate / Bulk": ["Corporate Gifting", "Bulk Premium Watches", "VIP Gift", "Wedding Gift"]
+        },
+        brands: ["Aigner", "Alexander Shorokhoff", "Amazfit", "Anne Klein", "Armani Exchange", "Auguste Reymond", "Balmain", "Baume et Mercier", "Boss", "Calvin Klein", "Casio", "Cerruti 1881", "Charriol", "Citizen", "Concord", "Daniel Wellington", "Diesel", "Ebel", "Edge", "Emporio Armani", "Fitbit", "Fossil", "Frederique Constant", "G-Shock", "Garmin", "GC", "Guess", "Herbelin", "Just Cavalli", "Kenneth Cole", "King Seiko", "Michael Kors", "Milus", "Movado", "Police", "Rado", "Raga", "Roamer", "Roberto Cavalli", "Seiko", "SevenFriday", "Swarovski", "Tissot", "Titan", "Titan Smart", "Tommy Hilfiger", "U Boat", "Versace", "Victorinox", "Xylys", "Not Brand Specific"],
+        defaultBrand: "Not Brand Specific"
+      }
+    };
+
+    const STORAGE_KEY = "np_capture_v1_records";
+    const SYNC_FILENAME = "non_purchase_register.json";
+    const HANDLE_DB = "np_capture_handles";
+    const HANDLE_STORE = "handles";
+    const HANDLE_KEY = "syncFolder";
+
+    const $ = (id) => document.getElementById(id);
+
+    const form = $("entryForm");
+    const fields = [
+      "recordId", "store", "visitDate", "visitTime", "source", "customerName", "mobile", "customerType",
+      "category", "subCategory", "brand", "gender", "occasion", "budget", "urgency", "greetor", "cro",
+      "reason", "competitor", "remarks", "followUp", "leadStatus", "followDate", "followTime"
+    ];
+
+    let records = loadRecords();
+    let folderHandle = null;
+
+    function todayISO() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function nowTime() {
+      const d = new Date();
+      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    }
+
+    function initDefaults() {
+      $("visitDate").value = todayISO();
+      $("visitTime").value = nowTime();
+      if (!$("followDate").value) $("followDate").value = todayISO();
+    }
+
+    function loadRecords() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveRecords() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      syncToFolder();
+    }
+
+    function toast(message) {
+      const t = $("toast");
+      t.textContent = message;
+      t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 2600);
+    }
+
+    function populateSelect(selectEl, items, placeholder) {
+      selectEl.innerHTML = "";
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = placeholder || "Select";
+      selectEl.appendChild(opt);
+
+      items.forEach(item => {
+        const o = document.createElement("option");
+        o.value = item;
+        o.textContent = item;
+        selectEl.appendChild(o);
+      });
+    }
+
+    function onStoreChange() {
+      const store = $("store").value;
+      if (!store || !MASTER[store]) {
+        populateSelect($("category"), [], "Select store first");
+        populateSelect($("subCategory"), [], "Select category first");
+        populateSelect($("brand"), [], "Select store first");
+        return;
+      }
+
+      populateSelect($("category"), Object.keys(MASTER[store].categories), "Select category");
+      populateSelect($("brand"), MASTER[store].brands, "Select brand");
+      $("brand").value = MASTER[store].defaultBrand || "";
+      populateSelect($("subCategory"), [], "Select category first");
+    }
+
+    function onCategoryChange() {
+      const store = $("store").value;
+      const category = $("category").value;
+      const list = store && category && MASTER[store] ? MASTER[store].categories[category] || [] : [];
+      populateSelect($("subCategory"), list, list.length ? "Select sub-category" : "Select category first");
+    }
+
+    function getFormData() {
+      const data = {};
+      fields.forEach(id => data[id] = $(id).value.trim());
+      data.updatedAt = new Date().toISOString();
+      if (!data.recordId) {
+        data.recordId = "NP-" + Date.now().toString(36).toUpperCase();
+        data.createdAt = new Date().toISOString();
+      } else {
+        const existing = records.find(r => r.recordId === data.recordId);
+        data.createdAt = existing?.createdAt || new Date().toISOString();
+      }
+      return data;
+    }
+
+    function setFormData(data) {
+      fields.forEach(id => {
+        if ($(id)) $(id).value = data[id] || "";
+      });
+      onStoreChange();
+      $("category").value = data.category || "";
+      onCategoryChange();
+      $("subCategory").value = data.subCategory || "";
+      $("brand").value = data.brand || "";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function resetForm() {
+      form.reset();
+      $("recordId").value = "";
+      initDefaults();
+      onStoreChange();
+      $("saveBtn").textContent = "Save Entry";
+      $("mobile").setCustomValidity("");
+    }
+
+    function validate(data) {
+      if (!data.store || !data.visitDate || !data.visitTime || !data.mobile || !data.category || !data.reason) {
+        toast("Please fill all required fields marked with *.");
+        return false;
+      }
+      if (!/^[6-9]\d{9}$/.test(data.mobile)) {
+        toast("Enter a valid 10-digit Indian mobile number.");
+        return false;
+      }
+      if (data.followUp === "Yes" && !data.followDate) {
+        toast("Please select a follow-up date.");
+        return false;
+      }
+      return true;
+    }
+
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+      const data = getFormData();
+      if (!validate(data)) return;
+
+      const index = records.findIndex(r => r.recordId === data.recordId);
+      if (index >= 0) {
+        records[index] = data;
+        toast("Entry updated successfully.");
+      } else {
+        records.unshift(data);
+        toast("Non-purchase entry saved.");
+      }
+      saveRecords();
+      resetForm();
+      render();
+    });
+
+    $("resetBtn").addEventListener("click", resetForm);
+    $("store").addEventListener("change", onStoreChange);
+    $("category").addEventListener("change", onCategoryChange);
+
+    $("mobile").addEventListener("input", function() {
+      this.value = this.value.replace(/\D/g, "").slice(0, 10);
+    });
+
+    ["searchBox", "filterStore", "filterStatus", "filterDate"].forEach(id => {
+      $(id).addEventListener("input", renderTable);
+      $(id).addEventListener("change", renderTable);
+    });
+
+    $("clearFilters").addEventListener("click", () => {
+      $("searchBox").value = "";
+      $("filterStore").value = "";
+      $("filterStatus").value = "";
+      $("filterDate").value = "";
+      renderTable();
+    });
+
+    function filteredRecords() {
+      const q = $("searchBox").value.toLowerCase().trim();
+      const fs = $("filterStore").value;
+      const st = $("filterStatus").value;
+      const fd = $("filterDate").value;
+
+      return records.filter(r => {
+        const text = Object.values(r).join(" ").toLowerCase();
+        return (!q || text.includes(q))
+          && (!fs || r.store === fs)
+          && (!st || r.leadStatus === st)
+          && (!fd || r.visitDate === fd);
+      });
+    }
+
+    function statusPill(status) {
+      let cls = "navy";
+      if (status === "Hot") cls = "red";
+      if (status === "Warm") cls = "orange";
+      if (status === "Converted Later") cls = "green";
+      if (status === "Cold" || status === "Closed - Not Interested") cls = "navy";
+      return `<span class="pill ${cls}">${escapeHTML(status || "Open")}</span>`;
+    }
+
+    function renderTable() {
+      const body = $("recordsBody");
+      const data = filteredRecords();
+      if (!data.length) {
+        body.innerHTML = `<tr><td colspan="10"><div class="empty">No entries found. Start capturing non-purchase walk-ins from the form.</div></td></tr>`;
+        renderInsights(data);
+        return;
+      }
+
+      body.innerHTML = data.map(r => `
+        <tr>
+          <td><strong>${escapeHTML(r.visitDate || "")}</strong><br>${escapeHTML(r.visitTime || "")}</td>
+          <td>${escapeHTML(r.store || "")}</td>
+          <td><strong>${escapeHTML(r.customerName || "Unnamed")}</strong><br>${escapeHTML(r.mobile || "")}<br><span class="note">${escapeHTML(r.customerType || "")}</span></td>
+          <td><strong>${escapeHTML(r.category || "")}</strong><br>${escapeHTML(r.subCategory || "")}<br><span class="pill navy">${escapeHTML(r.brand || "NA")}</span></td>
+          <td>${escapeHTML(r.budget || "")}<br><span class="note">${escapeHTML(r.urgency || "")}</span></td>
+          <td><strong>${escapeHTML(r.reason || "")}</strong><br><span class="note">${escapeHTML(r.remarks || "").slice(0, 90)}${(r.remarks || "").length > 90 ? "..." : ""}</span></td>
+          <td>Greetor: ${escapeHTML(r.greetor || "-")}<br>CRO: ${escapeHTML(r.cro || "-")}</td>
+          <td>${escapeHTML(r.followUp || "No")}<br>${escapeHTML(r.followDate || "")} ${escapeHTML(r.followTime || "")}</td>
+          <td>${statusPill(r.leadStatus)}</td>
+          <td>
+            <div class="small-actions">
+              <button class="btn-secondary" type="button" onclick="editRecord('${r.recordId}')">Edit</button>
+              <button class="btn-danger" type="button" onclick="deleteRecord('${r.recordId}')">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+
+      renderInsights(data);
+    }
+
+    function renderDashboard() {
+      const total = records.length;
+      const today = records.filter(r => r.visitDate === todayISO()).length;
+      const hot = records.filter(r => r.leadStatus === "Hot").length;
+      const follow = records.filter(r => r.followUp === "Yes" && r.leadStatus !== "Converted Later" && r.leadStatus !== "Closed - Not Interested").length;
+      const converted = records.filter(r => r.leadStatus === "Converted Later").length;
+
+      $("dashboard").innerHTML = [
+        ["Total Entries", total],
+        ["Today", today],
+        ["Hot Leads", hot],
+        ["Follow-ups", follow],
+        ["Converted Later", converted]
+      ].map(([label, val]) => `
+        <div class="metric">
+          <span>${label}</span>
+          <strong>${val}</strong>
+        </div>
+      `).join("");
+    }
+
+    function countsBy(data, key) {
+      return data.reduce((acc, r) => {
+        const k = r[key] || "Not Captured";
+        acc[k] = (acc[k] || 0) + 1;
+        return acc;
+      }, {});
+    }
+
+    function renderInsights(data) {
+      renderBars("reasonInsights", countsBy(data, "reason"));
+      renderBars("categoryInsights", countsBy(data, "category"));
+    }
+
+    function renderBars(targetId, counts) {
+      const entries = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 8);
+      const max = Math.max(...entries.map(e => e[1]), 1);
+      if (!entries.length) {
+        $(targetId).innerHTML = `<p class="note">No data yet.</p>`;
+        return;
+      }
+      $(targetId).innerHTML = entries.map(([name, count]) => `
+        <div class="bar-row">
+          <span title="${escapeHTML(name)}">${escapeHTML(name.length > 24 ? name.slice(0, 24) + "..." : name)}</span>
+          <div class="bar"><i style="width:${Math.max(8, (count / max) * 100)}%"></i></div>
+          <strong>${count}</strong>
+        </div>
+      `).join("");
+    }
+
+    function render() {
+      renderDashboard();
+      renderTable();
+    }
+
+    window.editRecord = function(id) {
+      const r = records.find(x => x.recordId === id);
+      if (!r) return;
+      setFormData(r);
+      $("saveBtn").textContent = "Update Entry";
+      toast("Loaded entry for editing.");
+    };
+
+    window.deleteRecord = function(id) {
+      if (!confirm("Delete this non-purchase entry?")) return;
+      records = records.filter(r => r.recordId !== id);
+      saveRecords();
+      render();
+      toast("Entry deleted.");
+    };
+
+    function escapeHTML(str) {
+      return String(str ?? "").replace(/[&<>"']/g, m => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[m]));
+    }
+
+    function toCSV(data) {
+      const headers = [
+        "Record ID", "Visit Date", "Visit Time", "Store", "Source", "Customer Name", "Mobile", "Customer Type",
+        "Category", "Sub Category", "Brand", "For Whom", "Occasion", "Budget", "Buying Timeline",
+        "Greetor", "CRO", "Primary Reason", "Competitor", "Remarks", "Follow-up Required", "Follow-up Date",
+        "Follow-up Time", "Lead Status", "Created At", "Updated At"
+      ];
+
+      const keys = [
+        "recordId", "visitDate", "visitTime", "store", "source", "customerName", "mobile", "customerType",
+        "category", "subCategory", "brand", "gender", "occasion", "budget", "urgency",
+        "greetor", "cro", "reason", "competitor", "remarks", "followUp", "followDate",
+        "followTime", "leadStatus", "createdAt", "updatedAt"
+      ];
+
+      const rows = data.map(r => keys.map(k => csvCell(r[k])).join(","));
+      return [headers.map(csvCell).join(","), ...rows].join("\n");
+    }
+
+    function csvCell(value) {
+      const v = String(value ?? "");
+      return `"${v.replace(/"/g, '""')}"`;
+    }
+
+    function download(filename, content, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    $("exportBtn").addEventListener("click", () => {
+      download(`non_purchase_register_${todayISO()}.csv`, toCSV(filteredRecords()), "text/csv;charset=utf-8");
+      toast("CSV export downloaded.");
+    });
+
+    $("backupBtn").addEventListener("click", () => {
+      download(`non_purchase_backup_${todayISO()}.json`, JSON.stringify(records, null, 2), "application/json");
+      toast("JSON backup downloaded.");
+    });
+
+    $("restoreBtn").addEventListener("click", () => $("restoreInput").click());
+
+    $("restoreInput").addEventListener("change", async function() {
+      const file = this.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const imported = JSON.parse(text);
+        if (!Array.isArray(imported)) throw new Error("Invalid backup file");
+        if (!confirm(`Restore ${imported.length} records? This will replace current local data.`)) return;
+        records = imported;
+        saveRecords();
+        render();
+        toast("Backup restored successfully.");
+      } catch (err) {
+        toast("Could not restore file. Please select a valid JSON backup.");
+      } finally {
+        this.value = "";
+      }
+    });
+
+    // ----- OneDrive / folder auto-sync via File System Access API -----
+
+    function openHandleDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(HANDLE_DB, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(HANDLE_STORE);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function storeHandle(handle) {
+      const db = await openHandleDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(HANDLE_STORE, "readwrite");
+        tx.objectStore(HANDLE_STORE).put(handle, HANDLE_KEY);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function readHandle() {
+      const db = await openHandleDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(HANDLE_STORE, "readonly");
+        const req = tx.objectStore(HANDLE_STORE).get(HANDLE_KEY);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function clearHandle() {
+      const db = await openHandleDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(HANDLE_STORE, "readwrite");
+        tx.objectStore(HANDLE_STORE).delete(HANDLE_KEY);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    function setSyncStatus(state, label) {
+      const dot = $("syncDot");
+      const lbl = $("syncLabel");
+      dot.classList.remove("green", "amber", "red");
+      if (state) dot.classList.add(state);
+      lbl.textContent = label;
+    }
+
+    async function ensurePermission(handle, mode = "readwrite") {
+      if (!handle) return false;
+      const opts = { mode };
+      const current = await handle.queryPermission(opts);
+      if (current === "granted") return true;
+      const next = await handle.requestPermission(opts);
+      return next === "granted";
+    }
+
+    async function writeRegisterFile() {
+      if (!folderHandle) return;
+      const ok = await ensurePermission(folderHandle, "readwrite");
+      if (!ok) {
+        setSyncStatus("amber", "Folder linked but permission not granted — click Connect to re-grant.");
+        return;
+      }
+      const fileHandle = await folderHandle.getFileHandle(SYNC_FILENAME, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(JSON.stringify(records, null, 2));
+      await writable.close();
+      setSyncStatus("green", `Auto-synced to ${folderHandle.name} • ${SYNC_FILENAME}`);
+    }
+
+    let syncTimer = null;
+    function syncToFolder() {
+      if (!folderHandle) return;
+      clearTimeout(syncTimer);
+      syncTimer = setTimeout(() => {
+        writeRegisterFile().catch(err => {
+          console.warn("Sync failed:", err);
+          setSyncStatus("red", "Sync failed — check folder access");
+        });
+      }, 250);
+    }
+
+    async function connectFolder() {
+      if (!window.showDirectoryPicker) {
+        toast("Folder sync needs Edge or Chrome on desktop. Use Download JSON Backup instead.");
+        return;
+      }
+      try {
+        const handle = await window.showDirectoryPicker({ mode: "readwrite", id: "np-onedrive-folder" });
+        folderHandle = handle;
+        await storeHandle(handle);
+        await writeRegisterFile();
+        toast(`Connected to "${handle.name}". Future saves will auto-sync.`);
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          toast("Could not connect folder: " + err.message);
+        }
+      }
+    }
+
+    async function tryReconnect() {
+      if (!window.showDirectoryPicker) {
+        setSyncStatus(null, "Folder sync not supported in this browser — use Edge or Chrome.");
+        return;
+      }
+      try {
+        const handle = await readHandle();
+        if (!handle) {
+          setSyncStatus(null, "Local only — pick a OneDrive folder to auto-sync");
+          return;
+        }
+        folderHandle = handle;
+        const perm = await handle.queryPermission({ mode: "readwrite" });
+        if (perm === "granted") {
+          setSyncStatus("green", `Auto-syncing to ${handle.name} • ${SYNC_FILENAME}`);
+        } else {
+          setSyncStatus("amber", `Linked to ${handle.name} — click Connect to re-grant access`);
+        }
+      } catch (err) {
+        console.warn("Reconnect failed:", err);
+        setSyncStatus("red", "Could not restore folder link");
+      }
+    }
+
+    $("connectFolderBtn").addEventListener("click", connectFolder);
+
+    initDefaults();
+    onStoreChange();
+    render();
+    tryReconnect();
+  </script>
+</body>
+</html>
