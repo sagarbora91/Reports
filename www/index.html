@@ -934,6 +934,193 @@ body.locked #auth-screen { display: block; }
   font-size: 14px;
   top: 2px; right: 2px;
 }
+
+/* --- Language picker (Settings → My account) --- */
+.lang-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 4px;
+  flex-wrap: wrap;
+}
+.lang-row-label {
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--gray-600);
+  font-weight: 500;
+  margin-right: 4px;
+}
+.lang-pill {
+  background: var(--white);
+  border: 1px solid var(--gray-300);
+  color: var(--gray-800);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.lang-pill.active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--white);
+}
+
+/* --- Reference tab --- */
+.ref-subnav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.ref-chip {
+  background: var(--white);
+  border: 1px solid var(--gray-300);
+  color: var(--gray-800);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+.ref-chip.active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--gold-light);
+}
+
+.ref-band {
+  background: var(--white);
+  border-left: 4px solid var(--gray-300);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.ref-band-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.ref-tier-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gray-200);
+  font-size: 14px;
+}
+.ref-tier-row:last-child { border-bottom: 0; }
+.ref-warning {
+  background: var(--amber-pale);
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  padding: 12px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  margin-top: 14px;
+}
+
+.ref-trigger {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.ref-trigger-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-family: 'DM Serif Display', serif;
+  font-size: 16px;
+  color: var(--navy);
+}
+.ref-trigger-num {
+  background: var(--red);
+  color: var(--white);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+.ref-trigger-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  margin-top: 4px;
+}
+.ref-trigger-meta .muted { color: var(--gray-600); }
+.ref-trigger-meta strong { color: var(--gray-800); }
+.ref-channel-pill {
+  display: inline-block;
+  background: var(--gray-100);
+  color: var(--navy);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.ref-evidence-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 600px) {
+  .ref-evidence-grid { grid-template-columns: 1fr 1fr; }
+}
+.ref-evidence-head {
+  font-family: 'DM Serif Display', serif;
+  font-size: 16px;
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid currentColor;
+}
+.ref-evidence-row {
+  background: var(--white);
+  border-left: 3px solid var(--gray-300);
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  border-radius: 4px;
+}
+.ref-evidence-row.strong { border-left-color: var(--green); background: var(--green-pale); }
+.ref-evidence-row.weak   { border-left-color: var(--red);   background: var(--red-pale); }
+
+.glossary-search {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--gray-300);
+  border-radius: 999px;
+  background: var(--white);
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+.ref-gloss-row {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.ref-gloss-term {
+  font-size: 14px;
+  color: var(--navy);
+  margin-bottom: 4px;
+}
+.ref-gloss-meaning {
+  font-size: 13px;
+  color: var(--gray-600);
+  line-height: 1.4;
+}
   </style>
 </head>
 <body>
@@ -950,6 +1137,7 @@ body.locked #auth-screen { display: block; }
     <button class="tab active" data-tab="audit">Audit</button>
     <button class="tab" data-tab="history">History</button>
     <button class="tab" data-tab="caps">CAPs<span id="capsBadge" class="tab-badge" hidden></span></button>
+    <button class="tab" data-tab="reference">Reference</button>
     <button class="tab" data-tab="settings">Settings</button>
   </nav>
 
@@ -957,6 +1145,7 @@ body.locked #auth-screen { display: block; }
     <section id="tab-audit" class="tab-content active"></section>
     <section id="tab-history" class="tab-content"></section>
     <section id="tab-caps" class="tab-content"></section>
+    <section id="tab-reference" class="tab-content"></section>
     <section id="tab-settings" class="tab-content"></section>
   </main>
 
@@ -968,6 +1157,1810 @@ body.locked #auth-screen { display: block; }
 
   <script src="shell.js"></script>
   <script>
+// Auto-generated bilingual string table — do not edit by hand.
+// Source: agent_outputs/marathi.json (469 string pairs, 0 [REVIEW] flags).
+window.I18N_DATA = {
+  "en": {
+    "ui_strings": {
+      "brand.tagline": "AUDIT",
+      "app.title": "Saagar Audit",
+      "app.version_label": "Saagar Audit · v0.2.0",
+      "nav.audit": "Audit",
+      "nav.history": "History",
+      "nav.caps": "CAPs",
+      "nav.settings": "Settings",
+      "nav.home": "Home",
+      "nav.audits": "Audits",
+      "nav.reference": "Reference",
+      "nav.reports": "Reports",
+      "btn.start_audit": "Start Audit",
+      "btn.start_daily_audit": "Start daily audit",
+      "btn.submit": "Submit",
+      "btn.submit_audit": "Submit audit",
+      "btn.save_draft": "Save Draft",
+      "btn.cancel": "Cancel",
+      "btn.cancel_audit": "Cancel audit",
+      "btn.continue": "Continue",
+      "btn.back": "Back",
+      "btn.next": "Next",
+      "btn.previous": "Previous",
+      "btn.pass": "Pass",
+      "btn.fail": "Fail",
+      "btn.na": "NA",
+      "btn.mark_na": "Mark N/A",
+      "btn.add_photo": "Add Photo",
+      "btn.take_photo": "Take photo",
+      "btn.retake": "Retake",
+      "btn.use_photo": "Use",
+      "btn.create_cap": "Create CAP",
+      "btn.mark_done": "Mark Done",
+      "btn.mark_all_done": "Mark all done →",
+      "btn.verify": "Verify",
+      "btn.close": "Close",
+      "btn.close_cap": "Close CAP",
+      "btn.reject": "Reject (re-open)",
+      "btn.reopen": "Reopen",
+      "btn.extend": "Extend Deadline",
+      "btn.escalate": "Escalate",
+      "btn.export_pdf": "Export PDF",
+      "btn.print_pdf": "Print / Save as PDF",
+      "btn.share_whatsapp": "Share to WhatsApp",
+      "btn.send_whatsapp": "Send on WhatsApp",
+      "btn.copy_message": "Copy message",
+      "btn.view_message": "View message",
+      "btn.dismiss": "Dismiss",
+      "btn.confirm": "Confirm",
+      "btn.login": "Login",
+      "btn.sign_in": "SIGN IN",
+      "btn.sign_out": "Sign out",
+      "btn.logout": "Logout",
+      "btn.switch_user": "Switch user",
+      "btn.change_pin": "Change PIN",
+      "btn.change_my_pin": "Change my PIN",
+      "btn.save_new_pin": "Save new PIN",
+      "btn.reset_pin": "Reset PIN",
+      "btn.add": "Add",
+      "btn.add_another": "Add another",
+      "btn.add_user": "Add user",
+      "btn.add_cro": "Add CRO",
+      "btn.edit": "Edit",
+      "btn.delete": "Delete",
+      "btn.remove": "Remove",
+      "btn.deactivate": "Deactivate",
+      "btn.deactivate_user": "Deactivate user",
+      "btn.reactivate_user": "Reactivate user",
+      "btn.save": "Save",
+      "btn.save_changes": "Save changes",
+      "btn.save_next": "Save & next",
+      "btn.discard_draft": "Discard draft",
+      "btn.change_phone": "Change phone",
+      "btn.change_my_phone": "Change my phone",
+      "btn.add_phone": "Add phone number",
+      "btn.add_my_phone": "Add my phone for WhatsApp escalations",
+      "btn.backup_drive": "Back up to Google Drive",
+      "btn.restore_backup": "Restore from backup file",
+      "btn.export_csv": "Export all to CSV",
+      "btn.export_audits_csv": "Export all audits to CSV",
+      "btn.erase_all": "Erase all data on this device",
+      "btn.forgot_pin": "Forgot?",
+      "btn.x": "X to revisit",
+      "label.audit_date": "Audit date",
+      "label.audit_notes": "Audit notes",
+      "label.audit_notes_c": "Audit notes:",
+      "label.backdated_audit": "Backdated audit:",
+      "label.backdated_audit_warn": "⚠ Backdated audit",
+      "label.cros_on_duty": "CROs on duty",
+      "label.cros": "CROs",
+      "label.users": "Users",
+      "label.role": "Role",
+      "label.name": "Name",
+      "label.your_name": "Your name",
+      "label.counter": "Counter",
+      "label.phone": "Phone (10 digits, optional)",
+      "label.phone_required": "Phone (10 digits or country-coded)",
+      "label.phone_for": "Phone for",
+      "label.my_phone": "My phone number",
+      "label.current_pin": "Current PIN",
+      "label.new_pin": "New PIN",
+      "label.confirm_pin": "Confirm PIN",
+      "label.confirm_new_pin": "Confirm new PIN",
+      "label.choose_pin": "Choose a 4-digit PIN",
+      "label.confirm_your_pin": "Confirm your PIN",
+      "label.checkpoint": "Checkpoint",
+      "label.cp": "CP",
+      "label.finding": "Finding",
+      "label.finding_evidence": "Finding / Evidence",
+      "label.cro_involved": "CRO involved (optional)",
+      "label.cro_involved_c": "CRO involved:",
+      "label.action_steps": "Action steps",
+      "label.responsible": "Responsible",
+      "label.deadline": "Deadline",
+      "label.root_cause": "Root cause",
+      "label.result": "Result",
+      "label.required": "REQUIRED",
+      "label.photo_required_fail": "Photo required if FAIL",
+      "label.draft_review": "DRAFT · review before submit",
+      "label.first_time_setup": "FIRST-TIME SETUP",
+      "label.daily_audit": "Daily audit",
+      "label.daily_reminder": "Daily audit reminder",
+      "label.notifications": "Notifications",
+      "label.my_account": "My account",
+      "label.signed_in_as": "Signed in as",
+      "label.welcome_back": "Welcome back",
+      "label.welcome": "Welcome,",
+      "label.welcome_owner": "Welcome, Owner",
+      "label.danger_zone": "Danger zone",
+      "label.backup_restore": "Backup & restore",
+      "label.escalation_msg": "Escalation message",
+      "label.verifier_note": "Verifier note:",
+      "label.verification_notes": "Verification notes (optional):",
+      "label.reject_reason": "Reason for rejection (required):",
+      "label.cro_fails_30d": "CROs with most fails (last 30 days)",
+      "role.store_manager": "Store Manager",
+      "role.sm_full": "Store Manager (runs daily audits)",
+      "role.gm": "GM",
+      "role.gm_full": "GM (verifies audits, manages CAPs)",
+      "role.owner": "Owner",
+      "role.cro": "CRO",
+      "counter.titan_world": "Titan World",
+      "counter.helios": "Helios",
+      "hint.pick_name": "Pick your name and enter your 4-digit PIN.",
+      "hint.set_account": "Let's set up your account. You can add a Store Manager and a GM after this.",
+      "hint.set_new_pin": "Set a new 4-digit PIN. They'll use this to sign in next time.",
+      "hint.pin_remember": "You'll use this to log in. Pick something you'll remember.",
+      "hint.type_again": "Type it again to make sure.",
+      "hint.audit_context": "Context for this audit — e.g. rain today, low footfall, 3 staff out, festival rush",
+      "hint.what_found": "What did you find?",
+      "hint.describe_finding": "Describe what you found (5+ characters)",
+      "hint.why_na": "Why is this not applicable today?",
+      "hint.problem_summary": "One sentence summary of the underlying cause",
+      "hint.5whys": "Drill down from symptom to root cause. Aim for 5 levels.",
+      "hint.add_action_step": "Add an action step",
+      "hint.sm_proceed": "Daily audits are usually run by the Store Manager. You can still proceed.",
+      "hint.owner_adds_users": "Owner adds Store Manager and GM accounts. Each user gets their own 4-digit PIN and (optionally) a phone number for WhatsApp escalations.",
+      "hint.owner_adds_brief": "Owner can add a Store Manager and a GM. Each gets their own PIN and an optional phone for WhatsApp escalations.",
+      "hint.phone_purpose": "Used to open a WhatsApp message when an escalation fires. Leave blank to clear.",
+      "hint.no_cros": "No CROs yet. Tap \"+ Add CRO\" above to add your floor staff.",
+      "hint.no_cros_short": "No CROs yet.",
+      "hint.no_caps": "No CAPs yet",
+      "hint.no_caps_filter": "No CAPs in this filter.",
+      "hint.caps_auto": "CAPs (Corrective Action Plans) are created automatically when an audit has FAILs. You'll see them here.",
+      "hint.no_audits": "No submitted audits yet",
+      "hint.audits_appear": "Once you submit a daily audit it'll appear here.",
+      "hint.no_photos": "No photos yet.",
+      "hint.no_actions": "No action steps yet. Add some below.",
+      "hint.waiting_verify": "Waiting for GM or Owner to verify.",
+      "hint.waiting_close": "Waiting for GM or Owner to close.",
+      "hint.restore_after": "Restoring a Drive backup afterwards will bring your audits back.",
+      "hint.unattributed": "— not attributed —",
+      "hint.no_phone": "· no phone on file",
+      "hint.submitted_today": "Submitted today",
+      "hint.resuming_audit": "Resuming audit",
+      "hint.skip_revisit": "Skipped — we'll come back to this checkpoint at the end.",
+      "hint.all_other_done": "All other checkpoints are done. Give this one a final verdict before you can submit.",
+      "hint.photo_evidence_required": "Photo evidence is required for Cash & Inventory fails.",
+      "hint.tick_all_actions": "Tick all action steps before marking done.",
+      "hint.long_press": "Long-press the message to select",
+      "hint.cant_deactivate_self": "Can't deactivate yourself",
+      "label.photo_n": "Photo {n}",
+      "label.photo_kb": "Photo stamped & added ({kb} KB)",
+      "ph.add_action": "Add an action step",
+      "ph.because": "Because…",
+      "ph.eg_phone": "e.g. 9876543210",
+      "ph.eg_finding": "e.g. CRO Suresh had no name badge at opening",
+      "ph.eg_name_full": "e.g. Priya Joshi",
+      "ph.eg_name_owner": "e.g. Sagar Bora",
+      "ph.eg_name_cro": "e.g. Suresh",
+      "ph.eg_na_reason": "e.g. counter closed today, no high-value sales",
+      "ph.eg_backdate": "e.g. phone died yesterday; logging late so the day isn't lost",
+      "report.title": "Saagar Audit — Daily Compliance Report",
+      "ok.all_erased": "All data erased",
+      "ok.audit_submitted": "Audit submitted successfully",
+      "ok.cap_closed": "CAP closed",
+      "ok.cap_done": "CAP marked done — waiting for verification",
+      "ok.cap_rejected": "CAP rejected — back to open",
+      "ok.cap_updated": "CAP updated",
+      "ok.cap_verified": "CAP verified",
+      "ok.cap_created": "CAP created",
+      "ok.reminder_set": "Daily reminder set for 10:00 AM",
+      "ok.reminder_off": "Daily reminder turned off",
+      "ok.message_copied": "Message copied",
+      "ok.phone_updated": "Phone updated",
+      "ok.pin_reset": "PIN reset",
+      "ok.pin_updated": "PIN updated",
+      "ok.pin_changed": "PIN changed",
+      "ok.synced": "Synced to cloud",
+      "ok.backup_shared": "Backup shared",
+      "ok.backup_downloaded": "Backup downloaded",
+      "confirm.exit_audit": "Audit in progress. Exit without submitting?",
+      "confirm.deactivate_user": "Deactivate this user? They won't be able to sign in.",
+      "confirm.discard_draft": "Discard this draft? Your marks will be lost.",
+      "confirm.dismiss_alert": "Dismiss this alert? It will move to history.",
+      "confirm.erase_all": "Erase ALL data on this device — audits, CROs, users and CAPs? This cannot be undone.",
+      "confirm.remove_cro": "Remove this CRO?",
+      "confirm.remove_photo": "Remove this photo?",
+      "confirm.sign_out": "Sign out?",
+      "hint.select_cro": "Select at least one CRO on duty.",
+      "hint.pick_date": "Pick a date.",
+      "hint.backdate_reason": "Backdated audit — please record a reason (5+ characters).",
+      "share.print_pdf_emoji": "📄 Print / Save as PDF",
+      "share.send_whatsapp_emoji": "📱 Send on WhatsApp",
+      "share.send_to_whatsapp_emoji": "📱 Send to WhatsApp"
+    },
+    "checkpoints": {
+      "1.1": "Uniform clean and well-fitted",
+      "1.2": "Name badge worn",
+      "1.3": "Hair gelled (M) / tied in bun (F)",
+      "1.4": "Hand gloves worn at jewellery counter",
+      "1.5": "Closed black polished shoes",
+      "1.6": "Mobile phone in pocket, not on counter",
+      "2.1": "Opening photo uploaded between 10:15 and 10:45",
+      "2.2": "Closing photo uploaded between 9:00 and 9:30 PM",
+      "2.3": "GPS enabled at opening upload",
+      "2.4": "GPS enabled at closing upload",
+      "2.5": "Full storefront window visible in photo",
+      "2.6": "Photo clear and in focus",
+      "2.7": "Titan acknowledgement received for uploads",
+      "2.8": "No pending uploads at day end",
+      "3.1": "Yesterday's billed customers identified (100% from POS)",
+      "3.2": "NPS calls attempted (100% of yesterday's billed customers)",
+      "3.3": "Calls completed ≥70% of attempts",
+      "3.4": "Standard NPS script followed",
+      "3.5": "NPS score recorded for each completed call",
+      "3.6": "Detractor (score ≤6) escalated within 24 hours",
+      "3.7": "Daily NPS summary signed by SM by 9:30 PM",
+      "4.1": "Walk-in register entry for every customer (≥90% capture)",
+      "4.2": "Phone number captured for every walk-in",
+      "4.3": "Customer interest captured",
+      "4.4": "KYC complete for every billed customer",
+      "4.5": "ID copy attached for sales ≥ ₹2 lakh",
+      "4.6": "DPDP consent ticked at billing",
+      "4.7": "Customer data file backed up at EOD",
+      "4.8": "No customer data shared verbally with anyone",
+      "5.1": "Glass display clean (no smudges or dust)",
+      "5.2": "All display lighting functional",
+      "5.3": "Brands placed in correct zones",
+      "5.4": "Price tags present and legible, match POS",
+      "5.5": "Display density per planogram",
+      "5.6": "Empty slots filled or removed",
+      "5.7": "Premium SKUs in eye-line position",
+      "5.8": "Current month promo displayed",
+      "5.9": "Multi-brand consistency in Helios counter",
+      "6.1": "Opening cash = yesterday's closing + ₹5,000 float",
+      "6.2": "Cash register entries up-to-date",
+      "6.3": "POS total = cash + card + UPI",
+      "6.4": "GST collected matches POS report",
+      "6.5": "Cash variance ≤ ₹50 (or fully explained)",
+      "6.6": "Cash > ₹50,000 deposited at bank by 9 PM",
+      "6.7": "Stamped deposit slip filed",
+      "6.8": "Petty cash withdrawals authorized in writing",
+      "6.9": "Original receipts attached for every petty entry",
+      "6.10": "Safe locked at all times outside cash handling",
+      "6.11": "POS overrides countersigned by 2 staff",
+      "6.12": "EOD cash summary completed by 9:30 PM",
+      "7.1": "Daily cycle count on rotation tray complete",
+      "7.2": "POS sales match stock deduction",
+      "7.3": "Today's GRNs entered into system",
+      "7.4": "Damaged items segregated and logged",
+      "7.5": "Returns processed within 24 hours",
+      "7.6": "High-value items (≥₹25,000) in secure storage",
+      "7.7": "Service intake items in service area only",
+      "7.8": "FIFO confirmed on 3 random spot-checks",
+      "7.9": "Repair-in register updated for every intake",
+      "7.10": "EOD stock summary sent to GM by 9:30 PM",
+      "8.1": "Service intake form signed by customer + CRO",
+      "8.2": "System Order ID generated",
+      "8.3": "Customer ID copy on file (DPDP-compliant)",
+      "8.4": "Intake photos captured by Order ID",
+      "8.5": "Estimate and timeline written on form",
+      "8.6": "Watch tagged and placed on service rack",
+      "8.7": "Service register updated at EOD",
+      "8.8": "Pending pickups > 24 hrs overdue → customer called"
+    },
+    "evidence_hints": {
+      "1.1": "Visual check at start of shift",
+      "1.2": "Visible on uniform",
+      "1.3": "Visual check",
+      "1.4": "Observe at counter",
+      "1.5": "Visual check",
+      "1.6": "Spot check counter top",
+      "2.1": "Sales Buddy timestamp",
+      "2.2": "Sales Buddy timestamp",
+      "2.3": "Sales Buddy location field",
+      "2.4": "Sales Buddy location field",
+      "2.5": "Photo review",
+      "2.6": "Photo review",
+      "2.7": "Sales Buddy ack screen",
+      "2.8": "Sales Buddy outbox empty",
+      "3.1": "POS export",
+      "3.2": "Call log",
+      "3.3": "Call log",
+      "3.4": "Call recording sample",
+      "3.5": "Call log",
+      "3.6": "Escalation log",
+      "3.7": "Signed summary",
+      "4.1": "Register vs CCTV",
+      "4.2": "Register column",
+      "4.3": "Register column",
+      "4.4": "Invoice attachments",
+      "4.5": "Invoice attachments",
+      "4.6": "Invoice / consent form",
+      "4.7": "Backup log",
+      "4.8": "CRO observation",
+      "5.1": "Visual + smudge wipe",
+      "5.2": "Visual check",
+      "5.3": "Planogram match",
+      "5.4": "Spot-check 5 SKUs",
+      "5.5": "Planogram compare",
+      "5.6": "Visual check",
+      "5.7": "Planogram match",
+      "5.8": "Promo calendar",
+      "5.9": "Helios planogram",
+      "6.1": "Opening count slip",
+      "6.2": "Register review",
+      "6.3": "POS day-end report",
+      "6.4": "POS GST report",
+      "6.5": "Variance note",
+      "6.6": "Bank deposit slip",
+      "6.7": "Deposit slip file",
+      "6.8": "Petty cash book",
+      "6.9": "Receipts file",
+      "6.10": "Spot check safe",
+      "6.11": "Override log",
+      "6.12": "EOD summary slip",
+      "7.1": "Cycle count log",
+      "7.2": "POS + stock report",
+      "7.3": "GRN log",
+      "7.4": "Damage register",
+      "7.5": "Returns log",
+      "7.6": "Storage check",
+      "7.7": "Service area check",
+      "7.8": "Spot check log",
+      "7.9": "Repair register",
+      "7.10": "Sent message",
+      "8.1": "Form file",
+      "8.2": "Order ID slip",
+      "8.3": "ID copy file",
+      "8.4": "Photo folder",
+      "8.5": "Form review",
+      "8.6": "Rack inspection",
+      "8.7": "Service register",
+      "8.8": "Call log"
+    },
+    "sop_names": {
+      "SOP1": "Grooming",
+      "SOP2": "Sales Buddy",
+      "SOP3": "NPS Calling",
+      "SOP4": "Customer Data",
+      "SOP5": "Display & Planogram",
+      "SOP6": "Cash Management",
+      "SOP7": "Inventory Management",
+      "SOP8": "Service Intake"
+    },
+    "bands": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "fair": "Fair",
+      "poor": "Poor",
+      "critical": "Critical"
+    },
+    "cap_statuses": {
+      "open": "Open",
+      "done": "Done",
+      "verified": "Verified",
+      "closed": "Closed",
+      "aged": "Aged",
+      "reopened": "Reopened"
+    },
+    "audit_statuses": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "verified": "Verified",
+      "hidden": "Hidden"
+    },
+    "errors": {
+      "wrong_pin": "Wrong PIN. Try again.",
+      "wrong_pin_short": "Wrong PIN",
+      "current_pin_wrong": "Current PIN is wrong",
+      "locked": "Too many attempts. Locked for {seconds}s.",
+      "required_field": "This field is required.",
+      "future_date": "Future date not allowed.",
+      "photo_required": "Photo required for Cash/Inventory Fails.",
+      "photo_evidence_required": "Photo evidence is required for Cash & Inventory fails.",
+      "finding_required": "Please write a one-sentence finding.",
+      "describe_finding": "Describe what you found (5+ characters)",
+      "no_internet": "No internet — will sync later.",
+      "cap_deadline_passed": "Cannot extend — deadline already passed.",
+      "cannot_edit_submitted": "Submitted audits cannot be edited.",
+      "name_too_short": "Name too short",
+      "enter_name": "Enter a name (2+ characters)",
+      "please_enter_name": "Please enter your name (2+ characters).",
+      "pin_must_4": "PIN must be 4 digits",
+      "new_pin_must_4": "New PIN must be 4 digits",
+      "pins_mismatch": "PINs do not match",
+      "pins_mismatch_full": "PINs do not match. Try again.",
+      "pin_confirm_mismatch": "PIN and confirmation do not match",
+      "new_pin_confirm_mismatch": "New PIN and confirmation do not match",
+      "enter_current_pin": "Enter your current 4-digit PIN",
+      "action_step_short": "Action step text too short",
+      "add_short_reason": "Add a short reason",
+      "tick_actions": "Tick all action steps before marking done.",
+      "select_cro_on_duty": "Select at least one CRO on duty.",
+      "pick_date": "Pick a date.",
+      "backdate_reason": "Backdated audit — please record a reason (5+ characters).",
+      "only_gm_owner_verify": "Only GM or Owner can verify",
+      "only_gm_owner_reject": "Only GM or Owner can reject",
+      "only_gm_owner_close": "Only GM or Owner can close",
+      "rejection_reason": "Rejection needs a reason",
+      "cant_deactivate_self": "Can't deactivate yourself",
+      "could_not_capture": "Could not capture photo",
+      "could_not_schedule": "Could not schedule — check notification permission",
+      "could_not_read_backup": "Could not read backup file",
+      "backup_failed": "Backup failed",
+      "filereader_failed": "FileReader failed",
+      "image_decode_failed": "Image decode failed",
+      "no_phone_recipient": "Recipient has no phone. Add one in Users.",
+      "cannot_build_wa": "Cannot build WhatsApp link",
+      "copy_failed": "Copy failed — long-press the message to select",
+      "shell_not_loaded": "Shell not loaded",
+      "sign_in_first": "Sign in first",
+      "reminder_change_failed": "Reminder change failed",
+      "no_submitted_audits": "No submitted audits yet",
+      "forgot_pin_help": "Forgot PIN?\n\nIf you're the Owner, you cannot reset your own PIN from this device. Reinstall the app to start over (you will lose data unless you have a Drive backup).\n\nIf you're SM or GM, ask the Owner to reset your PIN from Settings."
+    },
+    "success": {
+      "audit_submitted": "Audit submitted successfully",
+      "cap_created": "CAP created",
+      "cap_marked_done": "CAP marked done",
+      "cap_verified": "CAP verified",
+      "cap_closed": "CAP closed",
+      "pin_changed": "PIN changed",
+      "synced": "Synced to cloud"
+    },
+    "escalation_triggers": {
+      "1": "Daily Critical band",
+      "2": "Recurring checkpoint failure",
+      "3": "Cash variance",
+      "4": "Inventory variance",
+      "5": "Theft / security / legal",
+      "6": "Customer complaint",
+      "7": "Declining trend"
+    },
+    "escalation_messages": {
+      "what_happened_label": "What happened",
+      "evidence_label": "Evidence",
+      "impact_label": "Impact",
+      "requested_action_label": "Requested action",
+      "impact.compliance_breach_cash_inv": "Compliance band breached AND a Cash or Inventory critical FAILed — direct loss risk.",
+      "impact.compliance_breach": "Compliance band breached. Today's operations do not meet store standards.",
+      "impact.cash_consecutive": "Cash control failure on consecutive days — direct money risk, possible theft or systemic gap.",
+      "impact.cash_direct": "Direct cash risk. Could mask process error, undercounting or worse.",
+      "impact.recurring": "Recurring failure on the same point — process or training gap, not a one-off mistake.",
+      "impact.security_legal": "Possible theft, security breach, or legal exposure. Could be loss-of-licence territory.",
+      "impact.brand_reputation": "Brand reputation. Customer may escalate publicly (social media, regulator, Titan corporate).",
+      "action.review_audit": "Review the audit in the app and call {sm} before tomorrow's opening.",
+      "action.recount_cash": "Re-count EOD cash, review the cash sheet, and call the auditor today.",
+      "action.pattern_cap": "Open a Pattern CAP in the app, run a 5 Whys with the responsible staff, set a 7-day deadline.",
+      "action.investigate_now": "Investigate immediately. Preserve evidence — CCTV, registers, cash count. Don't let staff close the store before you arrive.",
+      "action.call_customer": "Call the customer today. Brief the Owner. Document the resolution."
+    },
+    "reference": {
+      "tier1_target": "Tier 1 daily target: 90%+ (81 / 90 weighted)",
+      "tier2_target": "Tier 2 weekly target: 92%+ (114 / 124 weighted)",
+      "tier3_target": "Tier 3 monthly target: 95%+ (qualitative)",
+      "band_excellent_range": "95–100% — Reward; document for replication",
+      "band_good_range": "90–94.9% — Note fixes; no CAP needed",
+      "band_fair_range": "85–89.9% — Written CAP required",
+      "band_poor_range": "80–84.9% — Urgent CAP + escalate one tier",
+      "band_critical_range": "< 80% — Same-day escalation; full RCA"
+    }
+  },
+  "mr": {
+    "ui_strings": {
+      "brand.tagline": "ऑडिट",
+      "app.title": "सागर ऑडिट",
+      "app.version_label": "सागर ऑडिट · v0.2.0",
+      "nav.audit": "ऑडिट",
+      "nav.history": "इतिहास",
+      "nav.caps": "CAPs",
+      "nav.settings": "सेटिंग्ज",
+      "nav.home": "मुख्यपृष्ठ",
+      "nav.audits": "ऑडिट",
+      "nav.reference": "संदर्भ",
+      "nav.reports": "अहवाल",
+      "btn.start_audit": "ऑडिट सुरू करा",
+      "btn.start_daily_audit": "दैनंदिन ऑडिट सुरू करा",
+      "btn.submit": "सादर करा",
+      "btn.submit_audit": "ऑडिट सादर करा",
+      "btn.save_draft": "ड्राफ्ट जतन करा",
+      "btn.cancel": "रद्द",
+      "btn.cancel_audit": "ऑडिट रद्द करा",
+      "btn.continue": "पुढे",
+      "btn.back": "मागे",
+      "btn.next": "पुढे",
+      "btn.previous": "मागे",
+      "btn.pass": "पास",
+      "btn.fail": "नापास",
+      "btn.na": "लागू नाही",
+      "btn.mark_na": "लागू नाही म्हणून खूण",
+      "btn.add_photo": "फोटो जोडा",
+      "btn.take_photo": "फोटो काढा",
+      "btn.retake": "पुन्हा घ्या",
+      "btn.use_photo": "वापरा",
+      "btn.create_cap": "CAP तयार करा",
+      "btn.mark_done": "पूर्ण म्हणून खूण",
+      "btn.mark_all_done": "सर्व पूर्ण म्हणून खूण →",
+      "btn.verify": "पडताळा",
+      "btn.close": "बंद",
+      "btn.close_cap": "CAP बंद करा",
+      "btn.reject": "नकार द्या (पुन्हा उघडा)",
+      "btn.reopen": "पुन्हा उघडा",
+      "btn.extend": "मुदतवाढ द्या",
+      "btn.escalate": "एस्केलेट करा",
+      "btn.export_pdf": "PDF निर्यात",
+      "btn.print_pdf": "छापा / PDF म्हणून जतन",
+      "btn.share_whatsapp": "WhatsApp ला शेअर",
+      "btn.send_whatsapp": "WhatsApp वर पाठवा",
+      "btn.copy_message": "संदेश कॉपी करा",
+      "btn.view_message": "संदेश पाहा",
+      "btn.dismiss": "रद्द करा",
+      "btn.confirm": "खात्री करा",
+      "btn.login": "लॉगिन",
+      "btn.sign_in": "साइन इन",
+      "btn.sign_out": "साइन आउट",
+      "btn.logout": "लॉगआउट",
+      "btn.switch_user": "वापरकर्ता बदला",
+      "btn.change_pin": "PIN बदला",
+      "btn.change_my_pin": "माझा PIN बदला",
+      "btn.save_new_pin": "नवीन PIN जतन",
+      "btn.reset_pin": "PIN रीसेट",
+      "btn.add": "जोडा",
+      "btn.add_another": "आणखी जोडा",
+      "btn.add_user": "वापरकर्ता जोडा",
+      "btn.add_cro": "सीआरओ जोडा",
+      "btn.edit": "संपादन",
+      "btn.delete": "हटवा",
+      "btn.remove": "काढून टाका",
+      "btn.deactivate": "निष्क्रिय करा",
+      "btn.deactivate_user": "वापरकर्ता निष्क्रिय करा",
+      "btn.reactivate_user": "वापरकर्ता पुन्हा सक्रिय करा",
+      "btn.save": "जतन करा",
+      "btn.save_changes": "बदल जतन",
+      "btn.save_next": "जतन व पुढे",
+      "btn.discard_draft": "ड्राफ्ट टाकून द्या",
+      "btn.change_phone": "फोन बदला",
+      "btn.change_my_phone": "माझा फोन बदला",
+      "btn.add_phone": "फोन नंबर जोडा",
+      "btn.add_my_phone": "WhatsApp एस्केलेशनसाठी माझा फोन जोडा",
+      "btn.backup_drive": "Google Drive वर बॅकअप",
+      "btn.restore_backup": "बॅकअप फाइलमधून पुनर्संचयित",
+      "btn.export_csv": "सर्व CSV ला निर्यात",
+      "btn.export_audits_csv": "सर्व ऑडिट CSV ला निर्यात",
+      "btn.erase_all": "या डिव्हाइसवरील सर्व डेटा पुसून टाका",
+      "btn.forgot_pin": "विसरलात?",
+      "btn.x": "X — पुन्हा भेट",
+      "label.audit_date": "ऑडिटची तारीख",
+      "label.audit_notes": "ऑडिट नोंदी",
+      "label.audit_notes_c": "ऑडिट नोंदी:",
+      "label.backdated_audit": "मागील तारखेचे ऑडिट:",
+      "label.backdated_audit_warn": "⚠ मागील तारखेचे ऑडिट",
+      "label.cros_on_duty": "ड्युटीवरील सीआरओ",
+      "label.cros": "सीआरओ",
+      "label.users": "वापरकर्ते",
+      "label.role": "भूमिका",
+      "label.name": "नाव",
+      "label.your_name": "तुमचे नाव",
+      "label.counter": "काउंटर",
+      "label.phone": "फोन (१० अंकी, ऐच्छिक)",
+      "label.phone_required": "फोन (१० अंकी किंवा देश-कोडसह)",
+      "label.phone_for": "फोन कोणासाठी",
+      "label.my_phone": "माझा फोन नंबर",
+      "label.current_pin": "सध्याचा PIN",
+      "label.new_pin": "नवीन PIN",
+      "label.confirm_pin": "PIN ची खात्री",
+      "label.confirm_new_pin": "नवीन PIN ची खात्री",
+      "label.choose_pin": "४-अंकी PIN निवडा",
+      "label.confirm_your_pin": "तुमच्या PIN ची खात्री",
+      "label.checkpoint": "तपासणी बिंदू",
+      "label.cp": "तपासणी बिंदू",
+      "label.finding": "निष्कर्ष",
+      "label.finding_evidence": "निष्कर्ष / पुरावा",
+      "label.cro_involved": "संबंधित सीआरओ (ऐच्छिक)",
+      "label.cro_involved_c": "संबंधित सीआरओ:",
+      "label.action_steps": "कृती पावले",
+      "label.responsible": "जबाबदार व्यक्ती",
+      "label.deadline": "मुदत",
+      "label.root_cause": "मूळ कारण",
+      "label.result": "निकाल",
+      "label.required": "आवश्यक",
+      "label.photo_required_fail": "नापास असेल तर फोटो आवश्यक",
+      "label.draft_review": "ड्राफ्ट · सादर करण्यापूर्वी पुनरावलोकन",
+      "label.first_time_setup": "पहिल्यांदा सेटअप",
+      "label.daily_audit": "दैनंदिन ऑडिट",
+      "label.daily_reminder": "दैनंदिन ऑडिट स्मरण",
+      "label.notifications": "सूचना",
+      "label.my_account": "माझे खाते",
+      "label.signed_in_as": "साइन इन",
+      "label.welcome_back": "पुन्हा स्वागत",
+      "label.welcome": "स्वागत,",
+      "label.welcome_owner": "स्वागत, मालक",
+      "label.danger_zone": "धोकादायक क्षेत्र",
+      "label.backup_restore": "बॅकअप व पुनर्संचयन",
+      "label.escalation_msg": "एस्केलेशन संदेश",
+      "label.verifier_note": "पडताळणाऱ्याची नोंद:",
+      "label.verification_notes": "पडताळणीच्या नोंदी (ऐच्छिक):",
+      "label.reject_reason": "नकाराचे कारण (आवश्यक):",
+      "label.cro_fails_30d": "सर्वाधिक नापासांचे सीआरओ (मागील ३० दिवस)",
+      "role.store_manager": "स्टोअर मॅनेजर",
+      "role.sm_full": "स्टोअर मॅनेजर (दैनंदिन ऑडिट चालवतो)",
+      "role.gm": "जीएम",
+      "role.gm_full": "जीएम (ऑडिट पडताळतो, CAPs सांभाळतो)",
+      "role.owner": "मालक",
+      "role.cro": "सीआरओ",
+      "counter.titan_world": "टायटन वर्ल्ड",
+      "counter.helios": "हेलिओस",
+      "hint.pick_name": "तुमचे नाव निवडा आणि तुमचा ४-अंकी PIN टाका.",
+      "hint.set_account": "तुमचे खाते सेट करूया. यानंतर तुम्ही स्टोअर मॅनेजर आणि जीएम जोडू शकता.",
+      "hint.set_new_pin": "नवीन ४-अंकी PIN सेट करा. पुढच्या वेळी साइन इनसाठी ते वापरतील.",
+      "hint.pin_remember": "लॉगिनसाठी हाच वापराल. लक्षात राहील असे काही निवडा.",
+      "hint.type_again": "खात्रीसाठी पुन्हा टाइप करा.",
+      "hint.audit_context": "या ऑडिटचा संदर्भ — उदा. आज पाऊस, कमी ग्राहक, ३ कर्मचारी रजेवर, सणाची गर्दी",
+      "hint.what_found": "तुम्हाला काय आढळले?",
+      "hint.describe_finding": "तुम्हाला काय आढळले ते लिहा (५+ अक्षरे)",
+      "hint.why_na": "आज हे लागू का नाही?",
+      "hint.problem_summary": "मूळ कारणाचा एका वाक्यात सारांश",
+      "hint.5whys": "लक्षणापासून मूळ कारणापर्यंत खोलात जा. ५ पातळ्यांचे लक्ष्य ठेवा.",
+      "hint.add_action_step": "कृती पाऊल जोडा",
+      "hint.sm_proceed": "दैनंदिन ऑडिट सहसा स्टोअर मॅनेजर चालवतो. तरी तुम्ही पुढे जाऊ शकता.",
+      "hint.owner_adds_users": "मालक स्टोअर मॅनेजर आणि जीएम खाती जोडतो. प्रत्येक वापरकर्त्याला स्वतःचा ४-अंकी PIN आणि (ऐच्छिक) WhatsApp एस्केलेशनसाठी फोन नंबर मिळतो.",
+      "hint.owner_adds_brief": "मालक स्टोअर मॅनेजर आणि जीएम जोडू शकतो. प्रत्येकाला स्वतःचा PIN आणि ऐच्छिक WhatsApp एस्केलेशनसाठी फोन.",
+      "hint.phone_purpose": "एस्केलेशन झाल्यावर WhatsApp संदेश उघडण्यासाठी वापरला जातो. रिकामा सोडल्यास हटवला जातो.",
+      "hint.no_cros": "अजून सीआरओ नाहीत. वरील \"+ सीआरओ जोडा\" टॅप करून तुमचे फ्लोअर स्टाफ जोडा.",
+      "hint.no_cros_short": "अजून सीआरओ नाहीत.",
+      "hint.no_caps": "अजून CAPs नाहीत",
+      "hint.no_caps_filter": "या फिल्टरमध्ये CAPs नाहीत.",
+      "hint.caps_auto": "ऑडिटमध्ये नापास असतील तेव्हा CAPs (कृती योजना) आपोआप तयार होतात. त्या इथे दिसतील.",
+      "hint.no_audits": "अजून सादर केलेले ऑडिट नाहीत",
+      "hint.audits_appear": "तुम्ही दैनंदिन ऑडिट सादर केल्यावर ते इथे दिसेल.",
+      "hint.no_photos": "अजून फोटो नाहीत.",
+      "hint.no_actions": "अजून कृती पावले नाहीत. खाली काही जोडा.",
+      "hint.waiting_verify": "जीएम किंवा मालकाच्या पडताळणीची प्रतीक्षा.",
+      "hint.waiting_close": "जीएम किंवा मालकाने बंद करण्याची प्रतीक्षा.",
+      "hint.restore_after": "नंतर Drive बॅकअप पुनर्संचयित केल्यास तुमचे ऑडिट परत येतील.",
+      "hint.unattributed": "— जबाबदारी न दिलेले —",
+      "hint.no_phone": "· फाइलवर फोन नाही",
+      "hint.submitted_today": "आज सादर केले",
+      "hint.resuming_audit": "ऑडिट पुन्हा सुरू",
+      "hint.skip_revisit": "वगळले — शेवटी या तपासणी बिंदूकडे परत येऊ.",
+      "hint.all_other_done": "इतर सर्व तपासणी बिंदू पूर्ण. सादर करण्याआधी या बिंदूचा अंतिम निकाल द्या.",
+      "hint.photo_evidence_required": "रोख व स्टॉक नापासांसाठी फोटो पुरावा आवश्यक.",
+      "hint.tick_all_actions": "पूर्ण म्हणून खूण करण्यापूर्वी सर्व कृती पावलांना टिक करा.",
+      "hint.long_press": "निवडण्यासाठी संदेश दाबून धरा",
+      "hint.cant_deactivate_self": "स्वतःला निष्क्रिय करू शकत नाही",
+      "label.photo_n": "फोटो {n}",
+      "label.photo_kb": "फोटो स्टॅम्प करून जोडला ({kb} KB)",
+      "ph.add_action": "कृती पाऊल जोडा",
+      "ph.because": "कारण…",
+      "ph.eg_phone": "उदा. ९८७६५४३२१०",
+      "ph.eg_finding": "उदा. उघडण्याच्या वेळी सीआरओ सुरेशकडे नावाचा बॅज नव्हता",
+      "ph.eg_name_full": "उदा. प्रिया जोशी",
+      "ph.eg_name_owner": "उदा. सागर बोरा",
+      "ph.eg_name_cro": "उदा. सुरेश",
+      "ph.eg_na_reason": "उदा. आज काउंटर बंद, उच्च-मूल्य विक्री नाही",
+      "ph.eg_backdate": "उदा. काल फोन बंद पडला; दिवस वाया जाऊ नये म्हणून उशिरा नोंदवत आहे",
+      "report.title": "सागर ऑडिट — दैनंदिन अनुपालन अहवाल",
+      "ok.all_erased": "सर्व डेटा पुसला",
+      "ok.audit_submitted": "ऑडिट यशस्वीरीत्या सादर",
+      "ok.cap_closed": "CAP बंद",
+      "ok.cap_done": "CAP पूर्ण म्हणून खूण — पडताळणीची प्रतीक्षा",
+      "ok.cap_rejected": "CAP नाकारले — पुन्हा उघडे",
+      "ok.cap_updated": "CAP अद्ययावत",
+      "ok.cap_verified": "CAP पडताळलेले",
+      "ok.cap_created": "CAP तयार",
+      "ok.reminder_set": "दैनंदिन स्मरण सकाळी १०:०० वाजता सेट",
+      "ok.reminder_off": "दैनंदिन स्मरण बंद",
+      "ok.message_copied": "संदेश कॉपी झाला",
+      "ok.phone_updated": "फोन अद्ययावत",
+      "ok.pin_reset": "PIN रीसेट झाला",
+      "ok.pin_updated": "PIN अद्ययावत",
+      "ok.pin_changed": "PIN बदलला",
+      "ok.synced": "क्लाउडशी समक्रमित",
+      "ok.backup_shared": "बॅकअप शेअर",
+      "ok.backup_downloaded": "बॅकअप डाउनलोड",
+      "confirm.exit_audit": "ऑडिट चालू. सादर न करता बाहेर पडायचे?",
+      "confirm.deactivate_user": "हा वापरकर्ता निष्क्रिय करायचा? तो साइन इन करू शकणार नाही.",
+      "confirm.discard_draft": "हा ड्राफ्ट टाकून द्यायचा? तुमच्या खुणा गमावल्या जातील.",
+      "confirm.dismiss_alert": "ही सूचना रद्द करायची? ती इतिहासात जाईल.",
+      "confirm.erase_all": "या डिव्हाइसवरील सर्व डेटा पुसायचा — ऑडिट, सीआरओ, वापरकर्ते आणि CAPs? हे परत आणता येणार नाही.",
+      "confirm.remove_cro": "हा सीआरओ काढून टाकायचा?",
+      "confirm.remove_photo": "हा फोटो काढून टाकायचा?",
+      "confirm.sign_out": "साइन आउट करायचे?",
+      "hint.select_cro": "ड्युटीवरील किमान एक सीआरओ निवडा.",
+      "hint.pick_date": "एक तारीख निवडा.",
+      "hint.backdate_reason": "मागील तारखेचे ऑडिट — कृपया कारण नोंदवा (५+ अक्षरे).",
+      "share.print_pdf_emoji": "📄 छापा / PDF म्हणून जतन",
+      "share.send_whatsapp_emoji": "📱 WhatsApp वर पाठवा",
+      "share.send_to_whatsapp_emoji": "📱 WhatsApp ला पाठवा"
+    },
+    "checkpoints": {
+      "1.1": "गणवेश स्वच्छ आणि व्यवस्थित बसणारा",
+      "1.2": "नावाचा बॅज लावलेला",
+      "1.3": "केस जेल लावलेले (पुरुष) / बन बांधलेला (महिला)",
+      "1.4": "दागिने काउंटरवर हाताचे ग्लोव्ह्ज घातलेले",
+      "1.5": "बंद, काळे, पॉलिश केलेले बूट",
+      "1.6": "मोबाइल फोन खिशात, काउंटरवर नाही",
+      "2.1": "उघडण्याचा फोटो १०:१५ ते १०:४५ दरम्यान अपलोड",
+      "2.2": "बंदोबस्ताचा फोटो रात्री ९:०० ते ९:३० दरम्यान अपलोड",
+      "2.3": "उघडण्याच्या अपलोडवेळी GPS चालू",
+      "2.4": "बंदोबस्ताच्या अपलोडवेळी GPS चालू",
+      "2.5": "फोटोत संपूर्ण दर्शनी खिडकी दिसते",
+      "2.6": "फोटो स्पष्ट आणि फोकसमध्ये",
+      "2.7": "अपलोडसाठी टायटनची पावती मिळाली",
+      "2.8": "दिवसाअखेर कोणतेही अपलोड प्रलंबित नाही",
+      "3.1": "कालचे बिल केलेले ग्राहक ओळखले (POS मधून १००%)",
+      "3.2": "एनपीएस कॉल केले (कालच्या बिल केलेल्या ग्राहकांच्या १००%)",
+      "3.3": "पूर्ण झालेले कॉल केलेल्या प्रयत्नांच्या ≥७०%",
+      "3.4": "मानक एनपीएस स्क्रिप्टचे पालन",
+      "3.5": "प्रत्येक पूर्ण कॉलसाठी एनपीएस गुण नोंदवले",
+      "3.6": "त्रासी ग्राहक (गुण ≤६) २४ तासांत एस्केलेट",
+      "3.7": "स्टोअर मॅनेजरने रात्री ९:३० पर्यंत दैनंदिन एनपीएस सारांशावर सही केली",
+      "4.1": "प्रत्येक ग्राहकासाठी वॉक-इन रजिस्टर नोंद (≥९०% कॅप्चर)",
+      "4.2": "प्रत्येक वॉक-इनसाठी फोन नंबर नोंदवला",
+      "4.3": "ग्राहकाचे स्वारस्य नोंदवले",
+      "4.4": "प्रत्येक बिल केलेल्या ग्राहकासाठी KYC पूर्ण",
+      "4.5": "₹२ लाख ≥ विक्रीसाठी आयडी प्रत जोडली",
+      "4.6": "बिलिंगवेळी DPDP संमतीवर टिक",
+      "4.7": "दिवसाअखेर ग्राहक डेटा फाइल बॅकअप घेतली",
+      "4.8": "कोणाशीही ग्राहक डेटा तोंडी सामायिक केला नाही",
+      "5.1": "काचेचा डिस्प्ले स्वच्छ (डाग किंवा धूळ नाही)",
+      "5.2": "सर्व डिस्प्ले प्रकाशयोजना कार्यरत",
+      "5.3": "ब्रँड योग्य क्षेत्रांत ठेवलेले",
+      "5.4": "किंमत-टॅग उपस्थित आणि वाचनीय, POS शी जुळतात",
+      "5.5": "डिस्प्ले घनता प्लानोग्रामनुसार",
+      "5.6": "रिकाम्या जागा भरल्या किंवा काढून टाकल्या",
+      "5.7": "प्रीमियम SKU डोळ्यासमोरच्या जागी",
+      "5.8": "चालू महिन्याचा प्रचार प्रदर्शित",
+      "5.9": "हेलिओस काउंटरमध्ये बहु-ब्रँड सुसंगतता",
+      "6.1": "उघडण्याची रोख = कालची बंद रोख + ₹५,००० फ्लोट",
+      "6.2": "रोख रजिस्टर नोंदी अद्ययावत",
+      "6.3": "POS एकूण = रोख + कार्ड + UPI",
+      "6.4": "गोळा केलेला GST POS अहवालाशी जुळतो",
+      "6.5": "रोख तफावत ≤ ₹५० (किंवा पूर्ण स्पष्टीकरण)",
+      "6.6": "₹५०,००० पेक्षा जास्त रोख रात्री ९ पर्यंत बँकेत जमा",
+      "6.7": "शिक्का असलेली डिपॉझिट स्लिप फाइल केली",
+      "6.8": "फुटकळ रोख काढणे लेखी अधिकृत",
+      "6.9": "प्रत्येक फुटकळ नोंदीसाठी मूळ पावत्या जोडल्या",
+      "6.10": "रोख हाताळणी सोडून तिजोरी नेहमी कुलूपबंद",
+      "6.11": "POS ओव्हरराइडवर २ कर्मचाऱ्यांच्या काऊंटर-सह्या",
+      "6.12": "दिवसाअखेरचा रोख सारांश ९:३० पर्यंत पूर्ण",
+      "7.1": "रोटेशन ट्रेवर दैनंदिन चक्र-मोजणी पूर्ण",
+      "7.2": "POS विक्री स्टॉक कपातीशी जुळते",
+      "7.3": "आजचे GRN सिस्टममध्ये नोंदवले",
+      "7.4": "खराब आयटम वेगळे केले व नोंदवले",
+      "7.5": "परतावे २४ तासांत प्रक्रिया केले",
+      "7.6": "उच्च-मूल्य आयटम (≥₹२५,०००) सुरक्षित ठिकाणी",
+      "7.7": "सर्व्हिस इनटेक आयटम फक्त सर्व्हिस क्षेत्रात",
+      "7.8": "३ यादृच्छिक स्पॉट-चेकवर FIFO ची पुष्टी",
+      "7.9": "प्रत्येक इनटेकसाठी रिपेअर-इन रजिस्टर अद्ययावत",
+      "7.10": "दिवसाअखेरचा स्टॉक सारांश रात्री ९:३० पर्यंत जीएमला पाठवला",
+      "8.1": "सर्व्हिस इनटेक फॉर्मवर ग्राहक + सीआरओची सही",
+      "8.2": "सिस्टम ऑर्डर आयडी तयार",
+      "8.3": "ग्राहक आयडी प्रत फाइलवर (DPDP-अनुरूप)",
+      "8.4": "ऑर्डर आयडीनुसार इनटेक फोटो काढले",
+      "8.5": "अंदाज आणि कालावधी फॉर्मवर लिहिले",
+      "8.6": "घड्याळावर टॅग लावून सर्व्हिस रॅकवर ठेवले",
+      "8.7": "दिवसाअखेर सर्व्हिस रजिस्टर अद्ययावत",
+      "8.8": "प्रलंबित पिकअप > २४ तास उशीर → ग्राहकाला फोन"
+    },
+    "evidence_hints": {
+      "1.1": "शिफ्टच्या सुरुवातीला दृश्य तपासणी",
+      "1.2": "गणवेशावर दिसणारा",
+      "1.3": "दृश्य तपासणी",
+      "1.4": "काउंटरवर निरीक्षण",
+      "1.5": "दृश्य तपासणी",
+      "1.6": "काउंटर टॉपवर स्पॉट चेक",
+      "2.1": "सेल्स बडी वेळ-शिक्का",
+      "2.2": "सेल्स बडी वेळ-शिक्का",
+      "2.3": "सेल्स बडी स्थान फील्ड",
+      "2.4": "सेल्स बडी स्थान फील्ड",
+      "2.5": "फोटो पुनरावलोकन",
+      "2.6": "फोटो पुनरावलोकन",
+      "2.7": "सेल्स बडी पावती स्क्रीन",
+      "2.8": "सेल्स बडी आउटबॉक्स रिकामा",
+      "3.1": "POS निर्यात",
+      "3.2": "कॉल लॉग",
+      "3.3": "कॉल लॉग",
+      "3.4": "कॉल रेकॉर्डिंग नमुना",
+      "3.5": "कॉल लॉग",
+      "3.6": "एस्केलेशन लॉग",
+      "3.7": "सही केलेला सारांश",
+      "4.1": "रजिस्टर वि. सीसीटीव्ही",
+      "4.2": "रजिस्टर स्तंभ",
+      "4.3": "रजिस्टर स्तंभ",
+      "4.4": "इनव्हॉइस संलग्न",
+      "4.5": "इनव्हॉइस संलग्न",
+      "4.6": "इनव्हॉइस / संमती फॉर्म",
+      "4.7": "बॅकअप लॉग",
+      "4.8": "सीआरओ निरीक्षण",
+      "5.1": "दृश्य + डाग पुसून पाहणे",
+      "5.2": "दृश्य तपासणी",
+      "5.3": "प्लानोग्राम जुळणी",
+      "5.4": "५ SKU वर स्पॉट-चेक",
+      "5.5": "प्लानोग्राम तुलना",
+      "5.6": "दृश्य तपासणी",
+      "5.7": "प्लानोग्राम जुळणी",
+      "5.8": "प्रचार दिनदर्शिका",
+      "5.9": "हेलिओस प्लानोग्राम",
+      "6.1": "उघडण्याची मोजणी स्लिप",
+      "6.2": "रजिस्टर पुनरावलोकन",
+      "6.3": "POS दिवस-अंत अहवाल",
+      "6.4": "POS GST अहवाल",
+      "6.5": "तफावत नोंद",
+      "6.6": "बँक डिपॉझिट स्लिप",
+      "6.7": "डिपॉझिट स्लिप फाइल",
+      "6.8": "फुटकळ रोख पुस्तक",
+      "6.9": "पावत्यांची फाइल",
+      "6.10": "तिजोरीवर स्पॉट चेक",
+      "6.11": "ओव्हरराइड लॉग",
+      "6.12": "दिवसाअखेरची सारांश स्लिप",
+      "7.1": "चक्र-मोजणी लॉग",
+      "7.2": "POS + स्टॉक अहवाल",
+      "7.3": "GRN लॉग",
+      "7.4": "खराब रजिस्टर",
+      "7.5": "परतावे लॉग",
+      "7.6": "स्टोरेज तपासणी",
+      "7.7": "सर्व्हिस क्षेत्र तपासणी",
+      "7.8": "स्पॉट चेक लॉग",
+      "7.9": "रिपेअर रजिस्टर",
+      "7.10": "पाठवलेला संदेश",
+      "8.1": "फॉर्म फाइल",
+      "8.2": "ऑर्डर आयडी स्लिप",
+      "8.3": "आयडी प्रत फाइल",
+      "8.4": "फोटो फोल्डर",
+      "8.5": "फॉर्म पुनरावलोकन",
+      "8.6": "रॅक तपासणी",
+      "8.7": "सर्व्हिस रजिस्टर",
+      "8.8": "कॉल लॉग"
+    },
+    "sop_names": {
+      "SOP1": "ग्रूमिंग",
+      "SOP2": "सेल्स बडी",
+      "SOP3": "एनपीएस कॉलिंग",
+      "SOP4": "ग्राहक डेटा",
+      "SOP5": "डिस्प्ले व प्लानोग्राम",
+      "SOP6": "रोख व्यवस्थापन",
+      "SOP7": "स्टॉक व्यवस्थापन",
+      "SOP8": "सर्व्हिस इनटेक"
+    },
+    "bands": {
+      "excellent": "उत्कृष्ट",
+      "good": "चांगले",
+      "fair": "बरे",
+      "poor": "वाईट",
+      "critical": "अत्यावश्यक"
+    },
+    "cap_statuses": {
+      "open": "उघडे",
+      "done": "पूर्ण",
+      "verified": "पडताळलेले",
+      "closed": "बंद",
+      "aged": "जुनी",
+      "reopened": "पुन्हा उघडलेले"
+    },
+    "audit_statuses": {
+      "draft": "ड्राफ्ट",
+      "submitted": "सादर",
+      "verified": "पडताळलेले",
+      "hidden": "लपवलेले"
+    },
+    "errors": {
+      "wrong_pin": "चुकीचा PIN. पुन्हा प्रयत्न करा.",
+      "wrong_pin_short": "चुकीचा PIN",
+      "current_pin_wrong": "सध्याचा PIN चुकीचा",
+      "locked": "बरेच प्रयत्न. {seconds} सेकंदांसाठी लॉक.",
+      "required_field": "हे क्षेत्र आवश्यक.",
+      "future_date": "भविष्यातील तारीख स्वीकारली जात नाही.",
+      "photo_required": "रोख/स्टॉक नापासांसाठी फोटो आवश्यक.",
+      "photo_evidence_required": "रोख व स्टॉक नापासांसाठी फोटो पुरावा आवश्यक.",
+      "finding_required": "कृपया एका वाक्याचा निष्कर्ष लिहा.",
+      "describe_finding": "तुम्हाला काय आढळले ते लिहा (५+ अक्षरे)",
+      "no_internet": "इंटरनेट नाही — नंतर समक्रमित होईल.",
+      "cap_deadline_passed": "वाढवू शकत नाही — मुदत आधीच संपली.",
+      "cannot_edit_submitted": "सादर ऑडिट संपादित करता येत नाहीत.",
+      "name_too_short": "नाव खूप लहान",
+      "enter_name": "नाव टाका (२+ अक्षरे)",
+      "please_enter_name": "कृपया तुमचे नाव टाका (२+ अक्षरे).",
+      "pin_must_4": "PIN ४ अंकी असावा",
+      "new_pin_must_4": "नवीन PIN ४ अंकी असावा",
+      "pins_mismatch": "PIN जुळत नाहीत",
+      "pins_mismatch_full": "PIN जुळत नाहीत. पुन्हा प्रयत्न करा.",
+      "pin_confirm_mismatch": "PIN आणि खात्री जुळत नाहीत",
+      "new_pin_confirm_mismatch": "नवीन PIN आणि खात्री जुळत नाहीत",
+      "enter_current_pin": "तुमचा सध्याचा ४-अंकी PIN टाका",
+      "action_step_short": "कृती पाऊल मजकूर खूप लहान",
+      "add_short_reason": "लहान कारण जोडा",
+      "tick_actions": "पूर्ण म्हणून खूण करण्यापूर्वी सर्व कृती पावलांना टिक करा.",
+      "select_cro_on_duty": "ड्युटीवरील किमान एक सीआरओ निवडा.",
+      "pick_date": "एक तारीख निवडा.",
+      "backdate_reason": "मागील तारखेचे ऑडिट — कृपया कारण नोंदवा (५+ अक्षरे).",
+      "only_gm_owner_verify": "फक्त जीएम किंवा मालक पडताळू शकतात",
+      "only_gm_owner_reject": "फक्त जीएम किंवा मालक नकार देऊ शकतात",
+      "only_gm_owner_close": "फक्त जीएम किंवा मालक बंद करू शकतात",
+      "rejection_reason": "नकारासाठी कारण आवश्यक",
+      "cant_deactivate_self": "स्वतःला निष्क्रिय करू शकत नाही",
+      "could_not_capture": "फोटो काढता आला नाही",
+      "could_not_schedule": "वेळ ठरवू शकलो नाही — सूचना परवानगी तपासा",
+      "could_not_read_backup": "बॅकअप फाइल वाचता आली नाही",
+      "backup_failed": "बॅकअप अयशस्वी",
+      "filereader_failed": "FileReader अयशस्वी",
+      "image_decode_failed": "इमेज डिकोड अयशस्वी",
+      "no_phone_recipient": "प्राप्तकर्त्याकडे फोन नाही. वापरकर्त्यांमध्ये एक जोडा.",
+      "cannot_build_wa": "WhatsApp लिंक तयार करता आली नाही",
+      "copy_failed": "कॉपी अयशस्वी — निवडण्यासाठी संदेश दाबून धरा",
+      "shell_not_loaded": "शेल लोड झाले नाही",
+      "sign_in_first": "आधी साइन इन करा",
+      "reminder_change_failed": "स्मरण बदल अयशस्वी",
+      "no_submitted_audits": "अजून सादर केलेले ऑडिट नाहीत",
+      "forgot_pin_help": "PIN विसरलात?\n\nतुम्ही मालक असाल — या डिव्हाइसवरून तुमचा स्वतःचा PIN रीसेट करता येणार नाही. नव्याने सुरुवात करण्यासाठी अॅप पुन्हा इन्स्टॉल करा (Drive बॅकअप नसेल तर डेटा गमावाल).\n\nतुम्ही SM किंवा GM असाल — मालकाला सेटिंग्जमधून तुमचा PIN रीसेट करायला सांगा."
+    },
+    "success": {
+      "audit_submitted": "ऑडिट यशस्वीरीत्या सादर",
+      "cap_created": "CAP तयार",
+      "cap_marked_done": "CAP पूर्ण म्हणून खूण",
+      "cap_verified": "CAP पडताळलेले",
+      "cap_closed": "CAP बंद",
+      "pin_changed": "PIN बदलला",
+      "synced": "क्लाउडशी समक्रमित"
+    },
+    "escalation_triggers": {
+      "1": "दैनंदिन अत्यावश्यक पट्टी",
+      "2": "तपासणी बिंदू वारंवार नापास",
+      "3": "रोख तफावत",
+      "4": "स्टॉक तफावत",
+      "5": "चोरी / सुरक्षा / कायदेशीर",
+      "6": "ग्राहक तक्रार",
+      "7": "घसरता कल"
+    },
+    "escalation_messages": {
+      "what_happened_label": "काय झाले",
+      "evidence_label": "पुरावा",
+      "impact_label": "परिणाम",
+      "requested_action_label": "मागितलेली कृती",
+      "impact.compliance_breach_cash_inv": "अनुपालन पट्टी मोडली आणि रोख किंवा स्टॉकमधील अत्यावश्यक बिंदू नापास — थेट तोट्याचा धोका.",
+      "impact.compliance_breach": "अनुपालन पट्टी मोडली. आजचे कामकाज स्टोअर मानकांना पूर्ण करत नाही.",
+      "impact.cash_consecutive": "सलग दिवशी रोख नियंत्रण अपयश — थेट पैशाचा धोका, संभाव्य चोरी किंवा प्रणालीगत त्रुटी.",
+      "impact.cash_direct": "थेट रोख धोका. प्रक्रिया चूक, कमी मोजणी किंवा वाईट काही लपवू शकते.",
+      "impact.recurring": "त्याच बिंदूवर वारंवार अपयश — प्रक्रिया किंवा प्रशिक्षण त्रुटी, एकवेळची चूक नाही.",
+      "impact.security_legal": "संभाव्य चोरी, सुरक्षा भंग, किंवा कायदेशीर धोका. परवाना गमावण्याची शक्यता.",
+      "impact.brand_reputation": "ब्रँडची प्रतिष्ठा. ग्राहक जाहीरपणे एस्केलेट करू शकतो (सोशल मीडिया, नियामक, टायटन कॉर्पोरेट).",
+      "action.review_audit": "अॅपमध्ये ऑडिट पुनरावलोकन करा आणि उद्या उघडण्याआधी {sm} ला फोन करा.",
+      "action.recount_cash": "दिवसाअखेरची रोख पुन्हा मोजा, रोख पत्रक पुनरावलोकन करा, आणि आज ऑडिटरला फोन करा.",
+      "action.pattern_cap": "अॅपमध्ये पॅटर्न CAP उघडा, जबाबदार कर्मचाऱ्यांसह पाच का? करा, ७-दिवसांची मुदत द्या.",
+      "action.investigate_now": "ताबडतोब तपास करा. पुरावे जपा — सीसीटीव्ही, रजिस्टर, रोख मोजणी. तुम्ही पोहोचण्यापूर्वी कर्मचाऱ्यांना स्टोअर बंद करू देऊ नका.",
+      "action.call_customer": "आज ग्राहकाला फोन करा. मालकाला माहिती द्या. निराकरण नोंदवा."
+    },
+    "reference": {
+      "tier1_target": "टियर १ दैनंदिन लक्ष्य: ९०%+ (८१ / ९० वजनी)",
+      "tier2_target": "टियर २ साप्ताहिक लक्ष्य: ९२%+ (११४ / १२४ वजनी)",
+      "tier3_target": "टियर ३ मासिक लक्ष्य: ९५%+ (गुणात्मक)",
+      "band_excellent_range": "९५–१००% — पुरस्कार; पुनरावृत्तीसाठी नोंद",
+      "band_good_range": "९०–९४.९% — सुधारणा नोंदवा; CAP नको",
+      "band_fair_range": "८५–८९.९% — लेखी CAP आवश्यक",
+      "band_poor_range": "८०–८४.९% — तातडीची CAP + एक स्तर एस्केलेट",
+      "band_critical_range": "< ८०% — त्याच दिवशी एस्केलेशन; पूर्ण मूळ कारण विश्लेषण"
+    }
+  },
+  "_categories": [
+    "ui_strings",
+    "checkpoints",
+    "evidence_hints",
+    "sop_names",
+    "bands",
+    "cap_statuses",
+    "audit_statuses",
+    "errors",
+    "success",
+    "escalation_triggers",
+    "escalation_messages",
+    "reference"
+  ]
+};
+
+// Auto-generated reference content (Spec §11 + Workbook A.4–A.7).
+// Source: agent_outputs/reference/*.json
+window.REFERENCE_DATA = {
+  "rating_scale": {
+    "title_en": "Compliance rating bands",
+    "title_mr": "अनुपालन रेटिंग पट्ट्या",
+    "subtitle_en": "Source: Workbook Appendix A.4 — Rating Scale Reference Card.",
+    "subtitle_mr": "स्रोत: पुस्तिका परिशिष्ट A.४ — रेटिंग स्केल संदर्भ कार्ड.",
+    "bands": [
+      {
+        "code": "excellent",
+        "label_en": "Excellent",
+        "label_mr": "उत्कृष्ट",
+        "min_pct": 95.0,
+        "max_pct": 100.0,
+        "range_label_en": "95% – 100%",
+        "range_label_mr": "९५% – १००%",
+        "color": "#166534",
+        "action_en": "Reward and document the practice for replication.",
+        "action_mr": "[REVIEW] सरावाचे प्रतिकृतीसाठी कौतुक करा व नोंदवा.",
+        "who_acts_en": "Store Manager records best practice; GM cites in weekly report.",
+        "who_acts_mr": "[REVIEW] स्टोअर मॅनेजर सर्वोत्तम सराव नोंदवतो; जीएम साप्ताहिक अहवालात उल्लेख करते.",
+        "description_en": "Audit-grade compliance. Sustain by training new staff to current standard.",
+        "description_mr": "[REVIEW] ऑडिट-दर्जाचे अनुपालन. नवीन कर्मचाऱ्यांना सध्याच्या मानकानुसार प्रशिक्षित करून टिकवा."
+      },
+      {
+        "code": "good",
+        "label_en": "Good",
+        "label_mr": "चांगले",
+        "min_pct": 90.0,
+        "max_pct": 94.9,
+        "range_label_en": "90% – 94.9%",
+        "range_label_mr": "९०% – ९४.९%",
+        "color": "#15803D",
+        "action_en": "Note minor fixes for the next day; no CAP needed.",
+        "action_mr": "[REVIEW] दुसर्‍या दिवशीसाठी किरकोळ सुधारणा नोंदवा; CAP आवश्यक नाही.",
+        "who_acts_en": "Store Manager addresses verbally with relevant CRO.",
+        "who_acts_mr": "[REVIEW] स्टोअर मॅनेजर संबंधित सीआरओशी तोंडी बोलून सोडवतो.",
+        "description_en": "On-target performance. Address small slips before they become patterns.",
+        "description_mr": "[REVIEW] लक्ष्यानुसार कामगिरी. पॅटर्न होण्यापूर्वी लहान चुका सोडवा."
+      },
+      {
+        "code": "fair",
+        "label_en": "Fair",
+        "label_mr": "बरे",
+        "min_pct": 85.0,
+        "max_pct": 89.9,
+        "range_label_en": "85% – 89.9%",
+        "range_label_mr": "८५% – ८९.९%",
+        "color": "#B45309",
+        "action_en": "Written Corrective Action Plan required.",
+        "action_mr": "[REVIEW] लेखी कृती योजना (CAP) आवश्यक.",
+        "who_acts_en": "Store Manager opens CAP; GM reviews at weekly audit.",
+        "who_acts_mr": "[REVIEW] स्टोअर मॅनेजर CAP उघडतो; जीएम साप्ताहिक ऑडिटमध्ये पुनरावलोकन करते.",
+        "description_en": "Below target. Root-cause analysis required before the issue settles in.",
+        "description_mr": "[REVIEW] लक्ष्याखाली. समस्या स्थिरावण्यापूर्वी मूळ-कारण विश्लेषण आवश्यक."
+      },
+      {
+        "code": "poor",
+        "label_en": "Poor",
+        "label_mr": "वाईट",
+        "min_pct": 80.0,
+        "max_pct": 84.9,
+        "range_label_en": "80% – 84.9%",
+        "range_label_mr": "८०% – ८४.९%",
+        "color": "#B91C1C",
+        "action_en": "Urgent CAP plus escalate one tier up.",
+        "action_mr": "[REVIEW] तातडीचा CAP आणि एक स्तर वर एस्केलेट करा.",
+        "who_acts_en": "Store Manager opens CAP; same-day escalation to GM.",
+        "who_acts_mr": "[REVIEW] स्टोअर मॅनेजर CAP उघडतो; त्याच दिवशी जीएमकडे एस्केलेशन.",
+        "description_en": "Clearly off-target. Multiple SOPs likely affected; act tonight, not tomorrow.",
+        "description_mr": "[REVIEW] स्पष्टपणे लक्ष्याबाहेर. अनेक एसओपी प्रभावित; उद्या नव्हे, आजच कृती करा."
+      },
+      {
+        "code": "critical",
+        "label_en": "Critical",
+        "label_mr": "अत्यावश्यक",
+        "min_pct": 0.0,
+        "max_pct": 79.9,
+        "range_label_en": "Below 80%",
+        "range_label_mr": "८०% च्या खाली",
+        "color": "#B91C1C",
+        "action_en": "Same-day escalation; full root-cause analysis.",
+        "action_mr": "[REVIEW] त्याच दिवशी एस्केलेशन; पूर्ण मूळ-कारण विश्लेषण.",
+        "who_acts_en": "Escalation to Owner regardless of tier.",
+        "who_acts_mr": "[REVIEW] स्तर कोणताही असो, मालकाकडे एस्केलेशन.",
+        "description_en": "Audit programme failure if not addressed. Trigger 1 fires automatically.",
+        "description_mr": "[REVIEW] सोडवले नाही तर ऑडिट कार्यक्रम अपयश. ट्रिगर १ आपोआप सुरू होतो."
+      }
+    ],
+    "tier_targets": [
+      {
+        "tier": "daily",
+        "tier_label_en": "Tier 1 daily",
+        "tier_label_mr": "टियर १ दैनंदिन",
+        "auditor_en": "Store Manager",
+        "auditor_mr": "स्टोअर मॅनेजर",
+        "target_pct": 90,
+        "label_en": "SM daily target",
+        "label_mr": "[REVIEW] SM दैनंदिन लक्ष्य",
+        "total_points": "90 weighted",
+        "points_to_pass": "81+ weighted",
+        "points_to_pass_label_en": "81 / 90",
+        "points_to_pass_label_mr": "८१ / ९०"
+      },
+      {
+        "tier": "weekly",
+        "tier_label_en": "Tier 2 weekly",
+        "tier_label_mr": "टियर २ साप्ताहिक",
+        "auditor_en": "GM",
+        "auditor_mr": "जीएम",
+        "target_pct": 92,
+        "label_en": "GM weekly target",
+        "label_mr": "[REVIEW] जीएम साप्ताहिक लक्ष्य",
+        "total_points": "124 weighted",
+        "points_to_pass": "114+ weighted",
+        "points_to_pass_label_en": "114 / 124",
+        "points_to_pass_label_mr": "११४ / १२४"
+      },
+      {
+        "tier": "monthly",
+        "tier_label_en": "Tier 3 monthly",
+        "tier_label_mr": "टियर ३ मासिक",
+        "auditor_en": "Owner",
+        "auditor_mr": "मालक",
+        "target_pct": 95,
+        "label_en": "Owner monthly target",
+        "label_mr": "[REVIEW] मालक मासिक लक्ष्य",
+        "total_points": "Strategic — qualitative",
+        "points_to_pass": "—",
+        "points_to_pass_label_en": "Qualitative",
+        "points_to_pass_label_mr": "गुणात्मक"
+      }
+    ],
+    "warning": {
+      "en": "The 89.9% → 90.0% boundary is the most-missed cliff in the whole programme. Always score with one decimal place. \"90\" is ambiguous — is it 90.0 (Good) or 89.7 (Fair) rounded up? Never round before banding.",
+      "mr": "[REVIEW] संपूर्ण कार्यक्रमातली सर्वात-चुकवली जाणारी सीमा म्हणजे ८९.९% → ९०.०%. नेहमी एका दशांश स्थानासह गुण लिहा. \"९०\" अस्पष्ट — ९०.० (चांगले) की वर गोलाकार केलेले ८९.७ (बरे)? पट्टी ठरवण्यापूर्वी कधीही गोलाकार करू नका."
+    }
+  },
+  "escalation_triggers": {
+    "title_en": "Escalation triggers",
+    "title_mr": "एस्केलेशन ट्रिगर",
+    "subtitle_en": "Source: Workbook Appendix A.5 — Escalation Checklist. Seven mandatory triggers; when any one is met, escalation happens regardless of auditor preference.",
+    "subtitle_mr": "[REVIEW] स्रोत: पुस्तिका परिशिष्ट A.५ — एस्केलेशन चेकलिस्ट. सात अनिवार्य ट्रिगर; एकही पूर्ण झाला की ऑडिटरच्या पसंतीची पर्वा न करता एस्केलेशन होते.",
+    "message_format": {
+      "intro_en": "Every escalation message has 4 parts. Send in English; WhatsApp may forward externally. Be short — the recipient is deciding under time pressure. Speed beats polish.",
+      "intro_mr": "[REVIEW] प्रत्येक एस्केलेशन संदेशाला ४ भाग असतात. इंग्रजीत पाठवा; व्हॉट्सअॅप पुढे बाहेर जाऊ शकते. छोटा ठेवा — प्राप्तकर्ता वेळेच्या दबावाखाली निर्णय घेत आहे. वेग पॉलिशपेक्षा महत्त्वाचा.",
+      "parts": [
+        {
+          "number": 1,
+          "label_en": "What happened",
+          "label_mr": "काय झाले",
+          "description_en": "One sentence stating the event, including the relevant numbers.",
+          "description_mr": "संबंधित आकड्यांसह घटना सांगणारे एक वाक्य."
+        },
+        {
+          "number": 2,
+          "label_en": "Evidence",
+          "label_mr": "पुरावा",
+          "description_en": "The photo, register entry, variance amount, complaint reference, or trend chart that proves it.",
+          "description_mr": "फोटो, रजिस्टर नोंद, तफावत रक्कम, तक्रार संदर्भ, किंवा कल चार्ट."
+        },
+        {
+          "number": 3,
+          "label_en": "Impact",
+          "label_mr": "कार्यवाहक परिणाम",
+          "description_en": "The immediate operational impact — store-day, brand-counter, customer relationship, financial exposure.",
+          "description_mr": "तातडीचा कार्यवाहक परिणाम — स्टोअर-दिवस, ब्रँड-काउंटर, ग्राहक नातेसंबंध, आर्थिक धोका."
+        },
+        {
+          "number": 4,
+          "label_en": "Requested action",
+          "label_mr": "मागितलेली कृती",
+          "description_en": "Information only / decision needed / immediate action needed. Be explicit.",
+          "description_mr": "फक्त माहिती / निर्णय आवश्यक / तातडीची कृती आवश्यक. स्पष्ट सांगा."
+        }
+      ]
+    },
+    "triggers": [
+      {
+        "number": 1,
+        "label_en": "Daily audit Critical band",
+        "label_mr": "दैनंदिन ऑडिट क्रिटिकल पट्टी",
+        "threshold_en": "Score < 80%",
+        "threshold_mr": "गुण < ८०%",
+        "to_en": "GM (Owner if Cash/Inv is the cause)",
+        "to_mr": "जीएम (कारण रोख/स्टॉक असेल तर मालक)",
+        "channel": [
+          "WhatsApp",
+          "In-app"
+        ],
+        "when_en": "Same night",
+        "when_mr": "त्याच रात्री",
+        "urgency": "same_night",
+        "example_message_en": "ESCALATION — Daily audit Critical band\n\n1. What happened: Tuesday daily audit scored 78.2%; cause is three Cash checkpoint Fails (override countersignature missing on 6.11, petty cash receipt missing on 6.9, till variance ₹420 over on 6.5).\n2. Evidence: Score sheet (attached), POS override register page for today, petty cash file photo.\n3. Impact: Critical-band day on a Cash-cause means the GM-to-Owner chain fires tonight. Cash-control credibility at stake; tomorrow opening will use a watched float.\n4. Requested action: Decision needed — GM to confirm Owner notification tonight and authorise tomorrow's tighter cash-handover procedure.\n\n—\nSaagar Traders audit app — auto-generated\nDate: 2026-05-27 • Tier: daily",
+        "example_message_mr": "[REVIEW] एस्केलेशन — दैनंदिन ऑडिट क्रिटिकल पट्टी\n\n१. काय झाले: मंगळवारच्या दैनंदिन ऑडिटला ७८.२% गुण; कारण तीन रोख तपासणी बिंदू नापास (६.११ वर ओव्हरराइड काऊंटर सही गहाळ, ६.९ वर फुटकळ रोख पावती गहाळ, ६.५ वर तिजोरी तफावत ₹४२० जास्त).\n२. पुरावा: स्कोअर शीट (जोडलेले), आजचे POS ओव्हरराइड रजिस्टर पान, फुटकळ रोख फाइलचा फोटो.\n३. कार्यवाहक परिणाम: रोख-कारणावरचा क्रिटिकल-पट्टी दिवस म्हणजे जीएम-ते-मालक साखळी आज रात्री सुरू होते. रोख-नियंत्रणाची विश्वासार्हता धोक्यात; उद्याची सुरुवात पाहणीतल्या फ्लोटने.\n४. मागितलेली कृती: निर्णय आवश्यक — जीएमने आज रात्री मालकाला कळवण्याची पुष्टी करावी आणि उद्याच्या अधिक कडक रोख-हस्तांतरण प्रक्रियेला मान्यता द्यावी.\n\n—\nसागर ट्रेडर्स ऑडिट अॅप — स्वयं-निर्मित\nदिनांक: २०२६-०५-२७ • स्तर: दैनंदिन"
+      },
+      {
+        "number": 2,
+        "label_en": "Same checkpoint repeated Fail",
+        "label_mr": "एकच तपासणी बिंदू पुन्हा-पुन्हा नापास",
+        "threshold_en": "5+ days in a week",
+        "threshold_mr": "एका आठवड्यात ५+ दिवस",
+        "to_en": "GM (open a Pattern CAP)",
+        "to_mr": "जीएम (पॅटर्न CAP उघडा)",
+        "channel": [
+          "In-app"
+        ],
+        "when_en": "At weekly audit",
+        "when_mr": "साप्ताहिक ऑडिटमध्ये",
+        "urgency": "next_audit",
+        "example_message_en": null,
+        "example_message_mr": null
+      },
+      {
+        "number": 3,
+        "label_en": "Single-day cash variance",
+        "label_mr": "एका दिवसाची रोख तफावत",
+        "threshold_en": "> ₹500 (regardless of explanation)",
+        "threshold_mr": "> ₹५०० (स्पष्टीकरण काहीही असो)",
+        "to_en": "GM (Owner if it recurs the next day)",
+        "to_mr": "जीएम (दुसर्‍या दिवशी पुन्हा झाले तर मालक)",
+        "channel": [
+          "WhatsApp",
+          "In-app"
+        ],
+        "when_en": "Same day",
+        "when_mr": "त्याच दिवशी",
+        "urgency": "same_day",
+        "example_message_en": "ESCALATION — Single-day cash variance > ₹500\n\n1. What happened: Friday closing cash variance ₹580 short on count one; investigation shows ₹600 over-payment to a customer at lunchtime. Customer returned ₹600 at 4 PM; final net variance ₹20 short.\n2. Evidence: Cash register page (attached) showing both counts; customer return receipt; CCTV timestamp 13:42 (over-payment) and 16:08 (return).\n3. Impact: Trigger 3 was breached at lunchtime even though the situation closed clean. Documenting because the weekly audit reviews \"explained\" variances cumulatively to ensure they do not become a habit.\n4. Requested action: Information only — no further action needed tonight, but please flag this CRO in the Wed–Fri pattern check at weekly audit.\n\n—\nSaagar Traders audit app — auto-generated\nDate: 2026-05-27 • Tier: daily",
+        "example_message_mr": "[REVIEW] एस्केलेशन — एका दिवसाची रोख तफावत > ₹५००\n\n१. काय झाले: शुक्रवारी बंदोबस्त रोख पहिल्या मोजणीत ₹५८० कमी; तपास दाखवतो दुपारी ग्राहकाला ₹६०० जास्त दिले गेले. ग्राहकाने ४ PM ला ₹६०० परत केले; अंतिम निव्वळ तफावत ₹२० कमी.\n२. पुरावा: रोख रजिस्टरचे पान (जोडलेले) दोन्ही मोजण्या दाखवते; ग्राहक परत पावती; सीसीटीव्ही वेळ-शिक्का १३:४२ (जास्त-पेमेंट) आणि १६:०८ (परत).\n३. कार्यवाहक परिणाम: परिस्थिती स्वच्छ बंद झाली तरीही दुपारी ट्रिगर ३ मोडले. कागदपत्र करत आहे कारण साप्ताहिक ऑडिट \"स्पष्टीकरण-असलेल्या\" तफावती एकत्रित पाहते — सवय होत नाही याची खात्री.\n४. मागितलेली कृती: फक्त माहिती — आज रात्री पुढे कृती नाही, पण कृपया साप्ताहिक ऑडिटच्या बुध-शुक्र पॅटर्न तपासणीत या सीआरओला झेंडा द्या.\n\n—\nसागर ट्रेडर्स ऑडिट अॅप — स्वयं-निर्मित\nदिनांक: २०२६-०५-२७ • स्तर: दैनंदिन"
+      },
+      {
+        "number": 4,
+        "label_en": "Inventory variance",
+        "label_mr": "स्टॉक तफावत",
+        "threshold_en": "> 2% of stock value",
+        "threshold_mr": "स्टॉक मूल्याच्या > २%",
+        "to_en": "Owner directly",
+        "to_mr": "थेट मालक",
+        "channel": [
+          "WhatsApp",
+          "In-app"
+        ],
+        "when_en": "Same day",
+        "when_mr": "त्याच दिवशी",
+        "urgency": "same_day",
+        "example_message_en": null,
+        "example_message_mr": null
+      },
+      {
+        "number": 5,
+        "label_en": "Theft / security / legal",
+        "label_mr": "चोरी / सुरक्षा / कायदेशीर",
+        "threshold_en": "Any indication",
+        "threshold_mr": "कोणताही संकेत",
+        "to_en": "Owner directly",
+        "to_mr": "थेट मालक",
+        "channel": [
+          "WhatsApp",
+          "In-app"
+        ],
+        "when_en": "Immediate",
+        "when_mr": "तातडीने",
+        "urgency": "immediate",
+        "example_message_en": "ESCALATION — Theft / security / legal indication\n\n1. What happened: At Thursday closing, back-office CCTV Camera 3 was found pointing at the wall, not the safe. Six days of safe-area footage are lost. Store Manager believes it was knocked when the cleaning ladder was moved Monday morning; no witness reports tampering.\n2. Evidence: Camera 3 current frame (attached, showing wall); Camera 3 footage log Mon–Thu (all wall); cleaning ladder photo for context.\n3. Impact: Whether the cause was innocent or not, six days of unmonitored safe-area is the issue. Safe count tonight will proceed under dual observation; FIR may be needed for caution.\n4. Requested action: Decision needed — Owner please direct (a) whether to involve security audit, (b) whether to file a precautionary FIR, (c) re-aim camera tonight or hold for inspection. Holding closing until you respond.\n\n—\nSaagar Traders audit app — auto-generated\nDate: 2026-05-27 • Tier: daily",
+        "example_message_mr": "[REVIEW] एस्केलेशन — चोरी / सुरक्षा / कायदेशीर संकेत\n\n१. काय झाले: गुरुवारच्या बंदोबस्ताला, मागील-कार्यालयाचा सीसीटीव्ही कॅमेरा ३ तिजोरीऐवजी भिंतीकडे पाहत आढळला. तिजोरी क्षेत्राचे सहा दिवसांचे फुटेज गमावले. स्टोअर मॅनेजरच्या मते सोमवारी सकाळी स्वच्छता शिडी हलवताना धक्का लागला; कोणीही साक्षीदार छेडछाडीची नोंद करत नाही.\n२. पुरावा: कॅमेरा ३ ची सध्याची फ्रेम (जोडलेली, भिंत दाखवते); कॅमेरा ३ सोम–गुरु फुटेज लॉग (सर्व भिंत); संदर्भासाठी स्वच्छता शिडीचा फोटो.\n३. कार्यवाहक परिणाम: कारण निरुपद्रवी असो की नसो, मुद्दा सहा दिवस अप्रत्यक्ष तिजोरी क्षेत्र हाच आहे. आज रात्री तिजोरीची मोजणी दोन-व्यक्तीच्या निरीक्षणाखाली होईल; सावधगिरीसाठी FIR आवश्यक असू शकते.\n४. मागितलेली कृती: निर्णय आवश्यक — मालकाने (अ) सुरक्षा ऑडिट जोडायचे का, (ब) सावधगिरीचा FIR दाखल करायचा का, (क) कॅमेरा आज रात्री पुन्हा लावायचा की तपासणीसाठी राखायचा — कृपया निर्देश द्या. तुमच्या उत्तरापर्यंत बंदोबस्त थांबवला आहे.\n\n—\nसागर ट्रेडर्स ऑडिट अॅप — स्वयं-निर्मित\nदिनांक: २०२६-०५-२७ • स्तर: दैनंदिन"
+      },
+      {
+        "number": 6,
+        "label_en": "Customer complaint",
+        "label_mr": "ग्राहक तक्रार",
+        "threshold_en": "Not resolvable at store level",
+        "threshold_mr": "स्टोअर स्तरावर सुटण्यासारखी नाही",
+        "to_en": "Owner directly",
+        "to_mr": "थेट मालक",
+        "channel": [
+          "WhatsApp",
+          "In-app"
+        ],
+        "when_en": "Same day",
+        "when_mr": "त्याच दिवशी",
+        "urgency": "same_day",
+        "example_message_en": null,
+        "example_message_mr": null
+      },
+      {
+        "number": 7,
+        "label_en": "Declining trend",
+        "label_mr": "घसरता कल",
+        "threshold_en": "3+ consecutive weeks of decline",
+        "threshold_mr": "सलग ३+ आठवडे घसरण",
+        "to_en": "Owner",
+        "to_mr": "मालक",
+        "channel": [
+          "In-app"
+        ],
+        "when_en": "At the third week's weekly audit",
+        "when_mr": "तिसर्‍या आठवड्याच्या साप्ताहिक ऑडिटमध्ये",
+        "urgency": "next_audit",
+        "example_message_en": null,
+        "example_message_mr": null
+      }
+    ],
+    "never_escalates": {
+      "title_en": "What never escalates",
+      "title_mr": "[REVIEW] काय कधीच एस्केलेट होत नाही",
+      "items": [
+        {
+          "en": "Single-checkpoint Fails within Good or Excellent band — get a CAP, not an escalation.",
+          "mr": "चांगले किंवा उत्कृष्ट पट्टीतले एकल-तपासणी बिंदू नापास — CAP मिळते, एस्केलेशन नाही."
+        },
+        {
+          "en": "Personal disagreements between Store Manager and CRO — go through HR, not audit.",
+          "mr": "स्टोअर मॅनेजर आणि सीआरओ यांच्यातले वैयक्तिक मतभेद — HR मधून जातात, ऑडिटमधून नव्हे."
+        },
+        {
+          "en": "Scoring debates between Store Manager and GM on borderline checkpoints — resolve at weekly audit through evidence review.",
+          "mr": "सीमारेषेच्या तपासणी बिंदूवर स्टोअर मॅनेजर आणि जीएम यांच्यात स्कोअरिंग वाद — साप्ताहिक ऑडिटमध्ये पुरावा पुनरावलोकनातून सुटतात."
+        }
+      ]
+    }
+  },
+  "evidence": {
+    "title_en": "Strong vs weak evidence",
+    "title_mr": "मजबूत वि. दुर्बल पुरावा",
+    "subtitle_en": "Source: Workbook Appendix A.6. Every audit finding must rest on something from the strong column. Findings supported only by items in the weak column are reporting, not auditing.",
+    "subtitle_mr": "स्रोत: पुस्तिका परिशिष्ट A.६. प्रत्येक ऑडिट निष्कर्षाला मजबूत स्तंभातील कशाने तरी पुरावा हवा. केवळ दुर्बल स्तंभातील आयटमने आधारित निष्कर्ष म्हणजे रिपोर्टिंग, ऑडिट नव्हे.",
+    "strong": [
+      {
+        "en": "Photographs with timestamp — WhatsApp send time, EXIF metadata, or Sales Buddy upload timestamp.",
+        "mr": "वेळ-शिक्क्यासह फोटो — व्हॉट्सअॅप पाठवण्याची वेळ, EXIF मेटाडेटा, किंवा सेल्स बडी अपलोड वेळ-शिक्का."
+      },
+      {
+        "en": "Signed and dated register entries — cash, stock, attendance, complaint, returns/damage, GRN, NPS.",
+        "mr": "सही व दिनांकित रजिस्टर नोंदी — रोख, स्टॉक, हजेरी, तक्रार, परतावा/खराब, GRN, एनपीएस."
+      },
+      {
+        "en": "POS and system reports — day-end POS sales, GST, cash summary; tamper-evident.",
+        "mr": "POS आणि सिस्टम रिपोर्ट्स — दिवसअखेर POS विक्री, GST, रोख सारांश; छेडछाडीचा माग ठेवणारे."
+      },
+      {
+        "en": "Sales Buddy upload acknowledgement — photo, GPS, timestamp, and Titan app receipt.",
+        "mr": "सेल्स बडी अपलोड पावती — फोटो, GPS, वेळ-शिक्का, आणि टायटन अॅप पावती."
+      },
+      {
+        "en": "Physical count records matching system/register — count sheet with both numbers and signature.",
+        "mr": "सिस्टम/रजिस्टरशी जुळणाऱ्या प्रत्यक्ष मोजणी नोंदी — दोन्ही संख्या व सहीसह मोजणी पत्रक."
+      },
+      {
+        "en": "Two-signature reconciliations — cash, high-value service intake.",
+        "mr": "दोन-सही ताळमेळ — रोख, उच्च-मूल्य सर्व्हिस इनटेक."
+      },
+      {
+        "en": "Bank deposit slips with original teller-stamped receipts.",
+        "mr": "मूळ टेलर-शिक्क्यासह बँक ठेव स्लिप."
+      },
+      {
+        "en": "Email/messaging audit trail with timestamp — daily and weekly report submissions.",
+        "mr": "वेळ-शिक्क्यासह ईमेल/संदेश ट्रेल — दैनंदिन व साप्ताहिक अहवाल सादरीकरणे."
+      }
+    ],
+    "weak": [
+      {
+        "en": "Verbal confirmation alone — \"yes I did it\" without any document or photo.",
+        "mr": "केवळ तोंडी पुष्टी — कोणताही दस्तऐवज किंवा फोटोशिवाय \"हो, मी केले\"."
+      },
+      {
+        "en": "\"Manager confirmed\" as standalone — reporting up the chain, not evidence.",
+        "mr": "\"मॅनेजरने पुष्टी केली\" एकटा — साखळीवर रिपोर्टिंग, पुरावा नव्हे."
+      },
+      {
+        "en": "\"I remember doing it\" — memory is unreliable for repetitive daily tasks.",
+        "mr": "\"मला आठवते\" — पुनरावृत्ती दैनंदिन कामांसाठी स्मरण अविश्वसनीय."
+      },
+      {
+        "en": "Photographs without timestamp — could have been taken any time.",
+        "mr": "वेळ-शिक्क्याशिवायचे फोटो — कधीही काढले जाऊ शकतात."
+      },
+      {
+        "en": "Unsigned documents — no accountability for accuracy.",
+        "mr": "सही नसलेले दस्तऐवज — अचूकतेला कोणीही जबाबदार नाही."
+      },
+      {
+        "en": "Second-hand reports — \"the CRO told me she did it\".",
+        "mr": "दुसर्‍याकडून ऐकलेले — \"सीआरओने मला सांगितले\"."
+      },
+      {
+        "en": "\"I will check tomorrow\" — deferred verification is not verification.",
+        "mr": "\"उद्या तपासतो\" — पुढे ढकललेली पडताळणी ही पडताळणी नाही."
+      },
+      {
+        "en": "Assumptions or estimates — \"there are about 30 pieces\" is not a count.",
+        "mr": "अंदाज किंवा गृहीतके — \"साधारण ३० तुकडे आहेत\" मोजणी नाही."
+      }
+    ],
+    "warning": {
+      "en": "Every finding must rest on the left column. Findings supported only by right-column items are reporting, not auditing.",
+      "mr": "प्रत्येक निष्कर्ष डाव्या स्तंभावर विसावला पाहिजे. फक्त उजव्या स्तंभातील आयटमने आधारित निष्कर्ष म्हणजे रिपोर्टिंग, ऑडिट नव्हे."
+    }
+  },
+  "glossary": [
+    {
+      "en": "Audit",
+      "mr": "ऑडिट",
+      "meaning_en": "Independent check of standard vs reality",
+      "meaning_mr": "[REVIEW] मानक विरुद्ध वास्तविकतेची स्वतंत्र तपासणी"
+    },
+    {
+      "en": "Auditor",
+      "mr": "ऑडिटर",
+      "meaning_en": "Person conducting the audit",
+      "meaning_mr": "[REVIEW] ऑडिट करणारी व्यक्ती"
+    },
+    {
+      "en": "Compliance",
+      "mr": "अनुपालन",
+      "meaning_en": "Meeting the SOP standard",
+      "meaning_mr": "[REVIEW] एसओपी मानक पूर्ण करणे"
+    },
+    {
+      "en": "Checkpoint",
+      "mr": "तपासणी बिंदू",
+      "meaning_en": "Single item being audited",
+      "meaning_mr": "[REVIEW] ऑडिट केला जाणारा एक आयटम"
+    },
+    {
+      "en": "SOP",
+      "mr": "एसओपी",
+      "meaning_en": "Standard Operating Procedure",
+      "meaning_mr": "[REVIEW] मानक कार्यप्रणाली"
+    },
+    {
+      "en": "Tier",
+      "mr": "स्तर",
+      "meaning_en": "Audit level (daily/weekly/monthly)",
+      "meaning_mr": "[REVIEW] ऑडिट पातळी (दैनंदिन/साप्ताहिक/मासिक)"
+    },
+    {
+      "en": "Store Manager",
+      "mr": "स्टोअर मॅनेजर",
+      "meaning_en": "Tier 1 auditor; conducts daily audit",
+      "meaning_mr": "[REVIEW] टियर १ ऑडिटर; दैनंदिन ऑडिट करतो"
+    },
+    {
+      "en": "GM",
+      "mr": "जीएम (जनरल मॅनेजर)",
+      "meaning_en": "Tier 2 auditor; conducts weekly audit",
+      "meaning_mr": "[REVIEW] टियर २ ऑडिटर; साप्ताहिक ऑडिट करते"
+    },
+    {
+      "en": "CRO",
+      "mr": "सीआरओ",
+      "meaning_en": "Customer Relationship Officer",
+      "meaning_mr": "[REVIEW] कस्टमर रिलेशनशिप ऑफिसर"
+    },
+    {
+      "en": "Owner",
+      "mr": "मालक",
+      "meaning_en": "Tier 3 auditor; conducts monthly audit",
+      "meaning_mr": "[REVIEW] टियर ३ ऑडिटर; मासिक ऑडिट करतो"
+    },
+    {
+      "en": "Pass",
+      "mr": "पास",
+      "meaning_en": "Checkpoint meets standard",
+      "meaning_mr": "[REVIEW] तपासणी बिंदू मानकानुसार"
+    },
+    {
+      "en": "Fail",
+      "mr": "नापास",
+      "meaning_en": "Checkpoint does not meet standard",
+      "meaning_mr": "[REVIEW] तपासणी बिंदू मानकानुसार नाही"
+    },
+    {
+      "en": "NA / Not Applicable",
+      "mr": "NA / लागू नाही",
+      "meaning_en": "Checkpoint genuinely does not apply",
+      "meaning_mr": "[REVIEW] तपासणी बिंदू खरोखर लागू होत नाही"
+    },
+    {
+      "en": "Weighted score",
+      "mr": "वजनी गुण",
+      "meaning_en": "Score adjusted for SOP weight",
+      "meaning_mr": "[REVIEW] एसओपी वजनासाठी समायोजित गुण"
+    },
+    {
+      "en": "Raw checkpoint",
+      "mr": "कच्चा तपासणी बिंदू",
+      "meaning_en": "Unweighted count of checkpoint",
+      "meaning_mr": "[REVIEW] वजनरहित तपासणी बिंदूची मोजणी"
+    },
+    {
+      "en": "Band",
+      "mr": "पट्टी",
+      "meaning_en": "Compliance category (Excellent/Good/Fair/Poor/Critical)",
+      "meaning_mr": "[REVIEW] अनुपालन वर्ग (उत्कृष्ट/चांगले/बरे/वाईट/अत्यावश्यक)"
+    },
+    {
+      "en": "Evidence",
+      "mr": "पुरावा",
+      "meaning_en": "Proof supporting an audit finding",
+      "meaning_mr": "[REVIEW] ऑडिट निष्कर्षाला आधार देणारा पुरावा"
+    },
+    {
+      "en": "Strong evidence",
+      "mr": "मजबूत पुरावा",
+      "meaning_en": "Independent, dated, preserved proof",
+      "meaning_mr": "[REVIEW] स्वतंत्र, दिनांकित, जतन केलेला पुरावा"
+    },
+    {
+      "en": "Weak evidence",
+      "mr": "दुर्बल पुरावा",
+      "meaning_en": "Verbal, memory, or unsigned — not acceptable",
+      "meaning_mr": "[REVIEW] तोंडी, स्मरण, किंवा सही नसलेला — स्वीकार्य नाही"
+    },
+    {
+      "en": "Finding",
+      "mr": "निष्कर्ष",
+      "meaning_en": "Named outcome of an audit",
+      "meaning_mr": "[REVIEW] ऑडिटचा नाव दिलेला निकाल"
+    },
+    {
+      "en": "Variance",
+      "mr": "तफावत",
+      "meaning_en": "Difference between expected and actual",
+      "meaning_mr": "[REVIEW] अपेक्षित आणि वास्तविक यांच्यातला फरक"
+    },
+    {
+      "en": "Reconciliation",
+      "mr": "ताळमेळ",
+      "meaning_en": "Process of matching two sets of records",
+      "meaning_mr": "[REVIEW] दोन नोंदी संच जुळवण्याची प्रक्रिया"
+    },
+    {
+      "en": "Cash reconciliation",
+      "mr": "रोख ताळमेळ",
+      "meaning_en": "Match POS, register, and physical cash",
+      "meaning_mr": "[REVIEW] POS, रजिस्टर, आणि प्रत्यक्ष रोख जुळवणे"
+    },
+    {
+      "en": "Petty cash",
+      "mr": "फुटकळ रोख",
+      "meaning_en": "Small-amount cash for minor expenses",
+      "meaning_mr": "[REVIEW] किरकोळ खर्चांसाठी लहान रकमेची रोख"
+    },
+    {
+      "en": "Safe / vault",
+      "mr": "तिजोरी",
+      "meaning_en": "Secure cash and high-value storage",
+      "meaning_mr": "[REVIEW] सुरक्षित रोख आणि उच्च-मूल्य साठवण"
+    },
+    {
+      "en": "Override",
+      "mr": "ओव्हरराइड",
+      "meaning_en": "Manual exception to standard POS flow",
+      "meaning_mr": "[REVIEW] मानक POS प्रवाहाला हाताने अपवाद"
+    },
+    {
+      "en": "Refund",
+      "mr": "परतावा",
+      "meaning_en": "Money returned to customer",
+      "meaning_mr": "[REVIEW] ग्राहकाला परत केलेले पैसे"
+    },
+    {
+      "en": "GRN",
+      "mr": "GRN (वस्तू प्राप्ती नोंद)",
+      "meaning_en": "Goods Received Note",
+      "meaning_mr": "[REVIEW] वस्तू प्राप्ती नोंद"
+    },
+    {
+      "en": "Stock movement",
+      "mr": "स्टॉक हालचाल",
+      "meaning_en": "Change in inventory recorded in system",
+      "meaning_mr": "[REVIEW] सिस्टमात नोंदलेला स्टॉकमधील बदल"
+    },
+    {
+      "en": "Cycle count",
+      "mr": "चक्र-मोजणी",
+      "meaning_en": "Daily count of one stock tray",
+      "meaning_mr": "[REVIEW] एका स्टॉक ट्रेची दैनंदिन मोजणी"
+    },
+    {
+      "en": "FIFO",
+      "mr": "FIFO (पहिल्या आत, पहिल्या बाहेर)",
+      "meaning_en": "First In, First Out — sell oldest first",
+      "meaning_mr": "[REVIEW] पहिल्या आत, पहिल्या बाहेर — सर्वात जुनी आधी विका"
+    },
+    {
+      "en": "Display / planogram",
+      "mr": "डिस्प्ले / प्लानोग्राम",
+      "meaning_en": "Standard layout of brand zone",
+      "meaning_mr": "[REVIEW] ब्रँड क्षेत्राची मानक मांडणी"
+    },
+    {
+      "en": "Aging report",
+      "mr": "एजिंग अहवाल",
+      "meaning_en": "Report of stock by time-in-store",
+      "meaning_mr": "[REVIEW] स्टोअरमधल्या वेळेनुसार स्टॉकचा अहवाल"
+    },
+    {
+      "en": "Slow-moving stock",
+      "mr": "हळू-विक्री स्टॉक",
+      "meaning_en": "Items not sold in 90+ days",
+      "meaning_mr": "[REVIEW] ९०+ दिवसांत न विकलेले आयटम"
+    },
+    {
+      "en": "Write-off",
+      "mr": "राइट-ऑफ",
+      "meaning_en": "Item formally removed from stock as loss",
+      "meaning_mr": "[REVIEW] तोटा म्हणून औपचारिकपणे स्टॉकमधून काढलेला आयटम"
+    },
+    {
+      "en": "Service intake",
+      "mr": "सर्व्हिस इनटेक",
+      "meaning_en": "Customer watch accepted for repair",
+      "meaning_mr": "[REVIEW] दुरुस्तीसाठी स्वीकारलेले ग्राहकाचे घड्याळ"
+    },
+    {
+      "en": "Order ID",
+      "mr": "ऑर्डर आयडी",
+      "meaning_en": "Unique system-generated ID per intake",
+      "meaning_mr": "[REVIEW] प्रत्येक इनटेकसाठी सिस्टमने तयार केलेला अद्वितीय आयडी"
+    },
+    {
+      "en": "Pickup",
+      "mr": "पिकअप",
+      "meaning_en": "Customer collection of repaired watch",
+      "meaning_mr": "[REVIEW] दुरुस्त केलेल्या घड्याळाची ग्राहकाने नेणे"
+    },
+    {
+      "en": "Grooming",
+      "mr": "ग्रूमिंग",
+      "meaning_en": "CRO personal appearance standards",
+      "meaning_mr": "[REVIEW] सीआरओ वैयक्तिक दिसण्याची मानके"
+    },
+    {
+      "en": "NPS",
+      "mr": "एनपीएस (नेट प्रमोटर स्कोर)",
+      "meaning_en": "Customer satisfaction measurement",
+      "meaning_mr": "[REVIEW] ग्राहक समाधानाचे मोजमाप"
+    },
+    {
+      "en": "DPDP",
+      "mr": "DPDP (डिजिटल वैयक्तिक डेटा संरक्षण)",
+      "meaning_en": "Indian data privacy regulation",
+      "meaning_mr": "[REVIEW] भारतीय डेटा गोपनीयता नियमन"
+    },
+    {
+      "en": "Sales Buddy",
+      "mr": "सेल्स बडी",
+      "meaning_en": "Titan's daily compliance photo app",
+      "meaning_mr": "[REVIEW] टायटनचे दैनंदिन अनुपालन फोटो अॅप"
+    },
+    {
+      "en": "Planogram",
+      "mr": "प्लानोग्राम",
+      "meaning_en": "Diagram of correct display layout",
+      "meaning_mr": "[REVIEW] योग्य डिस्प्ले मांडणीचे आकृती"
+    },
+    {
+      "en": "CAP",
+      "mr": "कृती योजना (CAP)",
+      "meaning_en": "Corrective Action Plan",
+      "meaning_mr": "[REVIEW] सुधारात्मक कृती योजना"
+    },
+    {
+      "en": "Plan / Do / Verify / Close",
+      "mr": "योजना / अंमलबजावणी / पडताळणी / बंद",
+      "meaning_en": "Four phases of the CAP cycle",
+      "meaning_mr": "[REVIEW] CAP चक्राचे चार टप्पे"
+    },
+    {
+      "en": "Root cause",
+      "mr": "मूळ कारण",
+      "meaning_en": "Underlying reason for a finding",
+      "meaning_mr": "[REVIEW] निष्कर्षामागचे मूलभूत कारण"
+    },
+    {
+      "en": "5 Whys",
+      "mr": "पाच का?",
+      "meaning_en": "Technique to drill from symptom to root cause",
+      "meaning_mr": "[REVIEW] लक्षणापासून मूळ कारणापर्यंत पोहोचण्याचे तंत्र"
+    },
+    {
+      "en": "Aged CAP",
+      "mr": "जुनी CAP",
+      "meaning_en": "CAP whose deadline passed without verification",
+      "meaning_mr": "[REVIEW] पडताळणीशिवाय मुदत संपलेली CAP"
+    },
+    {
+      "en": "Escalation",
+      "mr": "एस्केलेशन",
+      "meaning_en": "Moving an issue to the next audit tier",
+      "meaning_mr": "[REVIEW] समस्या पुढच्या ऑडिट स्तराकडे नेणे"
+    },
+    {
+      "en": "Trigger",
+      "mr": "ट्रिगर",
+      "meaning_en": "Condition that requires escalation",
+      "meaning_mr": "[REVIEW] एस्केलेशन आवश्यक करणारी अट"
+    },
+    {
+      "en": "Pattern",
+      "mr": "पॅटर्न",
+      "meaning_en": "Repeated finding across days or weeks",
+      "meaning_mr": "[REVIEW] दिवस किंवा आठवड्यांमध्ये पुनरावृत्ती होणारा निष्कर्ष"
+    },
+    {
+      "en": "Slow slide",
+      "mr": "हळू घसरण",
+      "meaning_en": "Gradual decline across 3+ weeks",
+      "meaning_mr": "[REVIEW] ३+ आठवड्यांमध्ये क्रमिक घसरण"
+    },
+    {
+      "en": "Single-SOP decay",
+      "mr": "एक-एसओपी क्षय",
+      "meaning_en": "One SOP failing repeatedly while overall stays healthy",
+      "meaning_mr": "[REVIEW] एकूण निरोगी असताना एक एसओपी वारंवार अपयशी"
+    },
+    {
+      "en": "Day-of-week clustering",
+      "mr": "दिवस-गठ्ठा",
+      "meaning_en": "Failures concentrated on specific days",
+      "meaning_mr": "[REVIEW] विशिष्ट दिवसांवर एकत्रित अपयश"
+    },
+    {
+      "en": "Spot check",
+      "mr": "स्पॉट चेक",
+      "meaning_en": "Targeted re-verification of evidence",
+      "meaning_mr": "[REVIEW] पुराव्याची लक्ष्यित पुन्हा-पडताळणी"
+    },
+    {
+      "en": "Verification",
+      "mr": "पडताळणी",
+      "meaning_en": "Confirming evidence still supports finding",
+      "meaning_mr": "[REVIEW] पुरावा अजूनही निष्कर्षाला आधार देतो याची पुष्टी"
+    },
+    {
+      "en": "Weekly report",
+      "mr": "साप्ताहिक अहवाल",
+      "meaning_en": "GM's submission to Owner after weekly audit",
+      "meaning_mr": "[REVIEW] साप्ताहिक ऑडिटनंतर जीएमचे मालकाला सादरीकरण"
+    },
+    {
+      "en": "Critical SOP",
+      "mr": "अत्यावश्यक एसओपी",
+      "meaning_en": "Cash and Inventory — double-weighted",
+      "meaning_mr": "[REVIEW] रोख आणि स्टॉक — दुप्पट वजन"
+    },
+    {
+      "en": "Tolerance window",
+      "mr": "सूट खिडकी",
+      "meaning_en": "Allowable variance around a standard time/value",
+      "meaning_mr": "[REVIEW] मानक वेळ/मूल्याभोवती परवानगी असलेली तफावत"
+    },
+    {
+      "en": "Daily audit folder",
+      "mr": "दैनंदिन ऑडिट फोल्डर",
+      "meaning_en": "Monthly file of all daily audit sheets",
+      "meaning_mr": "[REVIEW] सर्व दैनंदिन ऑडिट पत्रकांची मासिक फाइल"
+    },
+    {
+      "en": "High-value stock",
+      "mr": "उच्च-मूल्य स्टॉक",
+      "meaning_en": "Items above ₹25,000 — separate handling",
+      "meaning_mr": "[REVIEW] ₹२५,००० वरचे आयटम — वेगळी हाताळणी"
+    },
+    {
+      "en": "Verbal confirmation",
+      "mr": "तोंडी पुष्टी",
+      "meaning_en": "Statement without supporting evidence",
+      "meaning_mr": "[REVIEW] आधार पुराव्याशिवायचे विधान"
+    },
+    {
+      "en": "Countersignature",
+      "mr": "काऊंटर सही",
+      "meaning_en": "Second authorising signature required for some actions",
+      "meaning_mr": "[REVIEW] काही कृतींसाठी आवश्यक असलेली दुसरी मंजूर करणारी सही"
+    },
+    {
+      "en": "Closing time",
+      "mr": "बंदोबस्ताची वेळ",
+      "meaning_en": "End of business day; cash counted, audit done",
+      "meaning_mr": "[REVIEW] व्यवसाय दिवसाचा शेवट; रोख मोजली, ऑडिट केले"
+    },
+    {
+      "en": "Opening time",
+      "mr": "उघडण्याची वेळ",
+      "meaning_en": "Start of business day; float ready, photo uploaded",
+      "meaning_mr": "[REVIEW] व्यवसाय दिवसाची सुरुवात; फ्लोट तयार, फोटो अपलोड"
+    }
+  ]
+};
+
 // Auto-generated from assets/seed/. Do not edit by hand.
 const CHECKPOINTS = [
   {
@@ -1851,10 +3844,12 @@ function toast(msg) {
 // ---------------------------------------------------------------------------
 
 const CAP_STATUSES = ['open', 'done', 'verified', 'closed', 'aged'];
-const CAP_STATUS_LABEL = {
-  open: 'Open', done: 'Done', verified: 'Verified',
-  closed: 'Closed', aged: 'Aged',
-};
+// Backwards-compat: callers that read CAP_STATUS_LABEL[s] will keep working
+// in English. New callers should use tCapStatus(s) for the localized label.
+const CAP_STATUS_LABEL = new Proxy(
+  { open: 'Open', done: 'Done', verified: 'Verified', closed: 'Closed', aged: 'Aged' },
+  { get(target, prop) { return typeof I18n !== 'undefined' ? tCapStatus(prop) : target[prop]; } }
+);
 
 function isoWeekOf(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -2671,7 +4666,69 @@ function scoreAudit(results) {
 }
 
 function bandLabel(band) {
-  return { excellent: 'Excellent', good: 'Good', fair: 'Fair', poor: 'Poor', critical: 'Critical' }[band];
+  return tBand(band);
+}
+
+// ---------------------------------------------------------------------------
+// i18n — single source of truth: window.I18N_DATA loaded from i18n_data.js.
+// Locale persisted in localStorage. Switch reloads via render().
+// ---------------------------------------------------------------------------
+
+const I18n = {
+  current: 'en',
+  init() {
+    const saved = localStorage.getItem('saagar_locale');
+    if (saved === 'mr' || saved === 'en') this.current = saved;
+  },
+  set(loc) {
+    if (loc !== 'en' && loc !== 'mr') return;
+    this.current = loc;
+    localStorage.setItem('saagar_locale', loc);
+    render();
+    renderTabBar();
+  },
+  // Pulls a localized string. Falls back to English, then to the key itself.
+  t(category, key, fallback) {
+    const data = window.I18N_DATA;
+    if (!data) return fallback != null ? fallback : key;
+    const cur = data[this.current] && data[this.current][category];
+    if (cur && cur[key] != null && cur[key] !== '') return cur[key];
+    const en = data.en && data.en[category];
+    if (en && en[key] != null && en[key] !== '') return en[key];
+    return fallback != null ? fallback : key;
+  },
+};
+
+function tBand(code)           { return I18n.t('bands', code, code); }
+function tCapStatus(s)         { return I18n.t('cap_statuses', s, s); }
+function tAuditStatus(s)       { return I18n.t('audit_statuses', s, s); }
+function tSop(id, fallback)    { return I18n.t('sop_names', id, fallback || id); }
+function tCheckpoint(cpId, fb) { return I18n.t('checkpoints', cpId, fb); }
+function tUi(key, fb)          { return I18n.t('ui_strings', key, fb != null ? fb : key); }
+
+// Updates tab bar labels in-place. Called on locale change so the topbar
+// nav stays in sync without a full DOM rebuild.
+function renderTabBar() {
+  const tabs = {
+    audit:     tUi('tab.audit',     'Audit'),
+    history:   tUi('tab.history',   'History'),
+    caps:      tUi('tab.caps',      'CAPs'),
+    reference: tUi('tab.reference', 'Reference'),
+    settings:  tUi('tab.settings',  'Settings'),
+  };
+  document.querySelectorAll('.tab[data-tab]').forEach(t => {
+    const k = t.dataset.tab;
+    if (tabs[k] == null) return;
+    // First child is normally the leading text node; the .tab-badge span is a
+    // following child. Replace just the text content without disturbing the
+    // badge element.
+    let textNode = t.firstChild;
+    if (!textNode || textNode.nodeType !== 3) {
+      textNode = document.createTextNode('');
+      t.insertBefore(textNode, t.firstChild || null);
+    }
+    textNode.nodeValue = tabs[k];
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -2843,6 +4900,8 @@ function render() {
   document.getElementById('tab-audit').innerHTML = renderAuditTab(freshState, auth);
   document.getElementById('tab-history').innerHTML = renderHistoryTab(freshState, auth);
   document.getElementById('tab-caps').innerHTML = renderCapsTab(freshState, auth);
+  const refTab = document.getElementById('tab-reference');
+  if (refTab) refTab.innerHTML = renderReferenceTab();
   document.getElementById('tab-settings').innerHTML = renderSettingsTab(freshState, auth);
   renderCapsBadge(freshState);
 }
@@ -3050,12 +5109,12 @@ function renderInProgressAudit(a) {
       </div>` : ''}
     <div class="progress"><span style="width:${pct}%"></span></div>
     <div class="cp-meta">
-      <span class="sop-chip ${sop.critical ? 'critical' : ''}">${escapeHtml(sop.name)}</span>
+      <span class="sop-chip ${sop.critical ? 'critical' : ''}">${escapeHtml(tSop(sop.id, sop.name))}</span>
       <span>CP ${escapeHtml(cp.id)}</span>
       <span style="margin-left:auto">${idx + 1} of ${CHECKPOINTS.length}${skipped > 0 && !isRevisitingSkip ? ` &middot; ${skipped} skipped` : ''}</span>
     </div>
     <div class="card">
-      <div class="cp-text">${escapeHtml(cp.text)}</div>
+      <div class="cp-text">${escapeHtml(tCheckpoint(cp.id, cp.text))}</div>
       ${cp.evidence ? `<div class="cp-evidence">Evidence: ${escapeHtml(cp.evidence)}</div>` : ''}
       ${cp.photo_required_on_fail
         ? `<div class="photo-required-badge">Photo required if FAIL</div>`
@@ -3405,12 +5464,161 @@ function capDetailModal(capId) {
   `);
 }
 
+// ---------------------------------------------------------------------------
+// Reference tab — bilingual content from window.REFERENCE_DATA.
+// ---------------------------------------------------------------------------
+
+const RefState = { sub: 'bands', glossaryFilter: '' };
+
+function renderReferenceTab() {
+  const data = window.REFERENCE_DATA;
+  if (!data) {
+    return '<div class="card"><p class="muted">Reference content not loaded.</p></div>';
+  }
+  const chips = [
+    { id: 'bands',    label: I18n.current === 'mr' ? 'श्रेणी'    : 'Bands' },
+    { id: 'triggers', label: I18n.current === 'mr' ? 'अलर्ट्स'   : 'Triggers' },
+    { id: 'evidence', label: I18n.current === 'mr' ? 'पुरावा'    : 'Evidence' },
+    { id: 'glossary', label: I18n.current === 'mr' ? 'शब्दकोश'   : 'Glossary' },
+  ];
+  let content = '';
+  if (RefState.sub === 'bands')    content = renderRefBands(data.rating_scale);
+  if (RefState.sub === 'triggers') content = renderRefTriggers(data.escalation_triggers);
+  if (RefState.sub === 'evidence') content = renderRefEvidence(data.evidence);
+  if (RefState.sub === 'glossary') content = renderRefGlossary(data.glossary);
+  return `
+    <div class="ref-subnav">
+      ${chips.map(c => `
+        <button class="ref-chip ${RefState.sub === c.id ? 'active' : ''}" data-action="ref-sub" data-id="${c.id}">${escapeHtml(c.label)}</button>
+      `).join('')}
+    </div>
+    <div id="ref-content">${content}</div>
+  `;
+}
+
+function pickLang(item, fieldEn) {
+  // For items shaped { en: 'x', mr: 'y' } OR { label_en: 'x', label_mr: 'y' }
+  // OR a top-level title_en/title_mr pair.
+  const enKey = fieldEn;
+  const mrKey = fieldEn.endsWith('_en') ? fieldEn.slice(0, -3) + '_mr' : 'mr';
+  if (I18n.current === 'mr' && item && item[mrKey]) return item[mrKey];
+  return item ? item[enKey] : '';
+}
+
+function renderRefBands(rs) {
+  if (!rs || !rs.bands) return '<p class="muted">No band data.</p>';
+  const title = I18n.current === 'mr' && rs.title_mr ? rs.title_mr : (rs.title_en || 'Compliance rating bands');
+  const warning = rs.warning && (I18n.current === 'mr' && rs.warning.mr ? rs.warning.mr : rs.warning.en);
+  return `
+    <h2 style="font-family:'DM Serif Display',serif;color:var(--navy);font-size:22px;margin-bottom:10px">${escapeHtml(title)}</h2>
+    ${rs.bands.map(b => `
+      <div class="ref-band" style="border-left-color:${b.color || '#999'}">
+        <div class="ref-band-head">
+          <strong style="color:${b.color || '#999'}">${escapeHtml(pickLang(b, 'label_en'))}</strong>
+          <span class="muted" style="font-size:13px">${b.min_pct}% – ${b.max_pct}%</span>
+        </div>
+        <p class="muted" style="margin:4px 0 0;font-size:14px">${escapeHtml(pickLang(b, 'description_en') || '')}</p>
+      </div>`).join('')}
+    ${rs.tier_targets ? `
+      <h3 style="font-family:'DM Serif Display',serif;color:var(--navy);font-size:16px;margin:18px 0 8px">${I18n.current === 'mr' ? 'दर्जा लक्ष्ये' : 'Tier targets'}</h3>
+      ${rs.tier_targets.map(t => `
+        <div class="ref-tier-row">
+          <span>${escapeHtml(pickLang(t, 'label_en') || t.tier)}</span>
+          <strong>${t.target_pct}%</strong>
+        </div>`).join('')}` : ''}
+    ${warning ? `<div class="ref-warning">⚠️ ${escapeHtml(warning)}</div>` : ''}
+  `;
+}
+
+function renderRefTriggers(et) {
+  if (!et || !et.triggers) return '<p class="muted">No trigger data.</p>';
+  const title = I18n.current === 'mr' && et.title_mr ? et.title_mr : (et.title_en || 'Escalation triggers');
+  const mf = et.message_format;
+  return `
+    <h2 style="font-family:'DM Serif Display',serif;color:var(--navy);font-size:22px;margin-bottom:10px">${escapeHtml(title)}</h2>
+    ${mf ? `
+      <div class="card">
+        <h3 style="font-size:14px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin:0 0 6px">${I18n.current === 'mr' ? 'संदेश रचना' : 'Message format'}</h3>
+        <p class="muted" style="margin:0 0 8px;font-size:13px">${escapeHtml(I18n.current === 'mr' && mf.intro_mr ? mf.intro_mr : mf.intro_en || '')}</p>
+        <ol style="margin:0;padding-left:20px;font-size:13px">
+          ${(mf.parts || []).map(p => `<li>${escapeHtml(pickLang(p, 'label_en'))}</li>`).join('')}
+        </ol>
+      </div>` : ''}
+    ${et.triggers.map(tr => `
+      <div class="ref-trigger">
+        <div class="ref-trigger-head">
+          <span class="ref-trigger-num">T${tr.number}</span>
+          <strong>${escapeHtml(pickLang(tr, 'label_en'))}</strong>
+        </div>
+        <div class="ref-trigger-meta">
+          <span class="muted">${I18n.current === 'mr' ? 'मर्यादा' : 'Threshold'}: <strong>${escapeHtml(pickLang(tr, 'threshold_en'))}</strong></span>
+          <span class="muted">${I18n.current === 'mr' ? 'कोणाला' : 'To'}: <strong>${escapeHtml(tr.to || '—')}</strong></span>
+          <span class="muted">${I18n.current === 'mr' ? 'कधी' : 'When'}: <strong>${escapeHtml(tr.when || '—')}</strong></span>
+        </div>
+        ${tr.channel ? `<div class="ref-trigger-meta"><span class="muted">${I18n.current === 'mr' ? 'चॅनेल' : 'Channel'}: ${(Array.isArray(tr.channel) ? tr.channel : [tr.channel]).map(c => `<span class="ref-channel-pill">${escapeHtml(c)}</span>`).join(' ')}</span></div>` : ''}
+      </div>`).join('')}
+  `;
+}
+
+function renderRefEvidence(ev) {
+  if (!ev) return '<p class="muted">No evidence data.</p>';
+  const title = I18n.current === 'mr' && ev.title_mr ? ev.title_mr : (ev.title_en || 'Strong vs weak evidence');
+  const strong = ev.strong || [];
+  const weak = ev.weak || [];
+  return `
+    <h2 style="font-family:'DM Serif Display',serif;color:var(--navy);font-size:22px;margin-bottom:10px">${escapeHtml(title)}</h2>
+    <div class="ref-evidence-grid">
+      <div>
+        <h3 class="ref-evidence-head" style="color:var(--green)">✓ ${I18n.current === 'mr' ? 'मजबूत पुरावा' : 'Strong evidence'}</h3>
+        ${strong.map(s => `<div class="ref-evidence-row strong">${escapeHtml(pickLang(s, 'en'))}</div>`).join('')}
+      </div>
+      <div>
+        <h3 class="ref-evidence-head" style="color:var(--red)">✗ ${I18n.current === 'mr' ? 'कमजोर पुरावा' : 'Weak evidence'}</h3>
+        ${weak.map(s => `<div class="ref-evidence-row weak">${escapeHtml(pickLang(s, 'en'))}</div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderRefGlossary(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return '<p class="muted">No glossary data.</p>';
+  const filter = (RefState.glossaryFilter || '').toLowerCase();
+  const filtered = filter
+    ? rows.filter(r =>
+        (r.en || '').toLowerCase().includes(filter) ||
+        (r.mr || '').toLowerCase().includes(filter) ||
+        (r.meaning_en || '').toLowerCase().includes(filter))
+    : rows;
+  return `
+    <input type="search" id="glossarySearch" class="glossary-search"
+      placeholder="${I18n.current === 'mr' ? 'शोधा...' : 'Search…'}"
+      value="${escapeHtml(RefState.glossaryFilter || '')}"
+      autocomplete="off">
+    <p class="muted" style="font-size:12px;margin:6px 0 14px">${filtered.length} ${I18n.current === 'mr' ? 'नोंदी' : 'entries'}</p>
+    ${filtered.map(r => `
+      <div class="ref-gloss-row">
+        <div class="ref-gloss-term">
+          <strong>${escapeHtml(r.en || '')}</strong>
+          ${r.mr ? `<span class="muted"> · ${escapeHtml(r.mr)}</span>` : ''}
+        </div>
+        <div class="ref-gloss-meaning">${escapeHtml((I18n.current === 'mr' && r.meaning_mr) ? r.meaning_mr : (r.meaning_en || ''))}</div>
+      </div>`).join('')}
+    ${filtered.length === 0 ? '<p class="muted" style="text-align:center;padding:20px">No matches.</p>' : ''}
+  `;
+}
+
 function renderSettingsTab(state, auth) {
   const isOwner = auth && auth.role === 'OWNER';
   return `
     <div class="card">
       <h2>My account</h2>
       <p class="muted">Signed in as <strong>${escapeHtml(auth.name)}</strong> &middot; ${escapeHtml(roleLabel(auth.role))}${auth.phone ? ' &middot; ' + escapeHtml(displayPhone(auth.phone)) : ''}</p>
+      <div class="lang-row" role="group" aria-label="Language">
+        <span class="lang-row-label">Language</span>
+        <button class="lang-pill ${I18n.current === 'en' ? 'active' : ''}" data-action="set-locale" data-locale="en">English</button>
+        <button class="lang-pill ${I18n.current === 'mr' ? 'active' : ''}" data-action="set-locale" data-locale="mr">मराठी</button>
+      </div>
+      <div class="spacer-12"></div>
       <button class="btn btn-ghost" data-action="set-my-phone">${auth.phone ? 'Change my phone' : 'Add my phone for WhatsApp escalations'}</button>
       <div class="spacer-12"></div>
       <button class="btn btn-ghost" data-action="change-my-pin">Change my PIN</button>
@@ -4023,6 +6231,17 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  if (action === 'ref-sub') {
+    RefState.sub = a.dataset.id;
+    document.getElementById('tab-reference').innerHTML = renderReferenceTab();
+    return;
+  }
+
+  if (action === 'set-locale') {
+    I18n.set(a.dataset.locale);
+    toast(a.dataset.locale === 'mr' ? 'भाषा बदलली' : 'Language changed');
+    return;
+  }
   if (action === 'set-my-phone')   { setPhoneModal(null); return; }
   if (action === 'user-set-phone') { setPhoneModal(a.dataset.id); return; }
   if (action === 'modal-save-phone') {
@@ -4531,6 +6750,24 @@ document.addEventListener('change', (e) => {
   }
 });
 
+// Live filter for the glossary search box.
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'glossarySearch') {
+    RefState.glossaryFilter = e.target.value;
+    const refRoot = document.getElementById('tab-reference');
+    if (refRoot) {
+      refRoot.innerHTML = renderReferenceTab();
+      // Restore focus + caret to the search box after re-render.
+      const input = document.getElementById('glossarySearch');
+      if (input) {
+        input.focus();
+        const v = input.value;
+        input.setSelectionRange(v.length, v.length);
+      }
+    }
+  }
+});
+
 // Hardware/keyboard support: numbers + backspace work in PIN entry.
 document.addEventListener('keydown', (e) => {
   if (!document.body.classList.contains('locked')) return;
@@ -4546,13 +6783,15 @@ document.addEventListener('keydown', (e) => {
 // Deep-link tab via hash, e.g. index.html#history.
 function applyHashTab() {
   const h = (location.hash || '').replace('#', '');
-  if (h && ['audit', 'history', 'settings'].includes(h)) {
+  if (h && ['audit', 'history', 'caps', 'reference', 'settings'].includes(h)) {
     switchTab(h);
   }
 }
 window.addEventListener('hashchange', applyHashTab);
 
+I18n.init();
 render();
+renderTabBar();
 applyHashTab();
 
 // Capacitor boot — status bar, splash, keyboard, hardware back button.
