@@ -879,6 +879,61 @@ body.locked #auth-screen { display: block; }
   color: var(--white);
   border: 0;
 }
+
+/* --- Per-checkpoint photo strip (audit screen) --- */
+.cp-photos {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.cp-photos-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--gray-600);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+.cp-photo-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--gold-pale);
+  border: 1px solid var(--gold);
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.cp-photo-add:active { background: var(--gold-light); }
+.cp-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.cp-photo-tile {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--gray-200);
+}
+.cp-photo-tile img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.cp-photo-tile .photo-remove {
+  width: 22px; height: 22px;
+  font-size: 14px;
+  top: 2px; right: 2px;
+}
   </style>
 </head>
 <body>
@@ -2330,35 +2385,152 @@ const LoginGuard = {
 // Image compression — keeps localStorage footprint small.
 // ---------------------------------------------------------------------------
 
-function compressImage(file, maxDim = 1024, quality = 0.72) {
+// Approximate size of a base64 data URL in KB.
+function dataUrlSizeKb(dataUrl) {
+  const b64 = (dataUrl.split(',')[1] || '');
+  return Math.round((b64.length * 0.75) / 1024);
+}
+
+// ---------------------------------------------------------------------------
+// GPS — single fetch, cached for 5 min so we don't ping on every photo.
+// ---------------------------------------------------------------------------
+
+let _gpsCache = null;
+function getCachedGps() {
+  return new Promise(resolve => {
+    if (_gpsCache && (Date.now() - _gpsCache.ts < 5 * 60 * 1000)) {
+      resolve(_gpsCache);
+      return;
+    }
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        _gpsCache = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          ts: Date.now(),
+        };
+        resolve(_gpsCache);
+      },
+      () => resolve(null),
+      { enableHighAccuracy: false, timeout: 6000, maximumAge: 5 * 60 * 1000 }
+    );
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Photo capture — opens the system camera, watermarks the JPEG with
+// date · time · auditor · checkpoint · GPS coords, returns a data URL.
+// ---------------------------------------------------------------------------
+
+function pickFromCamera() {
+  return new Promise(resolve => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.style.display = 'none';
+    input.onchange = () => {
+      const f = input.files && input.files[0] || null;
+      try { document.body.removeChild(input); } catch (_) {}
+      resolve(f);
+    };
+    document.body.appendChild(input);
+    input.click();
+  });
+}
+
+function fileToImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('FileReader failed'));
-    reader.onload = (e) => {
+    reader.onload = e => {
       const img = new Image();
       img.onerror = () => reject(new Error('Image decode failed'));
-      img.onload = () => {
-        const longest = Math.max(img.width, img.height);
-        const scale = longest > maxDim ? maxDim / longest : 1;
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
+      img.onload = () => resolve(img);
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
   });
 }
 
-// Approximate size of a base64 data URL in KB.
-function dataUrlSizeKb(dataUrl) {
-  const b64 = (dataUrl.split(',')[1] || '');
-  return Math.round((b64.length * 0.75) / 1024);
+// Watermarked photo: resizes to maxDim=1024, draws a navy/gold bar at the
+// bottom carrying date+time+auditor+CP+GPS. Result is a JPEG data URL.
+async function capturePhotoWithStamp({ cpId, quality = 0.72, maxDim = 1024 } = {}) {
+  const file = await pickFromCamera();
+  if (!file) return null;
+
+  const [img, gps] = await Promise.all([fileToImage(file), getCachedGps()]);
+  const state = Store.load();
+  const auth = AuthSession.current(state);
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const auditor = auth ? auth.name : '';
+  const gpsStr = gps ? `${gps.lat.toFixed(4)}°, ${gps.lng.toFixed(4)}°` : '';
+
+  // Resize image
+  const longest = Math.max(img.width, img.height);
+  const scale = longest > maxDim ? maxDim / longest : 1;
+  const w = Math.round(img.width * scale);
+  const h = Math.round(img.height * scale);
+
+  // Watermark bar height ~13% of image height, minimum 90px
+  const barH = Math.max(90, Math.round(h * 0.13));
+  const pad = Math.round(barH * 0.16);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h + barH;
+  const ctx = canvas.getContext('2d');
+
+  // 1. Original photo
+  ctx.drawImage(img, 0, 0, w, h);
+
+  // 2. Navy bar
+  ctx.fillStyle = '#0d2340';
+  ctx.fillRect(0, h, w, barH);
+  // Thin gold line on top of the bar
+  ctx.fillStyle = '#d4a843';
+  ctx.fillRect(0, h, w, Math.max(2, Math.round(barH * 0.04)));
+
+  // 3. Big line: date + time
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#d4a843';
+  const fs1 = Math.round(barH * 0.27);
+  ctx.font = `bold ${fs1}px system-ui, -apple-system, Arial, sans-serif`;
+  ctx.fillText(`${dateStr}  ·  ${timeStr}`, pad, h + pad);
+
+  // 4. Sub line: auditor + CP id
+  ctx.fillStyle = '#ffffff';
+  const fs2 = Math.round(barH * 0.20);
+  ctx.font = `${fs2}px system-ui, -apple-system, Arial, sans-serif`;
+  const line2Parts = [];
+  if (auditor) line2Parts.push(auditor);
+  if (cpId) line2Parts.push(`CP ${cpId}`);
+  if (line2Parts.length) {
+    ctx.fillText(line2Parts.join('  ·  '), pad, h + pad + Math.round(fs1 * 1.25));
+  }
+
+  // 5. GPS line (smaller, lighter)
+  if (gpsStr) {
+    ctx.fillStyle = '#a1a1aa';
+    const fs3 = Math.round(barH * 0.16);
+    ctx.font = `${fs3}px system-ui, -apple-system, Arial, sans-serif`;
+    ctx.fillText(gpsStr, pad, h + pad + Math.round(fs1 * 1.25) + Math.round(fs2 * 1.3));
+  }
+
+  // 6. Saagar brand on the right
+  ctx.fillStyle = '#d4a843';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  const fs4 = Math.round(barH * 0.30);
+  ctx.font = `italic bold ${fs4}px Georgia, 'Times New Roman', serif`;
+  ctx.fillText('Saagar', w - pad, h + barH / 2);
+
+  return canvas.toDataURL('image/jpeg', quality);
 }
 
 // ---------------------------------------------------------------------------
@@ -2424,13 +2596,40 @@ function markCheckpoint(checkpointId, result, opts = {}) {
   const state = Store.load();
   const a = currentAudit(state);
   if (!a) return;
+  const existing = a.results[checkpointId] || {};
   a.results[checkpointId] = {
     result,
-    finding: opts.finding || '',
-    cro_id: opts.croId || null,
-    photos: opts.photos || [],
+    finding: opts.finding != null ? opts.finding : (existing.finding || ''),
+    cro_id: opts.croId != null ? opts.croId : (existing.cro_id || null),
+    // If caller passes photos explicitly, that wins. Otherwise carry whatever
+    // photos the user attached pre-verdict (or from a previous mark).
+    photos: opts.photos != null ? opts.photos : (existing.photos || []),
     at: new Date().toISOString(),
   };
+  Store.save(state);
+}
+
+// Attach a photo to a checkpoint independent of its verdict — used by the
+// per-checkpoint photo button. Creates an "unmarked" result row if needed.
+function addPhotoToCheckpoint(checkpointId, dataUrl) {
+  const state = Store.load();
+  const a = currentAudit(state);
+  if (!a) return;
+  const existing = a.results[checkpointId] || {
+    result: null, finding: '', cro_id: null, photos: [], at: null,
+  };
+  existing.photos = (existing.photos || []).concat([dataUrl]);
+  a.results[checkpointId] = existing;
+  Store.save(state);
+}
+
+function removePhotoFromCheckpoint(checkpointId, photoIdx) {
+  const state = Store.load();
+  const a = currentAudit(state);
+  if (!a) return;
+  const r = a.results[checkpointId];
+  if (!r || !r.photos) return;
+  r.photos.splice(photoIdx, 1);
   Store.save(state);
 }
 
@@ -2444,7 +2643,10 @@ const FailDraft = {
 
 function nextUnmarkedIndex(audit) {
   for (let i = 0; i < CHECKPOINTS.length; i++) {
-    if (!audit.results[CHECKPOINTS[i].id]) return i;
+    const r = audit.results[CHECKPOINTS[i].id];
+    // A row that exists only for photos (no verdict yet) still counts as
+    // unmarked — the user needs to set PASS / FAIL / NA on it.
+    if (!r || !r.result) return i;
   }
   return CHECKPOINTS.length; // all done
 }
@@ -2697,6 +2899,7 @@ function renderInProgressAudit(a) {
         ? `<div class="photo-required-badge">Photo required if FAIL</div>`
         : ''}
     </div>
+    ${renderCheckpointPhotoStrip(a, cp.id)}
     <div class="btn-row">
       <button class="btn btn-pass" data-action="mark" data-verdict="P">PASS</button>
       <button class="btn btn-fail" data-action="mark" data-verdict="F">FAIL</button>
@@ -2709,6 +2912,30 @@ function renderInProgressAudit(a) {
     </div>
     <div class="spacer-24"></div>
     <button class="btn btn-ghost" data-action="cancel-audit">Cancel audit</button>
+  `;
+}
+
+// Per-checkpoint photo strip — shows existing photos and an Add Photo
+// button. Photos attach to the current checkpoint's result row even if no
+// verdict has been chosen yet; markCheckpoint() preserves them.
+function renderCheckpointPhotoStrip(audit, cpId) {
+  const r = audit.results[cpId] || {};
+  const photos = r.photos || [];
+  const tiles = photos.map((url, i) => `
+    <div class="cp-photo-tile">
+      <img src="${url}" alt="Photo ${i + 1}">
+      <button class="photo-remove" data-action="remove-cp-photo" data-cp="${escapeHtml(cpId)}" data-i="${i}" title="Remove">×</button>
+    </div>`).join('');
+  return `
+    <div class="cp-photos">
+      <div class="cp-photos-head">
+        <span>Evidence photos${photos.length ? ` · ${photos.length}` : ''}</span>
+        <button class="cp-photo-add" data-action="add-cp-photo" data-cp="${escapeHtml(cpId)}">
+          <span>📷</span> ${photos.length === 0 ? 'Take photo' : 'Add another'}
+        </button>
+      </div>
+      ${photos.length > 0 ? `<div class="cp-photo-grid">${tiles}</div>` : ''}
+    </div>
   `;
 }
 
@@ -3094,7 +3321,6 @@ function failModal(checkpoint, cros) {
         Photo evidence ${required ? '<span class="req-pill">REQUIRED</span>' : '<span class="muted" style="font-size:11px">(optional)</span>'}
       </span>
       <div id="failPhotoGrid" class="photo-grid"></div>
-      <input id="failPhotoInput" type="file" accept="image/*" capture="environment" hidden>
       <button class="btn btn-ghost" type="button" data-action="add-fail-photo" style="margin-top:8px">
         📷 Take photo
       </button>
@@ -3646,29 +3872,48 @@ document.addEventListener('click', async (e) => {
   }
 
   if (action === 'add-fail-photo') {
-    const input = document.getElementById('failPhotoInput');
-    if (!input) return;
-    input.value = ''; // reset so picking the same file twice still triggers change
-    input.onchange = async (ev) => {
-      const file = ev.target.files && ev.target.files[0];
-      if (!file) return;
-      try {
-        const dataUrl = await compressImage(file);
-        FailDraft.add(dataUrl);
-        renderFailPhotoGrid();
-        toast(`Photo added (${dataUrlSizeKb(dataUrl)} KB)`);
-      } catch (err) {
-        console.error(err);
-        toast('Could not read photo');
-      }
-    };
-    input.click();
+    try {
+      // The current checkpoint we're FAILing — its CP id goes on the stamp.
+      const state = Store.load();
+      const audit = currentAudit(state);
+      const idx = audit ? nextUnmarkedIndex(audit) : 0;
+      const cp = CHECKPOINTS[idx];
+      const dataUrl = await capturePhotoWithStamp({ cpId: cp ? cp.id : '' });
+      if (!dataUrl) return;
+      FailDraft.add(dataUrl);
+      renderFailPhotoGrid();
+      toast(`Photo stamped & added (${dataUrlSizeKb(dataUrl)} KB)`);
+    } catch (err) {
+      console.error(err);
+      toast('Could not capture photo');
+    }
     return;
   }
   if (action === 'remove-fail-photo') {
     const i = parseInt(a.dataset.index, 10);
     FailDraft.removeAt(i);
     renderFailPhotoGrid();
+    return;
+  }
+
+  // ----- Per-checkpoint photo button (on the audit checkpoint screen) -----
+  if (action === 'add-cp-photo') {
+    try {
+      const dataUrl = await capturePhotoWithStamp({ cpId: a.dataset.cp });
+      if (!dataUrl) return;
+      addPhotoToCheckpoint(a.dataset.cp, dataUrl);
+      toast(`Photo stamped & added (${dataUrlSizeKb(dataUrl)} KB)`);
+      render();
+    } catch (err) {
+      console.error(err);
+      toast('Could not capture photo');
+    }
+    return;
+  }
+  if (action === 'remove-cp-photo') {
+    if (!confirm('Remove this photo?')) return;
+    removePhotoFromCheckpoint(a.dataset.cp, parseInt(a.dataset.i, 10));
+    render();
     return;
   }
 
