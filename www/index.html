@@ -817,6 +817,68 @@ body.locked #auth-screen { display: block; }
 .step-row:last-child { border-bottom: 0; }
 .step-row input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
 .step-done { text-decoration: line-through; color: var(--gray-600); }
+
+/* --- Escalation alert cards (Audit tab) --- */
+.alert-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  border-left: 4px solid var(--gray-300);
+  box-shadow: var(--shadow);
+}
+.alert-card.crit { border-left-color: var(--red);   background: var(--red-pale); }
+.alert-card.high { border-left-color: var(--amber); background: var(--amber-pale); }
+.alert-card.norm { border-left-color: var(--navy); }
+.alert-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.alert-sev {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.alert-sev.crit { background: var(--red);   color: var(--white); }
+.alert-sev.high { background: var(--amber); color: var(--white); }
+.alert-sev.norm { background: var(--navy);  color: var(--white); }
+.alert-trigger {
+  font-family: 'DM Serif Display', serif;
+  font-size: 15px;
+  color: var(--navy);
+  flex: 1;
+}
+.alert-body {
+  font-size: 13px;
+  color: var(--gray-800);
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+.alert-recip {
+  font-size: 12px;
+  color: var(--gray-600);
+  margin-bottom: 10px;
+}
+.alert-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.alert-actions .btn {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+.btn-whatsapp {
+  background: #25D366;
+  color: var(--white);
+  border: 0;
+}
   </style>
 </head>
 <body>
@@ -1624,6 +1686,7 @@ const Store = {
       cros: [],
       users: [],
       caps: [],
+      escalations: [],
       current_audit_id: null,
       current_user_id: null,
       auditor_name: '',
@@ -1812,6 +1875,313 @@ const Caps = {
 };
 
 // ---------------------------------------------------------------------------
+// Escalation engine (spec §7)
+//
+// Seven triggers checked at audit-submit time. Each fires a pre-composed
+// 4-part English WhatsApp message (what happened / evidence / impact /
+// requested action) and points at the GM or Owner phone number.
+// ---------------------------------------------------------------------------
+
+const ESC_TRIGGERS = {
+  1: 'Daily Critical band',
+  2: 'Recurring checkpoint failure',
+  3: 'Cash variance',
+  4: 'Inventory variance',
+  5: 'Theft / security / legal',
+  6: 'Customer complaint',
+  7: 'Declining trend',
+};
+
+// Keyword sniffing — finding text gets compared to these (case-insensitive).
+const T5_KEYWORDS = [
+  'theft', 'thief', 'steal', 'stole', 'stolen', 'missing cash',
+  'missing stock', 'missing inventory', 'police', 'lawyer', 'legal notice',
+  'lawsuit', 'fraud', 'fraudulent', 'suspicious', 'tampered',
+];
+const T6_KEYWORDS = [
+  'complaint', 'complained', 'angry customer', 'irate customer',
+  'dissatisfied', 'refund denied', 'manager called', 'social media',
+  'twitter', 'facebook post', 'review', 'demand',
+];
+
+function findKeyword(text, keywords) {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  return keywords.find(k => lower.includes(k)) || null;
+}
+
+// Build a 4-part English message per Spec §7.
+function composeMessage({ what, evidence, impact, action }) {
+  return [
+    `What happened: ${what}`,
+    `Evidence: ${evidence}`,
+    `Impact: ${impact}`,
+    `Requested action: ${action}`,
+  ].join('\n\n');
+}
+
+function fmtDateShort(d) {
+  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// Pure: returns a list of *new* escalation drafts for this audit. Drafts have
+// no id / raised_at yet — saveEscalations stamps them.
+function evaluateEscalationsForAudit(audit, state) {
+  const out = [];
+  const score = audit.score;
+  const fails = Object.entries(audit.results || {})
+    .filter(([_, r]) => r.result === 'F')
+    .map(([cpId, r]) => ({ cpId, ...r }));
+
+  // -- T1: Daily Critical band (<80%) -----------------------------------
+  if (score && score.pct < 80) {
+    const cashOrInvFail = fails.some(f =>
+      f.cpId.startsWith('6.') || f.cpId.startsWith('7.'));
+    const failBySop = {};
+    fails.forEach(f => {
+      const cp = CHECKPOINTS.find(c => c.id === f.cpId);
+      const sop = cp && SOPS.find(s => s.id === cp.sop_id);
+      const key = sop ? sop.name : 'Other';
+      failBySop[key] = (failBySop[key] || 0) + 1;
+    });
+    const sopBreakdown = Object.entries(failBySop)
+      .map(([k, n]) => `${k} (${n})`).join(', ');
+    out.push({
+      trigger_number: 1,
+      trigger_label: ESC_TRIGGERS[1],
+      severity: 'critical',
+      recipient_role: cashOrInvFail ? 'OWNER' : 'GM',
+      message: composeMessage({
+        what: `Daily audit on ${fmtDateShort(audit.date)} scored ${score.pct.toFixed(1)}% (Critical, target 90%+).`,
+        evidence: `${fails.length} FAILs across ${sopBreakdown || 'multiple SOPs'}. Auditor: ${audit.auditor_name || '—'}.`,
+        impact: cashOrInvFail
+          ? 'Compliance band breached AND a Cash or Inventory critical FAILed — direct loss risk.'
+          : 'Compliance band breached. Today\'s operations do not meet store standards.',
+        action: `Review the audit in the app and call ${audit.auditor_name || 'the SM'} before tomorrow's opening.`,
+      }),
+    });
+  }
+
+  // -- T2: Recurring checkpoint failure (5+ days in last 7) -------------
+  const auditDate = new Date(audit.date);
+  const cutoff = new Date(auditDate); cutoff.setDate(cutoff.getDate() - 6);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  const recent = (state.audits || []).filter(a =>
+    a.status === 'submitted' && a.date >= cutoffStr && a.date <= audit.date);
+  const failCounts = {};
+  const failDates = {};
+  recent.forEach(a => {
+    Object.entries(a.results || {}).forEach(([cpId, r]) => {
+      if (r.result !== 'F') return;
+      failCounts[cpId] = (failCounts[cpId] || 0) + 1;
+      (failDates[cpId] = failDates[cpId] || []).push(a.date);
+    });
+  });
+  Object.entries(failCounts).forEach(([cpId, count]) => {
+    if (count >= 5) {
+      const cp = CHECKPOINTS.find(c => c.id === cpId);
+      out.push({
+        trigger_number: 2,
+        trigger_label: ESC_TRIGGERS[2],
+        severity: 'high',
+        recipient_role: 'GM',
+        message: composeMessage({
+          what: `Checkpoint ${cpId} "${cp ? cp.text : 'unknown'}" failed ${count} times in the last 7 days.`,
+          evidence: `Failure dates: ${failDates[cpId].map(fmtDateShort).join(', ')}.`,
+          impact: 'Recurring failure on the same point — process or training gap, not a one-off mistake.',
+          action: 'Open a Pattern CAP in the app, run a 5 Whys with the responsible staff, set a 7-day deadline.',
+        }),
+      });
+    }
+  });
+
+  // -- T3: Cash variance > ₹500 (proxy: any Cash SOP FAIL today) --------
+  const cashFails = fails.filter(f => f.cpId.startsWith('6.'));
+  if (cashFails.length > 0) {
+    const findings = cashFails
+      .filter(f => f.finding)
+      .map(f => `${f.cpId}: ${f.finding}`)
+      .join(' | ') || `${cashFails.length} cash checkpoint FAIL(s) without text`;
+    // Check yesterday too — if cash failed yesterday too, escalate to Owner.
+    const yest = new Date(auditDate); yest.setDate(yest.getDate() - 1);
+    const yestStr = yest.toISOString().slice(0, 10);
+    const yesterdayAudit = (state.audits || []).find(a =>
+      a.status === 'submitted' && a.date === yestStr);
+    const yesterdayCash = yesterdayAudit && Object.entries(yesterdayAudit.results || {})
+      .some(([cpId, r]) => r.result === 'F' && cpId.startsWith('6.'));
+    out.push({
+      trigger_number: 3,
+      trigger_label: ESC_TRIGGERS[3],
+      severity: yesterdayCash ? 'critical' : 'high',
+      recipient_role: yesterdayCash ? 'OWNER' : 'GM',
+      message: composeMessage({
+        what: `Cash SOP FAILed on ${fmtDateShort(audit.date)}${yesterdayCash ? ' — and also yesterday.' : '.'}`,
+        evidence: findings,
+        impact: yesterdayCash
+          ? 'Cash control failure on consecutive days — direct money risk, possible theft or systemic gap.'
+          : 'Direct cash risk. Could mask process error, undercounting or worse.',
+        action: 'Re-count EOD cash, review the cash sheet, and call the auditor today.',
+      }),
+    });
+  }
+
+  // -- T4: Inventory variance > 2% weekly — needs weekly audit (Phase 2)
+  // (intentional stub — uncomment when weekly audits ship)
+
+  // -- T5: Theft / security / legal keywords in any finding -------------
+  fails.forEach(f => {
+    const hit = findKeyword(f.finding, T5_KEYWORDS);
+    if (!hit) return;
+    out.push({
+      trigger_number: 5,
+      trigger_label: ESC_TRIGGERS[5],
+      severity: 'critical',
+      recipient_role: 'OWNER',
+      message: composeMessage({
+        what: `Audit finding mentions a security or legal red flag ("${hit}").`,
+        evidence: `Checkpoint ${f.cpId}: "${f.finding}"`,
+        impact: 'Possible theft, security breach, or legal exposure. Could be loss-of-licence territory.',
+        action: 'Investigate immediately. Preserve evidence — CCTV, registers, cash count. Don\'t let staff close the store before you arrive.',
+      }),
+    });
+  });
+
+  // -- T6: Customer complaint mentioned in any finding ------------------
+  fails.forEach(f => {
+    const hit = findKeyword(f.finding, T6_KEYWORDS);
+    if (!hit) return;
+    out.push({
+      trigger_number: 6,
+      trigger_label: ESC_TRIGGERS[6],
+      severity: 'high',
+      recipient_role: 'OWNER',
+      message: composeMessage({
+        what: `Audit finding flags a customer complaint that needs management ("${hit}").`,
+        evidence: `Checkpoint ${f.cpId}: "${f.finding}"`,
+        impact: 'Brand reputation. Customer may escalate publicly (social media, regulator, Titan corporate).',
+        action: 'Call the customer today. Brief the Owner. Document the resolution.',
+      }),
+    });
+  });
+
+  // -- T7: Declining trend 3+ weeks — needs weekly aggregation (Phase 3)
+
+  return out;
+}
+
+const Escalations = {
+  list(state) { return state.escalations || []; },
+  byId(state, id) { return (state.escalations || []).find(e => e.id === id) || null; },
+  unsent(state) { return (state.escalations || []).filter(e => !e.sent_at); },
+
+  // Save a batch of new escalations from evaluateEscalationsForAudit.
+  saveDrafts(drafts, audit) {
+    const state = Store.load();
+    state.escalations = state.escalations || [];
+    // Idempotent: skip if this trigger # for this audit already exists.
+    const newOnes = drafts
+      .filter(d => !state.escalations.some(e =>
+        e.audit_id === audit.id && e.trigger_number === d.trigger_number))
+      .map(d => Object.assign({}, d, {
+        id: 'esc-' + uuid(),
+        audit_id: audit.id,
+        raised_at: new Date().toISOString(),
+        sent_at: null,
+        sent_via: null,
+        sent_by: null,
+      }));
+    state.escalations = state.escalations.concat(newOnes);
+    Store.save(state);
+    return newOnes;
+  },
+
+  markSent(id, sentBy, via) {
+    const state = Store.load();
+    const e = Escalations.byId(state, id);
+    if (!e) return;
+    e.sent_at = new Date().toISOString();
+    e.sent_via = via || 'whatsapp';
+    e.sent_by = sentBy || null;
+    Store.save(state);
+  },
+
+  dismiss(id, dismissedBy) {
+    const state = Store.load();
+    const e = Escalations.byId(state, id);
+    if (!e) return;
+    e.sent_at = new Date().toISOString();
+    e.sent_via = 'dismissed';
+    e.sent_by = dismissedBy || null;
+    Store.save(state);
+  },
+};
+
+// Run on audit submit. Returns the count of new escalations.
+function processEscalationsForAudit(audit) {
+  const state = Store.load();
+  const drafts = evaluateEscalationsForAudit(audit, state);
+  const saved = Escalations.saveDrafts(drafts, audit);
+  return saved.length;
+}
+
+// Render the unsent escalation cards that show on top of the Audit tab.
+function renderEscalationCards(state, auth) {
+  const unsent = Escalations.unsent(state).sort((a, b) =>
+    (b.raised_at || '').localeCompare(a.raised_at || ''));
+  if (unsent.length === 0) return '';
+
+  return unsent.map(e => {
+    const recipient = findRecipient(state, e.recipient_role);
+    const hasPhone = recipient && recipient.phone;
+    const audit = (state.audits || []).find(a => a.id === e.audit_id);
+    const preview = (e.message || '').split('\n').slice(0, 2).join(' · ').slice(0, 180);
+    const sevClass = e.severity === 'critical' ? 'crit' : (e.severity === 'high' ? 'high' : 'norm');
+
+    return `
+      <div class="alert-card ${sevClass}">
+        <div class="alert-head">
+          <span class="alert-sev ${sevClass}">${escapeHtml(e.severity.toUpperCase())}</span>
+          <span class="alert-trigger">T${e.trigger_number} · ${escapeHtml(e.trigger_label)}</span>
+        </div>
+        <div class="alert-body">
+          ${escapeHtml(preview)}${(e.message && e.message.length > 180) ? '…' : ''}
+        </div>
+        <div class="alert-recip">
+          For <strong>${escapeHtml(recipient ? recipient.name : e.recipient_role)}</strong>
+          ${recipient ? `(${escapeHtml(roleLabel(recipient.role))})` : ''}
+          ${hasPhone
+            ? `· ${escapeHtml(displayPhone(recipient.phone))}`
+            : `<span style="color:var(--red)">· no phone on file</span>`}
+        </div>
+        <div class="alert-actions">
+          ${hasPhone
+            ? `<button class="btn btn-whatsapp" data-action="esc-send" data-id="${escapeHtml(e.id)}">📱 Send on WhatsApp</button>`
+            : `<button class="btn btn-ghost" data-action="esc-preview" data-id="${escapeHtml(e.id)}">View message</button>`}
+          <button class="btn btn-ghost" data-action="esc-dismiss" data-id="${escapeHtml(e.id)}">Dismiss</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function escalationPreviewModal(escId) {
+  const state = Store.load();
+  const e = Escalations.byId(state, escId);
+  if (!e) return;
+  const recipient = findRecipient(state, e.recipient_role);
+  openModal(`
+    <h3>Escalation message</h3>
+    <p class="muted">T${e.trigger_number} · ${escapeHtml(e.trigger_label)} · for <strong>${escapeHtml(recipient ? recipient.name : e.recipient_role)}</strong></p>
+    <pre style="white-space:pre-wrap;background:var(--gray-100);padding:12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.5">${escapeHtml(e.message)}</pre>
+    ${!recipient || !recipient.phone
+      ? `<p class="error">No phone number set for ${escapeHtml(recipient ? recipient.name : e.recipient_role)}. Add one in Settings → Users to enable WhatsApp send.</p>`
+      : ''}
+    <button class="btn btn-ghost" data-action="esc-copy" data-id="${escapeHtml(escId)}">Copy message</button>
+    <div class="spacer-12"></div>
+    <button class="btn btn-ghost" data-action="modal-cancel">Close</button>
+  `);
+}
+
+// ---------------------------------------------------------------------------
 // Crypto — PIN hashing via Web Crypto PBKDF2 (no library needed).
 // ---------------------------------------------------------------------------
 
@@ -1847,17 +2217,26 @@ const Users = {
   listAll(state) { return state.users.slice(); },
   byId(state, id) { return state.users.find(u => u.id === id) || null; },
 
-  async create({ name, role, pin }) {
+  async create({ name, role, pin, phone }) {
     const state = Store.load();
     const salt = randomSalt();
     const pin_hash = await hashPin(pin, salt);
     const u = {
       id: uuid(), name, role, pin_salt: salt, pin_hash,
+      phone: normalizePhone(phone || ''),
       created_at: new Date().toISOString(), is_active: true,
     };
     state.users.push(u);
     Store.save(state);
     return u;
+  },
+
+  setPhone(userId, phone) {
+    const state = Store.load();
+    const u = Users.byId(state, userId);
+    if (!u) return;
+    u.phone = normalizePhone(phone || '');
+    Store.save(state);
   },
 
   async changePin(userId, newPin) {
@@ -1901,6 +2280,34 @@ const AuthSession = {
 
 function roleLabel(r) {
   return { OWNER: 'Owner', GM: 'GM', SM: 'Store Manager' }[r] || r;
+}
+
+// Phone helpers. India default: if 10 digits, prepend '91'.
+function normalizePhone(input) {
+  if (!input) return '';
+  const digits = String(input).replace(/[^\d]/g, '');
+  if (digits.length === 0) return '';
+  if (digits.length === 10) return '91' + digits;
+  return digits;
+}
+
+function displayPhone(p) {
+  if (!p) return '';
+  if (p.length === 12 && p.startsWith('91')) {
+    return '+91 ' + p.slice(2, 7) + ' ' + p.slice(7);
+  }
+  return '+' + p;
+}
+
+function whatsappLink(phone, message) {
+  const p = normalizePhone(phone || '');
+  if (!p) return null;
+  return `https://wa.me/${p}?text=${encodeURIComponent(message)}`;
+}
+
+// Pick the first active user matching a role (Owner takes precedence if multiple).
+function findRecipient(state, role) {
+  return state.users.find(u => u.is_active && u.role === role) || null;
 }
 
 // In-memory lockout — 5 wrong PINs within 60s → 60-second lockout.
@@ -2054,7 +2461,9 @@ function submitAudit() {
   Store.save(state);
   // Spawn CAPs for every FAIL. Spec §4.3: "every Fail produces a CAP."
   const newCaps = autoCreateCapsForAudit(a);
-  return { audit: a, capsCreated: newCaps.length };
+  // Run the escalation engine against this audit's results.
+  const newEscalations = processEscalationsForAudit(a);
+  return { audit: a, capsCreated: newCaps.length, escalationsRaised: newEscalations };
 }
 
 // ---------------------------------------------------------------------------
@@ -2216,6 +2625,7 @@ function renderStartAudit(state, auth) {
   // (pinch-hit) but we surface that with a hint.
   const showPinchHitHint = auth && auth.role !== 'SM';
   return `
+    ${renderEscalationCards(state, auth)}
     <div class="card">
       <h2>Daily audit</h2>
       <p class="muted">${escapeHtml(fmtDate(today()))} &middot; auditor: <strong>${escapeHtml(auth.name)}</strong> (${escapeHtml(roleLabel(auth.role))})</p>
@@ -2587,7 +2997,9 @@ function renderSettingsTab(state, auth) {
   return `
     <div class="card">
       <h2>My account</h2>
-      <p class="muted">Signed in as <strong>${escapeHtml(auth.name)}</strong> &middot; ${escapeHtml(roleLabel(auth.role))}</p>
+      <p class="muted">Signed in as <strong>${escapeHtml(auth.name)}</strong> &middot; ${escapeHtml(roleLabel(auth.role))}${auth.phone ? ' &middot; ' + escapeHtml(displayPhone(auth.phone)) : ''}</p>
+      <button class="btn btn-ghost" data-action="set-my-phone">${auth.phone ? 'Change my phone' : 'Add my phone for WhatsApp escalations'}</button>
+      <div class="spacer-12"></div>
       <button class="btn btn-ghost" data-action="change-my-pin">Change my PIN</button>
       <div class="spacer-12"></div>
       <button class="btn btn-ghost" data-action="logout">Sign out</button>
@@ -2596,12 +3008,14 @@ function renderSettingsTab(state, auth) {
     ${isOwner ? `
     <div class="card">
       <h2>Users</h2>
-      <p class="muted">Owner can add a Store Manager and a GM. Each gets their own PIN.</p>
+      <p class="muted">Owner can add a Store Manager and a GM. Each gets their own PIN and an optional phone for WhatsApp escalations.</p>
       ${Users.listAll(state).map(u => `
         <div class="user-row">
           <div class="info">
             <div class="name">${escapeHtml(u.name)} <span class="role-pill ${u.is_active ? u.role : 'inactive'}">${escapeHtml(u.is_active ? roleLabel(u.role) : 'INACTIVE')}</span></div>
-            <div class="meta">Added ${escapeHtml(new Date(u.created_at).toLocaleDateString('en-IN'))}${u.id === auth.id ? ' · that\'s you' : ''}</div>
+            <div class="meta">
+              ${u.phone ? escapeHtml(displayPhone(u.phone)) + ' &middot; ' : ''}Added ${escapeHtml(new Date(u.created_at).toLocaleDateString('en-IN'))}${u.id === auth.id ? ' · that\'s you' : ''}
+            </div>
           </div>
           ${u.id === auth.id
             ? ''
@@ -2747,7 +3161,7 @@ function addCroModal() {
 function addUserModal() {
   openModal(`
     <h3>Add user</h3>
-    <p class="muted">Owner adds Store Manager and GM accounts. Each user gets their own 4-digit PIN.</p>
+    <p class="muted">Owner adds Store Manager and GM accounts. Each user gets their own 4-digit PIN and (optionally) a phone number for WhatsApp escalations.</p>
     <label class="field">
       <span>Name</span>
       <input type="text" id="newUserName" placeholder="e.g. Priya Joshi" autocapitalize="words">
@@ -2760,6 +3174,10 @@ function addUserModal() {
       </select>
     </label>
     <label class="field">
+      <span>Phone (10 digits, optional)</span>
+      <input type="tel" id="newUserPhone" inputmode="tel" placeholder="e.g. 9876543210">
+    </label>
+    <label class="field">
       <span>4-digit PIN</span>
       <input type="tel" id="newUserPin" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••">
     </label>
@@ -2770,6 +3188,24 @@ function addUserModal() {
     <div class="row">
       <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
       <button class="btn btn-primary" data-action="modal-save-user">Add user</button>
+    </div>
+  `);
+}
+
+function setPhoneModal(userId) {
+  const state = Store.load();
+  const u = userId ? Users.byId(state, userId) : AuthSession.current(state);
+  if (!u) return;
+  openModal(`
+    <h3>${userId ? 'Phone for ' + escapeHtml(u.name) : 'My phone number'}</h3>
+    <p class="muted">Used to open a WhatsApp message when an escalation fires. Leave blank to clear.</p>
+    <label class="field">
+      <span>Phone (10 digits or country-coded)</span>
+      <input type="tel" id="phoneInput" inputmode="tel" value="${escapeHtml(u.phone || '')}" placeholder="e.g. 9876543210">
+    </label>
+    <div class="row">
+      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="modal-save-phone" data-id="${escapeHtml(u.id)}">Save</button>
     </div>
   `);
 }
@@ -2824,8 +3260,9 @@ function userMenuModal(userId) {
   if (!u) return;
   openModal(`
     <h3>${escapeHtml(u.name)}</h3>
-    <p class="muted">${escapeHtml(roleLabel(u.role))} &middot; ${u.is_active ? 'active' : 'inactive'}</p>
+    <p class="muted">${escapeHtml(roleLabel(u.role))} &middot; ${u.is_active ? 'active' : 'inactive'}${u.phone ? ' &middot; ' + escapeHtml(displayPhone(u.phone)) : ''}</p>
     <div style="display:grid;gap:10px;margin-top:14px">
+      <button class="btn btn-secondary" data-action="user-set-phone" data-id="${escapeHtml(u.id)}">${u.phone ? 'Change phone' : 'Add phone number'}</button>
       <button class="btn btn-secondary" data-action="user-reset-pin" data-id="${escapeHtml(u.id)}">Reset PIN</button>
       ${u.is_active
         ? `<button class="btn btn-ghost" data-action="user-deactivate" data-id="${escapeHtml(u.id)}" style="color:var(--red);border-color:var(--red)">Deactivate user</button>`
@@ -3105,14 +3542,26 @@ document.addEventListener('click', async (e) => {
   if (action === 'modal-save-user') {
     const name = document.getElementById('newUserName').value.trim();
     const role = document.getElementById('newUserRole').value;
+    const phone = document.getElementById('newUserPhone').value.trim();
     const pin  = document.getElementById('newUserPin').value;
     const pinc = document.getElementById('newUserPinConfirm').value;
     if (name.length < 2)        { toast('Enter a name (2+ characters)'); return; }
     if (!/^\d{4}$/.test(pin))   { toast('PIN must be 4 digits'); return; }
     if (pin !== pinc)           { toast('PIN and confirmation do not match'); return; }
-    await Users.create({ name, role, pin });
+    await Users.create({ name, role, pin, phone });
     closeModal();
     toast(`${name} added as ${roleLabel(role)}`);
+    render();
+    return;
+  }
+
+  if (action === 'set-my-phone')   { setPhoneModal(null); return; }
+  if (action === 'user-set-phone') { setPhoneModal(a.dataset.id); return; }
+  if (action === 'modal-save-phone') {
+    const newPhone = document.getElementById('phoneInput').value.trim();
+    Users.setPhone(a.dataset.id, newPhone);
+    closeModal();
+    toast('Phone updated');
     render();
     return;
   }
@@ -3258,10 +3707,10 @@ document.addEventListener('click', async (e) => {
     const submitted = submitAudit();
     if (submitted && submitted.audit) {
       const sc = submitted.audit.score;
-      const capPart = submitted.capsCreated
-        ? ` · ${submitted.capsCreated} CAP${submitted.capsCreated > 1 ? 's' : ''} opened`
-        : '';
-      toast(`Audit submitted: ${sc.pct.toFixed(1)}% ${bandLabel(sc.band)}${capPart}`);
+      const parts = [`${sc.pct.toFixed(1)}% ${bandLabel(sc.band)}`];
+      if (submitted.capsCreated) parts.push(`${submitted.capsCreated} CAP${submitted.capsCreated > 1 ? 's' : ''}`);
+      if (submitted.escalationsRaised) parts.push(`${submitted.escalationsRaised} alert${submitted.escalationsRaised > 1 ? 's' : ''}`);
+      toast(`Audit submitted · ${parts.join(' · ')}`);
     }
     render();
     return;
@@ -3280,6 +3729,52 @@ document.addEventListener('click', async (e) => {
     const state = Store.load();
     const found = audit(a.dataset.id, state);
     if (found) historyDetailModal(found);
+    return;
+  }
+
+  // ----- Escalations -----
+  if (action === 'esc-send') {
+    const state = Store.load();
+    const e = Escalations.byId(state, a.dataset.id);
+    if (!e) return;
+    const recipient = findRecipient(state, e.recipient_role);
+    if (!recipient || !recipient.phone) {
+      toast('Recipient has no phone. Add one in Users.');
+      return;
+    }
+    const link = whatsappLink(recipient.phone, e.message);
+    if (!link) { toast('Cannot build WhatsApp link'); return; }
+    const me = AuthSession.current(state);
+    Escalations.markSent(a.dataset.id, me ? me.id : null, 'whatsapp');
+    // Open WhatsApp via system intent. _blank works in both browser preview
+    // and Capacitor WebView.
+    window.open(link, '_blank', 'noopener');
+    render();
+    return;
+  }
+  if (action === 'esc-dismiss') {
+    if (!confirm('Dismiss this alert? It will move to history.')) return;
+    const me = AuthSession.current();
+    Escalations.dismiss(a.dataset.id, me ? me.id : null);
+    render();
+    return;
+  }
+  if (action === 'esc-preview') {
+    escalationPreviewModal(a.dataset.id);
+    return;
+  }
+  if (action === 'esc-copy') {
+    const state = Store.load();
+    const e = Escalations.byId(state, a.dataset.id);
+    if (!e) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(e.message).then(
+        () => toast('Message copied'),
+        () => toast('Copy failed — long-press the message to select')
+      );
+    } else {
+      toast('Long-press the message to select');
+    }
     return;
   }
 
