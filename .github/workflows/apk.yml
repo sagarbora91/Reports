@@ -35,6 +35,9 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
+      - name: Rasterize brand SVG sources to PNG
+        run: npm run build-assets
+
       - name: Add or sync Android platform
         run: |
           if [ ! -d "android" ]; then
@@ -44,6 +47,49 @@ jobs:
             echo "android/ exists, syncing"
             npx cap sync android
           fi
+
+      - name: Generate Android icon & splash variants
+        run: npx capacitor-assets generate --android
+
+      - name: Stamp version code and name from CI run number
+        run: |
+          BUILD_NUM="${{ github.run_number }}"
+          VERSION_NAME="0.2.${BUILD_NUM}"
+          echo "Stamping versionCode=${BUILD_NUM}, versionName=${VERSION_NAME}"
+          sed -i "s/versionCode 1/versionCode ${BUILD_NUM}/" android/app/build.gradle
+          sed -i "s/versionName \"1.0\"/versionName \"${VERSION_NAME}\"/" android/app/build.gradle
+          grep -E 'versionCode|versionName' android/app/build.gradle
+
+      - name: Sync Capacitor after asset + version updates
+        run: npx cap sync android
+
+      - name: Patch AndroidManifest with CAMERA permission
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          if grep -q "android.permission.CAMERA" "$MANIFEST"; then
+            echo "CAMERA permission already declared, skipping."
+          else
+            # Inject CAMERA permission + optional camera feature before <application>.
+            # Needed for <input type='file' capture='environment'> to launch the
+            # system camera in the Capacitor WebView.
+            python3 - <<'PY'
+          import re
+          path = 'android/app/src/main/AndroidManifest.xml'
+          with open(path, encoding='utf-8') as f:
+              src = f.read()
+          inject = (
+              '    <uses-permission android:name="android.permission.CAMERA" />\n'
+              '    <uses-feature android:name="android.hardware.camera" android:required="false" />\n'
+              '    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />\n'
+          )
+          new = re.sub(r'(\s*)<application', inject + r'\1<application', src, count=1)
+          with open(path, 'w', encoding='utf-8') as f:
+              f.write(new)
+          print('Injected CAMERA permission into', path)
+          PY
+          fi
+          echo "--- Final AndroidManifest.xml (top 30 lines) ---"
+          head -n 30 "$MANIFEST"
 
       - name: Build debug APK
         working-directory: android
@@ -61,6 +107,8 @@ jobs:
       - name: Summary
         run: |
           echo "### Saagar Audit APK ready" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Version: **0.2.${{ github.run_number }}** (versionCode ${{ github.run_number }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Download artifact: **saagar-audit-${{ github.sha }}** from the Artifacts panel above." >> $GITHUB_STEP_SUMMARY
           echo "Transfer to your Android phone → enable 'Install from unknown sources' in your file manager → tap to install." >> $GITHUB_STEP_SUMMARY

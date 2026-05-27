@@ -511,6 +511,147 @@ hr.soft { border: 0; border-top: 1px solid var(--gray-200); margin: 16px 0; }
   margin: 0 0 4px;
 }
 
+/* --- auth screens (locked state) --- */
+body.locked .topbar,
+body.locked .tabs,
+body.locked main,
+body.locked #toast,
+body.locked #modal-root,
+body.locked #print-root {
+  display: none !important;
+}
+#auth-screen {
+  min-height: 100vh;
+  background: var(--cream);
+  display: none;
+  padding: calc(var(--safe-top) + 24px) 16px calc(var(--safe-bottom) + 24px);
+}
+body.locked #auth-screen { display: block; }
+
+.auth-wrap {
+  max-width: 480px;
+  margin: 0 auto;
+}
+.auth-brand {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.auth-brand .serif {
+  font-family: 'DM Serif Display', serif;
+  font-size: 38px;
+  color: var(--navy);
+  line-height: 1;
+}
+.auth-brand .sub {
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--gold);
+  margin-top: 6px;
+}
+.auth-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 24px 20px;
+}
+.auth-card h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px;
+  color: var(--navy);
+  margin: 0 0 4px;
+}
+.auth-card p { color: var(--gray-600); font-size: 14px; margin: 0 0 16px; }
+
+/* --- PIN input dots + numpad --- */
+.pin-dots {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin: 20px 0;
+}
+.pin-dots .dot {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--navy);
+  background: transparent;
+}
+.pin-dots .dot.filled { background: var(--navy); }
+.pin-dots.shake { animation: shake 0.4s; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+.numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+.numpad button {
+  height: 64px;
+  background: var(--white);
+  border: 1px solid var(--gray-300);
+  border-radius: 12px;
+  font-family: 'DM Serif Display', serif;
+  font-size: 24px;
+  color: var(--navy);
+  cursor: pointer;
+}
+.numpad button:active { background: var(--gray-100); }
+.numpad button.muted { color: var(--gray-600); font-size: 14px; font-family: 'DM Sans', sans-serif; }
+.numpad button[data-key="back"] { background: var(--gray-100); }
+
+/* --- user badge in topbar --- */
+#userBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#userBadge .name { color: var(--white); font-size: 14px; font-weight: 500; }
+#userBadge .role {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: var(--gold-light);
+  background: var(--navy-mid);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+#userBadge button {
+  background: transparent;
+  border: 0;
+  color: var(--white);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+/* --- user list rows in Settings --- */
+.user-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--gray-200);
+}
+.user-row:last-child { border-bottom: 0; }
+.user-row .info { flex: 1; }
+.user-row .info .name { font-weight: 600; color: var(--navy); }
+.user-row .info .meta { font-size: 12px; color: var(--gray-600); margin-top: 2px; }
+.role-pill {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-left: 6px;
+}
+.role-pill.OWNER { background: var(--gold-pale); color: var(--gold); }
+.role-pill.GM    { background: var(--navy);      color: var(--white); }
+.role-pill.SM    { background: var(--gray-100);  color: var(--navy); }
+.role-pill.inactive { background: var(--gray-200); color: var(--gray-600); }
+
 /* --- print --- */
 @media print {
   @page { margin: 16mm 12mm; }
@@ -538,10 +679,7 @@ hr.soft { border: 0; border-top: 1px solid var(--gray-200); margin: 16px 0; }
       <span class="brand-serif">Saagar</span>
       <span class="brand-sans">AUDIT</span>
     </div>
-    <div style="display:flex; gap:4px; align-items:center;">
-      <a href="non-purchase.html" class="iconbtn" title="Non-Purchase Capture" style="text-decoration:none; font-size:13px; font-weight:700; padding:8px 12px;">Non-Purchase</a>
-      <button id="logoutBtn" class="iconbtn" title="Sign out" hidden>&#8624;</button>
-    </div>
+    <div id="userBadge"></div>
   </header>
 
   <nav class="tabs" id="tabs">
@@ -555,6 +693,8 @@ hr.soft { border: 0; border-top: 1px solid var(--gray-200); margin: 16px 0; }
     <section id="tab-history" class="tab-content"></section>
     <section id="tab-settings" class="tab-content"></section>
   </main>
+
+  <div id="auth-screen" hidden></div>
 
   <div id="toast" class="toast" hidden></div>
   <div id="modal-root"></div>
@@ -1328,7 +1468,16 @@ const Store = {
     }
   },
   save(s) { localStorage.setItem(STORE_KEY, JSON.stringify(s)); },
-  empty() { return { audits: [], cros: [], current_audit_id: null, auditor_name: '' }; },
+  empty() {
+    return {
+      audits: [],
+      cros: [],
+      users: [],
+      current_audit_id: null,
+      current_user_id: null,
+      auditor_name: '',
+    };
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -1359,6 +1508,114 @@ function toast(msg) {
   clearTimeout(toast._t);
   toast._t = setTimeout(() => { el.hidden = true; }, 1800);
 }
+
+// ---------------------------------------------------------------------------
+// Crypto — PIN hashing via Web Crypto PBKDF2 (no library needed).
+// ---------------------------------------------------------------------------
+
+async function hashPin(pin, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(pin), { name: 'PBKDF2' }, false, ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: enc.encode(salt), iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, 256
+  );
+  return Array.from(new Uint8Array(bits))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function verifyPin(pin, salt, expected) {
+  return (await hashPin(pin, salt)) === expected;
+}
+
+function randomSalt() {
+  const a = new Uint8Array(16);
+  crypto.getRandomValues(a);
+  return Array.from(a).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ---------------------------------------------------------------------------
+// Users + auth
+// ---------------------------------------------------------------------------
+
+const Users = {
+  listActive(state) { return state.users.filter(u => u.is_active); },
+  listAll(state) { return state.users.slice(); },
+  byId(state, id) { return state.users.find(u => u.id === id) || null; },
+
+  async create({ name, role, pin }) {
+    const state = Store.load();
+    const salt = randomSalt();
+    const pin_hash = await hashPin(pin, salt);
+    const u = {
+      id: uuid(), name, role, pin_salt: salt, pin_hash,
+      created_at: new Date().toISOString(), is_active: true,
+    };
+    state.users.push(u);
+    Store.save(state);
+    return u;
+  },
+
+  async changePin(userId, newPin) {
+    const state = Store.load();
+    const u = Users.byId(state, userId);
+    if (!u) return false;
+    u.pin_salt = randomSalt();
+    u.pin_hash = await hashPin(newPin, u.pin_salt);
+    Store.save(state);
+    return true;
+  },
+
+  setActive(userId, active) {
+    const state = Store.load();
+    const u = Users.byId(state, userId);
+    if (!u) return;
+    u.is_active = !!active;
+    Store.save(state);
+  },
+};
+
+const AuthSession = {
+  current(state) {
+    state = state || Store.load();
+    if (!state.current_user_id) return null;
+    const u = Users.byId(state, state.current_user_id);
+    if (!u || !u.is_active) return null;
+    return u;
+  },
+  login(userId) {
+    const state = Store.load();
+    state.current_user_id = userId;
+    Store.save(state);
+  },
+  logout() {
+    const state = Store.load();
+    state.current_user_id = null;
+    Store.save(state);
+  },
+};
+
+function roleLabel(r) {
+  return { OWNER: 'Owner', GM: 'GM', SM: 'Store Manager' }[r] || r;
+}
+
+// In-memory lockout — 5 wrong PINs within 60s → 60-second lockout.
+const LoginGuard = {
+  attempts: 0,
+  lockedUntil: 0,
+  register(success) {
+    if (success) { this.attempts = 0; this.lockedUntil = 0; return; }
+    this.attempts++;
+    if (this.attempts >= 5) {
+      this.lockedUntil = Date.now() + 60 * 1000;
+      this.attempts = 0;
+    }
+  },
+  isLocked() { return this.lockedUntil > Date.now(); },
+  secondsLeft() { return Math.max(0, Math.ceil((this.lockedUntil - Date.now()) / 1000)); },
+};
 
 // ---------------------------------------------------------------------------
 // Image compression — keeps localStorage footprint small.
@@ -1432,13 +1689,14 @@ function audit(id, state) {
   return state.audits.find(a => a.id === id) || null;
 }
 
-function startNewAudit({ date, auditorName, croIds }) {
+function startNewAudit({ date, auditorName, auditorId, croIds }) {
   const state = Store.load();
   // If an unsubmitted draft already exists for today, replace it.
   state.audits = state.audits.filter(a => !(a.date === date && a.status === 'draft'));
   const newAudit = {
     id: uuid(),
     date,
+    auditor_id: auditorId || null,
     auditor_name: auditorName,
     cros: croIds.slice(),
     status: 'draft',
@@ -1496,41 +1754,164 @@ function submitAudit() {
 }
 
 // ---------------------------------------------------------------------------
-// Rendering — tabs
+// Rendering — auth gate + tabs
 // ---------------------------------------------------------------------------
+
+// Transient PIN entry buffer for the auth screens.
+const PinBuf = {
+  value: '',
+  shake: false,
+  reset() { this.value = ''; this.shake = false; },
+};
 
 function render() {
   const state = Store.load();
-  document.getElementById('tab-audit').innerHTML = renderAuditTab(state);
-  document.getElementById('tab-history').innerHTML = renderHistoryTab(state);
-  document.getElementById('tab-settings').innerHTML = renderSettingsTab(state);
+  const auth = AuthSession.current(state);
+
+  // Gate 1: no users at all → first-time setup
+  if (state.users.length === 0) {
+    document.body.classList.add('locked');
+    document.getElementById('auth-screen').innerHTML = renderFirstTimeSetup();
+    return;
+  }
+  // Gate 2: users exist but no one logged in → login screen
+  if (!auth) {
+    document.body.classList.add('locked');
+    document.getElementById('auth-screen').innerHTML = renderLoginScreen(state);
+    return;
+  }
+
+  // Authenticated — show normal UI
+  document.body.classList.remove('locked');
+  renderUserBadge(auth);
+  document.getElementById('tab-audit').innerHTML = renderAuditTab(state, auth);
+  document.getElementById('tab-history').innerHTML = renderHistoryTab(state, auth);
+  document.getElementById('tab-settings').innerHTML = renderSettingsTab(state, auth);
 }
 
-function renderAuditTab(state) {
+function renderUserBadge(user) {
+  const el = document.getElementById('userBadge');
+  if (!el) return;
+  el.innerHTML = `
+    <span class="name">${escapeHtml(user.name)}</span>
+    <span class="role">${escapeHtml(user.role)}</span>
+    <button data-action="logout" title="Switch user">⏏</button>
+  `;
+}
+
+// --- Auth screens ---
+
+function renderFirstTimeSetup() {
+  const isConfirm = PinBuf.value.startsWith('CONFIRM:');
+  const stage = window._setupStage || 'name';
+  return `
+    <div class="auth-wrap">
+      <div class="auth-brand">
+        <div class="serif">Saagar Audit</div>
+        <div class="sub">FIRST-TIME SETUP</div>
+      </div>
+      <div class="auth-card">
+        ${stage === 'name' ? `
+          <h2>Welcome, Owner</h2>
+          <p>Let's set up your account. You can add a Store Manager and a GM after this.</p>
+          <label class="field">
+            <span>Your name</span>
+            <input type="text" id="ownerName" placeholder="e.g. Sagar Bora" autocomplete="off" autocapitalize="words">
+          </label>
+          <div id="setupErr" class="error" hidden></div>
+          <button class="btn btn-primary" data-action="setup-name-next">Continue</button>
+        ` : stage === 'pin' ? `
+          <h2>Choose a 4-digit PIN</h2>
+          <p>You'll use this to log in. Pick something you'll remember.</p>
+          ${renderPinPad()}
+          <div id="setupErr" class="error" hidden></div>
+        ` : stage === 'confirm' ? `
+          <h2>Confirm your PIN</h2>
+          <p>Type it again to make sure.</p>
+          ${renderPinPad()}
+          <div id="setupErr" class="error" hidden></div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderLoginScreen(state) {
+  const active = Users.listActive(state).sort((a, b) => {
+    const order = { OWNER: 0, GM: 1, SM: 2 };
+    return (order[a.role] - order[b.role]) || a.name.localeCompare(b.name);
+  });
+  const selected = window._loginUserId || (active[0] && active[0].id);
+  const locked = LoginGuard.isLocked();
+  return `
+    <div class="auth-wrap">
+      <div class="auth-brand">
+        <div class="serif">Saagar Audit</div>
+        <div class="sub">SIGN IN</div>
+      </div>
+      <div class="auth-card">
+        <h2>Welcome back</h2>
+        <p>Pick your name and enter your 4-digit PIN.</p>
+        <label class="field">
+          <span>Name</span>
+          <select id="loginUser">
+            ${active.map(u => `
+              <option value="${escapeHtml(u.id)}" ${u.id === selected ? 'selected' : ''}>
+                ${escapeHtml(u.name)} — ${escapeHtml(roleLabel(u.role))}
+              </option>`).join('')}
+          </select>
+        </label>
+        ${locked
+          ? `<p class="error" style="text-align:center">Too many wrong PINs. Try again in ${LoginGuard.secondsLeft()}s.</p>`
+          : renderPinPad()}
+        <div id="loginErr" class="error" hidden></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderPinPad() {
+  const dots = '<div class="pin-dots' + (PinBuf.shake ? ' shake' : '') + '">' +
+    [0,1,2,3].map(i => `<span class="dot ${PinBuf.value.length > i ? 'filled' : ''}"></span>`).join('') +
+    '</div>';
+  return dots + `
+    <div class="numpad">
+      <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
+      <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button>
+      <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button>
+      <button class="muted" data-key="forgot">Forgot?</button>
+      <button data-key="0">0</button>
+      <button data-key="back">⌫</button>
+    </div>
+  `;
+}
+
+function renderAuditTab(state, auth) {
   const a = currentAudit(state);
   if (a) return renderInProgressAudit(a);
-  return renderStartAudit(state);
+  return renderStartAudit(state, auth);
 }
 
-function renderStartAudit(state) {
+function renderStartAudit(state, auth) {
   const todays = state.audits.find(x => x.date === today() && x.status === 'submitted');
-  const lastName = state.auditor_name || '';
   const cros = state.cros;
+  // Daily audits are SM's job per spec. GM and Owner can still run them
+  // (pinch-hit) but we surface that with a hint.
+  const showPinchHitHint = auth && auth.role !== 'SM';
   return `
     <div class="card">
       <h2>Daily audit</h2>
-      <p class="muted">${escapeHtml(fmtDate(today()))}</p>
+      <p class="muted">${escapeHtml(fmtDate(today()))} &middot; auditor: <strong>${escapeHtml(auth.name)}</strong> (${escapeHtml(roleLabel(auth.role))})</p>
+      ${showPinchHitHint
+        ? `<p class="tiny" style="color:var(--amber);margin-top:4px">Daily audits are usually run by the Store Manager. You can still proceed.</p>`
+        : ''}
       ${todays
         ? `<div class="card" style="background:var(--green-pale);border-color:var(--green);margin-top:12px">
             <strong>Submitted today</strong>
-            <p>${todays.score.pct.toFixed(1)}% &middot; ${bandLabel(todays.score.band)}</p>
+            <p>${todays.score.pct.toFixed(1)}% &middot; ${bandLabel(todays.score.band)}${todays.auditor_name ? ' &middot; by ' + escapeHtml(todays.auditor_name) : ''}</p>
           </div>`
         : ''}
       <div class="spacer-12"></div>
-      <label class="field">
-        <span>Your name (auditor)</span>
-        <input type="text" id="auditorName" value="${escapeHtml(lastName)}" placeholder="e.g. Sagar" autocomplete="name">
-      </label>
       <label class="field">
         <span>Audit date</span>
         <input type="date" id="auditDate" value="${today()}" max="${today()}">
@@ -1619,9 +2000,14 @@ function renderReviewAudit(a) {
   `;
 }
 
-function renderHistoryTab(state) {
+function renderHistoryTab(state, auth) {
+  // SM sees own audits only; GM and Owner see all.
   const submitted = state.audits
     .filter(a => a.status === 'submitted')
+    .filter(a => {
+      if (!auth || auth.role !== 'SM') return true;
+      return a.auditor_id === auth.id || !a.auditor_id; // legacy audits with no auditor_id are visible too
+    })
     .sort((a, b) => b.date.localeCompare(a.date));
   if (submitted.length === 0) {
     return `<div class="card"><h2>No submitted audits yet</h2><p class="muted">Once you submit a daily audit it'll appear here.</p></div>`;
@@ -1669,11 +2055,38 @@ function renderHistoryTab(state) {
   `;
 }
 
-function renderSettingsTab(state) {
+function renderSettingsTab(state, auth) {
+  const isOwner = auth && auth.role === 'OWNER';
   return `
     <div class="card">
+      <h2>My account</h2>
+      <p class="muted">Signed in as <strong>${escapeHtml(auth.name)}</strong> &middot; ${escapeHtml(roleLabel(auth.role))}</p>
+      <button class="btn btn-ghost" data-action="change-my-pin">Change my PIN</button>
+      <div class="spacer-12"></div>
+      <button class="btn btn-ghost" data-action="logout">Sign out</button>
+    </div>
+
+    ${isOwner ? `
+    <div class="card">
+      <h2>Users</h2>
+      <p class="muted">Owner can add a Store Manager and a GM. Each gets their own PIN.</p>
+      ${Users.listAll(state).map(u => `
+        <div class="user-row">
+          <div class="info">
+            <div class="name">${escapeHtml(u.name)} <span class="role-pill ${u.is_active ? u.role : 'inactive'}">${escapeHtml(u.is_active ? roleLabel(u.role) : 'INACTIVE')}</span></div>
+            <div class="meta">Added ${escapeHtml(new Date(u.created_at).toLocaleDateString('en-IN'))}${u.id === auth.id ? ' · that\'s you' : ''}</div>
+          </div>
+          ${u.id === auth.id
+            ? ''
+            : `<button class="iconbtn" style="color:var(--navy)" data-action="user-menu" data-id="${u.id}">⋯</button>`}
+        </div>`).join('')}
+      <div class="spacer-12"></div>
+      <button class="btn btn-secondary" data-action="add-user">+ Add user</button>
+    </div>` : ''}
+
+    <div class="card">
       <h2>CROs</h2>
-      <p class="muted">Staff who appear in the "CROs on duty" picker and the FAIL detail dropdown.</p>
+      <p class="muted">Floor staff at Titan World &amp; Helios counters. They appear in the "CROs on duty" picker and the FAIL detail dropdown.</p>
       ${state.cros.length === 0
         ? '<p class="muted">No CROs yet.</p>'
         : state.cros.map(c => `
@@ -1687,7 +2100,7 @@ function renderSettingsTab(state) {
 
     <div class="card">
       <h2>Backup &amp; restore</h2>
-      <p class="muted">${state.audits.length} audit(s) stored on this device. Back up to Google Drive (or any app) anytime — you'll be able to restore from the file later.</p>
+      <p class="muted">${state.audits.length} audit(s) and ${state.users.length} user(s) stored on this device. Back up to Google Drive (or any app) anytime — you'll be able to restore from the file later.</p>
       <button class="btn btn-primary" data-action="backup-drive">Back up to Google Drive</button>
       <div class="spacer-12"></div>
       <button class="btn btn-ghost" data-action="restore-backup">Restore from backup file</button>
@@ -1695,12 +2108,13 @@ function renderSettingsTab(state) {
       <button class="btn btn-ghost" data-action="export-csv">Export all audits to CSV</button>
     </div>
 
+    ${isOwner ? `
     <div class="card">
       <h2>Danger zone</h2>
       <button class="btn btn-ghost" data-action="clear-data" style="color:var(--red);border-color:var(--red)">Erase all data on this device</button>
-    </div>
+    </div>` : ''}
 
-    <p class="tiny" style="text-align:center">Saagar Audit &middot; v0.1.0</p>
+    <p class="tiny" style="text-align:center">Saagar Audit &middot; v0.2.0</p>
   `;
 }
 
@@ -1799,6 +2213,97 @@ function addCroModal() {
     <div class="row">
       <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
       <button class="btn btn-primary" data-action="modal-save-cro">Add</button>
+    </div>
+  `);
+}
+
+function addUserModal() {
+  openModal(`
+    <h3>Add user</h3>
+    <p class="muted">Owner adds Store Manager and GM accounts. Each user gets their own 4-digit PIN.</p>
+    <label class="field">
+      <span>Name</span>
+      <input type="text" id="newUserName" placeholder="e.g. Priya Joshi" autocapitalize="words">
+    </label>
+    <label class="field">
+      <span>Role</span>
+      <select id="newUserRole">
+        <option value="SM">Store Manager (runs daily audits)</option>
+        <option value="GM">GM (verifies audits, manages CAPs)</option>
+      </select>
+    </label>
+    <label class="field">
+      <span>4-digit PIN</span>
+      <input type="tel" id="newUserPin" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••">
+    </label>
+    <label class="field">
+      <span>Confirm PIN</span>
+      <input type="tel" id="newUserPinConfirm" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••">
+    </label>
+    <div class="row">
+      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="modal-save-user">Add user</button>
+    </div>
+  `);
+}
+
+function changePinModal() {
+  openModal(`
+    <h3>Change your PIN</h3>
+    <label class="field">
+      <span>Current PIN</span>
+      <input type="tel" id="pinCurrent" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••">
+    </label>
+    <label class="field">
+      <span>New PIN</span>
+      <input type="tel" id="pinNew" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••">
+    </label>
+    <label class="field">
+      <span>Confirm new PIN</span>
+      <input type="tel" id="pinNewConfirm" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••">
+    </label>
+    <div class="row">
+      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="modal-save-my-pin">Save</button>
+    </div>
+  `);
+}
+
+function resetPinModal(userId) {
+  const state = Store.load();
+  const u = Users.byId(state, userId);
+  if (!u) return;
+  openModal(`
+    <h3>Reset PIN for ${escapeHtml(u.name)}</h3>
+    <p class="muted">Set a new 4-digit PIN. They'll use this to sign in next time.</p>
+    <label class="field">
+      <span>New PIN</span>
+      <input type="tel" id="resetPinNew" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••">
+    </label>
+    <label class="field">
+      <span>Confirm</span>
+      <input type="tel" id="resetPinConfirm" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••">
+    </label>
+    <div class="row">
+      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="modal-save-reset-pin" data-id="${escapeHtml(u.id)}">Save new PIN</button>
+    </div>
+  `);
+}
+
+function userMenuModal(userId) {
+  const state = Store.load();
+  const u = Users.byId(state, userId);
+  if (!u) return;
+  openModal(`
+    <h3>${escapeHtml(u.name)}</h3>
+    <p class="muted">${escapeHtml(roleLabel(u.role))} &middot; ${u.is_active ? 'active' : 'inactive'}</p>
+    <div style="display:grid;gap:10px;margin-top:14px">
+      <button class="btn btn-secondary" data-action="user-reset-pin" data-id="${escapeHtml(u.id)}">Reset PIN</button>
+      ${u.is_active
+        ? `<button class="btn btn-ghost" data-action="user-deactivate" data-id="${escapeHtml(u.id)}" style="color:var(--red);border-color:var(--red)">Deactivate user</button>`
+        : `<button class="btn btn-ghost" data-action="user-reactivate" data-id="${escapeHtml(u.id)}">Reactivate user</button>`}
+      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
     </div>
   `);
 }
@@ -2062,7 +2567,14 @@ function exportCsv() {
 // Event handlers
 // ---------------------------------------------------------------------------
 
-document.addEventListener('click', (e) => {
+document.addEventListener('click', async (e) => {
+  // Auth pin pad — buttons with data-key, only when locked
+  const key = e.target.closest('[data-key]');
+  if (key && document.body.classList.contains('locked')) {
+    await handlePinKey(key.dataset.key);
+    return;
+  }
+
   const t = e.target.closest('[data-tab]');
   if (t) { switchTab(t.dataset.tab); return; }
 
@@ -2070,8 +2582,96 @@ document.addEventListener('click', (e) => {
   if (!a) return;
   const action = a.dataset.action;
 
+  // Auth actions
+  if (action === 'logout') {
+    if (!confirm('Sign out?')) return;
+    AuthSession.logout();
+    PinBuf.reset();
+    window._loginUserId = null;
+    render();
+    return;
+  }
+  if (action === 'setup-name-next') {
+    const name = document.getElementById('ownerName').value.trim();
+    const err = document.getElementById('setupErr');
+    if (name.length < 2) {
+      err.textContent = 'Please enter your name (2+ characters).';
+      err.hidden = false;
+      return;
+    }
+    window._setupOwnerName = name;
+    window._setupStage = 'pin';
+    PinBuf.reset();
+    render();
+    return;
+  }
+
   if (action === 'modal-cancel' || action === 'modal-backdrop') { closeModal(); return; }
   if (e.target.matches('[data-modal-backdrop]')) { closeModal(); return; }
+
+  // ----- User management (Owner-only mostly) -----
+  if (action === 'change-my-pin') { changePinModal(); return; }
+  if (action === 'modal-save-my-pin') {
+    const cur = document.getElementById('pinCurrent').value;
+    const np  = document.getElementById('pinNew').value;
+    const npc = document.getElementById('pinNewConfirm').value;
+    if (!/^\d{4}$/.test(cur)) { toast('Enter your current 4-digit PIN'); return; }
+    if (!/^\d{4}$/.test(np))  { toast('New PIN must be 4 digits'); return; }
+    if (np !== npc)           { toast('New PIN and confirmation do not match'); return; }
+    const me = AuthSession.current();
+    const ok = await verifyPin(cur, me.pin_salt, me.pin_hash);
+    if (!ok) { toast('Current PIN is wrong'); return; }
+    await Users.changePin(me.id, np);
+    closeModal();
+    toast('PIN updated');
+    render();
+    return;
+  }
+
+  if (action === 'add-user') { addUserModal(); return; }
+  if (action === 'modal-save-user') {
+    const name = document.getElementById('newUserName').value.trim();
+    const role = document.getElementById('newUserRole').value;
+    const pin  = document.getElementById('newUserPin').value;
+    const pinc = document.getElementById('newUserPinConfirm').value;
+    if (name.length < 2)        { toast('Enter a name (2+ characters)'); return; }
+    if (!/^\d{4}$/.test(pin))   { toast('PIN must be 4 digits'); return; }
+    if (pin !== pinc)           { toast('PIN and confirmation do not match'); return; }
+    await Users.create({ name, role, pin });
+    closeModal();
+    toast(`${name} added as ${roleLabel(role)}`);
+    render();
+    return;
+  }
+
+  if (action === 'user-menu')      { userMenuModal(a.dataset.id); return; }
+  if (action === 'user-reset-pin') { resetPinModal(a.dataset.id); return; }
+  if (action === 'modal-save-reset-pin') {
+    const np  = document.getElementById('resetPinNew').value;
+    const npc = document.getElementById('resetPinConfirm').value;
+    if (!/^\d{4}$/.test(np)) { toast('PIN must be 4 digits'); return; }
+    if (np !== npc)          { toast('PINs do not match'); return; }
+    await Users.changePin(a.dataset.id, np);
+    closeModal();
+    toast('PIN reset');
+    render();
+    return;
+  }
+  if (action === 'user-deactivate') {
+    const me = AuthSession.current();
+    if (a.dataset.id === me.id) { toast("Can't deactivate yourself"); return; }
+    if (!confirm('Deactivate this user? They won\'t be able to sign in.')) return;
+    Users.setActive(a.dataset.id, false);
+    closeModal();
+    render();
+    return;
+  }
+  if (action === 'user-reactivate') {
+    Users.setActive(a.dataset.id, true);
+    closeModal();
+    render();
+    return;
+  }
 
   if (action === 'add-cro')     { addCroModal(); return; }
   if (action === 'modal-save-cro') {
@@ -2096,15 +2696,15 @@ document.addEventListener('click', (e) => {
   }
 
   if (action === 'start-audit') {
-    const name = document.getElementById('auditorName').value.trim();
+    const me = AuthSession.current();
+    if (!me) { toast('Sign in first'); return; }
     const date = document.getElementById('auditDate').value;
     const croIds = Array.from(document.querySelectorAll('.cro-check:checked')).map(el => el.value);
     const err = document.getElementById('startError');
     err.hidden = true;
-    if (name.length < 2) { err.textContent = 'Enter your name.'; err.hidden = false; return; }
-    if (!date)           { err.textContent = 'Pick a date.'; err.hidden = false; return; }
+    if (!date)               { err.textContent = 'Pick a date.'; err.hidden = false; return; }
     if (croIds.length === 0) { err.textContent = 'Select at least one CRO on duty.'; err.hidden = false; return; }
-    startNewAudit({ date, auditorName: name, croIds });
+    startNewAudit({ date, auditorName: me.name, auditorId: me.id, croIds });
     render();
     return;
   }
@@ -2226,6 +2826,119 @@ function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + name));
 }
+
+// PIN pad keypress dispatch — runs only while body.locked.
+async function handlePinKey(k) {
+  if (k === 'forgot') {
+    alert(
+      'Forgot PIN?\n\n' +
+      'Ask the Owner to reset it in Settings → Users.\n\n' +
+      'If you ARE the Owner, you\'ll need to erase all data in your phone\'s Settings → Apps → Saagar Audit → Storage → Clear data. ' +
+      'Restoring a Drive backup afterwards will bring your audits back.'
+    );
+    return;
+  }
+  if (LoginGuard.isLocked() && !document.querySelector('#ownerName')) {
+    // Locked from login attempts — ignore numeric input.
+    return;
+  }
+  if (k === 'back') {
+    if (PinBuf.value.length > 0) PinBuf.value = PinBuf.value.slice(0, -1);
+    render();
+    return;
+  }
+  if (!/^[0-9]$/.test(k)) return;
+  if (PinBuf.value.length >= 4) return;
+  PinBuf.value += k;
+  // Re-render dots only — avoid full render mid-input to keep dropdown selection.
+  const dotsEl = document.querySelector('.pin-dots');
+  if (dotsEl) {
+    [...dotsEl.querySelectorAll('.dot')].forEach((d, i) => {
+      d.classList.toggle('filled', PinBuf.value.length > i);
+    });
+  }
+  if (PinBuf.value.length === 4) {
+    setTimeout(() => onPinComplete(), 80);
+  }
+}
+
+async function onPinComplete() {
+  const stage = window._setupStage;
+  const pin = PinBuf.value;
+  // First-time setup flow
+  if (document.querySelector('#auth-screen .auth-brand .sub')?.textContent === 'FIRST-TIME SETUP') {
+    if (stage === 'pin') {
+      window._setupPin = pin;
+      window._setupStage = 'confirm';
+      PinBuf.reset();
+      render();
+      return;
+    }
+    if (stage === 'confirm') {
+      if (pin !== window._setupPin) {
+        PinBuf.value = ''; PinBuf.shake = true;
+        const err = document.getElementById('setupErr');
+        if (err) { err.textContent = 'PINs do not match. Try again.'; err.hidden = false; }
+        render();
+        setTimeout(() => { PinBuf.shake = false; window._setupStage = 'pin'; PinBuf.reset(); render(); }, 400);
+        return;
+      }
+      const u = await Users.create({ name: window._setupOwnerName, role: 'OWNER', pin });
+      AuthSession.login(u.id);
+      window._setupOwnerName = null;
+      window._setupPin = null;
+      window._setupStage = null;
+      PinBuf.reset();
+      toast('Welcome, ' + u.name);
+      render();
+      return;
+    }
+  }
+  // Login flow
+  const select = document.getElementById('loginUser');
+  const userId = select ? select.value : window._loginUserId;
+  if (!userId) return;
+  const state = Store.load();
+  const u = Users.byId(state, userId);
+  if (!u) return;
+  const ok = await verifyPin(pin, u.pin_salt, u.pin_hash);
+  LoginGuard.register(ok);
+  if (ok) {
+    AuthSession.login(u.id);
+    PinBuf.reset();
+    render();
+  } else {
+    PinBuf.value = ''; PinBuf.shake = true;
+    const err = document.getElementById('loginErr');
+    if (err) {
+      if (LoginGuard.isLocked()) {
+        err.textContent = `Locked for ${LoginGuard.secondsLeft()}s.`;
+      } else {
+        err.textContent = 'Wrong PIN. Try again.';
+      }
+      err.hidden = false;
+    }
+    render();
+    setTimeout(() => { PinBuf.shake = false; render(); }, 400);
+  }
+}
+
+// Keep PIN buffer in sync when user changes login dropdown
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'loginUser') {
+    window._loginUserId = e.target.value;
+    PinBuf.reset();
+    render();
+  }
+});
+
+// Hardware/keyboard support: numbers + backspace work in PIN entry.
+document.addEventListener('keydown', (e) => {
+  if (!document.body.classList.contains('locked')) return;
+  if (document.activeElement && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+  if (e.key >= '0' && e.key <= '9') { handlePinKey(e.key); e.preventDefault(); return; }
+  if (e.key === 'Backspace') { handlePinKey('back'); e.preventDefault(); return; }
+});
 
 // ---------------------------------------------------------------------------
 // Boot
