@@ -1759,6 +1759,20 @@ function uuid() {
 
 function today() { return new Date().toISOString().slice(0, 10); }
 
+// Show/hide the backdate reason field whenever the audit date != today.
+// Inlined onchange so it survives renderAuditTab re-renders.
+window.toggleBackdateField = function () {
+  const dateEl = document.getElementById('auditDate');
+  const field  = document.getElementById('backdateField');
+  if (!dateEl || !field) return;
+  const isBackdated = dateEl.value && dateEl.value !== today();
+  field.hidden = !isBackdated;
+  if (isBackdated) {
+    const ta = document.getElementById('backdateReason');
+    if (ta && document.activeElement !== ta) ta.focus();
+  }
+};
+
 function fmtDate(iso) {
   const d = new Date(iso);
   return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
@@ -2570,7 +2584,7 @@ function audit(id, state) {
   return state.audits.find(a => a.id === id) || null;
 }
 
-function startNewAudit({ date, auditorName, auditorId, croIds }) {
+function startNewAudit({ date, auditorName, auditorId, croIds, backdateReason }) {
   const state = Store.load();
   // If an unsubmitted draft already exists for today, replace it.
   state.audits = state.audits.filter(a => !(a.date === date && a.status === 'draft'));
@@ -2584,6 +2598,8 @@ function startNewAudit({ date, auditorName, auditorId, croIds }) {
     results: {},
     started_at: new Date().toISOString(),
     submitted_at: null,
+    // Empty string for same-day audits; populated when date != today.
+    backdate_reason: (backdateReason || '').trim(),
   };
   state.audits.push(newAudit);
   state.current_audit_id = newAudit.id;
@@ -2843,8 +2859,20 @@ function renderStartAudit(state, auth) {
       <div class="spacer-12"></div>
       <label class="field">
         <span>Audit date</span>
-        <input type="date" id="auditDate" value="${today()}" max="${today()}">
+        <input type="date" id="auditDate" value="${today()}" max="${today()}"
+               onchange="toggleBackdateField()">
       </label>
+      <div class="field" id="backdateField" hidden>
+        <span style="font-size:13px;color:var(--amber);font-weight:600">
+          Backdated audit — please record why
+        </span>
+        <textarea id="backdateReason" maxlength="200" rows="2"
+                  placeholder="e.g. phone died yesterday; logging late so the day isn't missed"
+                  style="margin-top:6px"></textarea>
+        <p class="tiny muted" style="margin:4px 0 0">
+          The reason is stored with the audit, shown on the report, and included in exports.
+        </p>
+      </div>
       <div class="field">
         <div class="row-spread">
           <span style="font-size:13px;color:var(--gray-600)">CROs on duty</span>
@@ -2995,11 +3023,14 @@ function renderHistoryTab(state, auth) {
 
   return croSummaryHtml + submitted.map(a => {
     const s = a.score;
+    const backdatedChip = a.backdate_reason
+      ? ` &middot; <span style="color:var(--amber);font-weight:600">backdated</span>`
+      : '';
     return `
       <div class="hist-row" data-action="open-history" data-id="${a.id}">
         <div>
           <strong>${escapeHtml(fmtDate(a.date))}</strong>
-          <div class="tiny">${s.p} P &middot; ${s.f} F &middot; ${s.na} N/A &middot; by ${escapeHtml(a.auditor_name || '—')}</div>
+          <div class="tiny">${s.p} P &middot; ${s.f} F &middot; ${s.na} N/A &middot; by ${escapeHtml(a.auditor_name || '—')}${backdatedChip}</div>
         </div>
         <div class="pct ${s.band}">${s.pct.toFixed(1)}%</div>
       </div>`;
@@ -3542,9 +3573,16 @@ function historyDetailModal(a) {
       </div>`;
   }).join('');
 
+  const backdatedBadge = a.backdate_reason
+    ? `<div class="card" style="background:#fff8e1;border:1px solid #f4c674;color:#6a4a00;margin-top:8px;padding:10px 12px">
+         <strong>⚠ Backdated audit</strong>
+         <p style="margin:4px 0 0;font-size:13px;line-height:1.45">${escapeHtml(a.backdate_reason)}</p>
+       </div>`
+    : '';
   openModal(`
     <h3>${escapeHtml(fmtDate(a.date))}</h3>
     <p class="muted">Submitted ${escapeHtml(new Date(a.submitted_at).toLocaleString('en-IN'))} by ${escapeHtml(a.auditor_name || '—')}</p>
+    ${backdatedBadge}
     <div class="score-card" style="padding:12px">
       <div class="score-pct ${s.band}" style="font-size:48px">${s.pct.toFixed(1)}%</div>
       <div class="score-band ${s.band}">${bandLabel(s.band)}</div>
@@ -3589,6 +3627,11 @@ function printAudit(auditId) {
       <tbody>${rows}</tbody></table>`;
   }).join('');
 
+  const backdatedHtml = a.backdate_reason
+    ? `<div class="meta" style="background:#fff8e1;border:1px solid #f4c674;color:#6a4a00;padding:8px 10px;border-radius:6px;margin-top:6px">
+         <strong>Backdated audit:</strong> ${escapeHtml(a.backdate_reason)}
+       </div>`
+    : '';
   document.getElementById('print-root').innerHTML = `
     <div class="print-page">
       <h1>Saagar Audit — Daily Compliance Report</h1>
@@ -3596,6 +3639,7 @@ function printAudit(auditId) {
         ${escapeHtml(fmtDate(a.date))} &middot; Auditor: ${escapeHtml(a.auditor_name || '—')} &middot;
         Submitted ${escapeHtml(new Date(a.submitted_at).toLocaleString('en-IN'))}
       </div>
+      ${backdatedHtml}
       <div class="pscore" style="color:${
         s.band === 'excellent' || s.band === 'good' ? '#166534'
         : s.band === 'fair' ? '#b45309' : '#b91c1c'
@@ -3664,7 +3708,7 @@ function exportCsv() {
   const state = Store.load();
   const submitted = state.audits.filter(a => a.status === 'submitted');
   if (submitted.length === 0) { toast('No submitted audits yet'); return; }
-  const rows = [['date', 'auditor', 'compliance_pct', 'band', 'raw', 'max', 'pass', 'fail', 'na', 'checkpoint_id', 'result', 'finding', 'cro_id']];
+  const rows = [['date', 'auditor', 'compliance_pct', 'band', 'raw', 'max', 'pass', 'fail', 'na', 'checkpoint_id', 'result', 'finding', 'cro_id', 'backdate_reason']];
   submitted.forEach(a => {
     Object.entries(a.results).forEach(([cpId, r]) => {
       rows.push([
@@ -3681,6 +3725,7 @@ function exportCsv() {
         r.result,
         r.finding || '',
         r.cro_id || '',
+        a.backdate_reason || '',
       ]);
     });
   });
@@ -3852,7 +3897,19 @@ document.addEventListener('click', async (e) => {
     err.hidden = true;
     if (!date)               { err.textContent = 'Pick a date.'; err.hidden = false; return; }
     if (croIds.length === 0) { err.textContent = 'Select at least one CRO on duty.'; err.hidden = false; return; }
-    startNewAudit({ date, auditorName: me.name, auditorId: me.id, croIds });
+    // Date guard: if the user is auditing a past date, require a written reason.
+    let backdateReason = '';
+    if (date !== today()) {
+      const ta = document.getElementById('backdateReason');
+      backdateReason = (ta && ta.value || '').trim();
+      if (backdateReason.length < 5) {
+        err.textContent = 'Backdated audit — please record a reason (5+ characters).';
+        err.hidden = false;
+        if (ta) ta.focus();
+        return;
+      }
+    }
+    startNewAudit({ date, auditorName: me.name, auditorId: me.id, croIds, backdateReason });
     render();
     return;
   }
