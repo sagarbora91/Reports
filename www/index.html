@@ -676,6 +676,147 @@ body.locked #auth-screen { display: block; }
 .print-page th, .print-page td { border: 1px solid #ccc; padding: 4px 6px; vertical-align: top; text-align: left; }
 .print-page th { background: #f0f0f0; }
 .print-page .photo-row img { max-width: 100px; max-height: 100px; margin: 2px; border: 1px solid #ccc; }
+
+/* --- CAPs tab --- */
+.tab { position: relative; }
+.tab-badge {
+  display: inline-block;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 9px;
+  vertical-align: 1px;
+  font-family: 'DM Sans', sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.filter-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+.filter-chip {
+  flex: 0 0 auto;
+  background: var(--white);
+  border: 1px solid var(--gray-300);
+  color: var(--gray-800);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.filter-chip.active {
+  background: var(--navy);
+  color: var(--white);
+  border-color: var(--navy);
+}
+
+.cap-row {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  border-left: 3px solid var(--gray-300);
+}
+.cap-row:active { background: var(--gray-100); }
+.cap-row.aged   { border-left-color: var(--red); background: var(--red-pale); }
+.cap-row.open   { border-left-color: var(--amber); }
+.cap-row.done   { border-left-color: var(--navy-light); }
+.cap-row.verified, .cap-row.closed { border-left-color: var(--green); }
+
+.cap-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.cap-id {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--gray-600);
+}
+.cap-row-mid {
+  font-size: 12px;
+  color: var(--gray-600);
+  margin-bottom: 4px;
+}
+.cap-row-mid .cap-cp.critical { color: var(--gold); font-weight: 600; }
+.cap-row-text {
+  font-family: 'DM Serif Display', serif;
+  font-size: 15px;
+  color: var(--navy);
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+.cap-row-finding {
+  font-size: 13px;
+  color: var(--gray-600);
+  font-style: italic;
+  margin-bottom: 6px;
+}
+.cap-row-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--gray-600);
+  margin-top: 4px;
+}
+.cap-meta { background: var(--gray-100); padding: 2px 8px; border-radius: 999px; }
+
+.cap-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.cap-pill.open     { background: var(--amber-pale);  color: var(--amber); }
+.cap-pill.aged     { background: var(--red);          color: var(--white); }
+.cap-pill.done     { background: var(--navy);         color: var(--white); }
+.cap-pill.verified { background: var(--green-pale);   color: var(--green); }
+.cap-pill.closed   { background: var(--gray-200);     color: var(--gray-600); }
+
+.cap-deadline {
+  background: var(--gray-100);
+  color: var(--gray-600);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.cap-deadline.today    { background: var(--amber-pale); color: var(--amber); }
+.cap-deadline.overdue  { background: var(--red); color: var(--white); }
+
+/* Action step rows inside CAP modal */
+.step-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gray-200);
+  font-size: 14px;
+}
+.step-row:last-child { border-bottom: 0; }
+.step-row input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
+.step-done { text-decoration: line-through; color: var(--gray-600); }
   </style>
 </head>
 <body>
@@ -690,14 +831,15 @@ body.locked #auth-screen { display: block; }
 
   <nav class="tabs" id="tabs">
     <button class="tab active" data-tab="audit">Audit</button>
-    <a class="tab tab-link" href="non-purchase.html">Non-Purchase</a>
     <button class="tab" data-tab="history">History</button>
+    <button class="tab" data-tab="caps">CAPs<span id="capsBadge" class="tab-badge" hidden></span></button>
     <button class="tab" data-tab="settings">Settings</button>
   </nav>
 
   <main>
     <section id="tab-audit" class="tab-content active"></section>
     <section id="tab-history" class="tab-content"></section>
+    <section id="tab-caps" class="tab-content"></section>
     <section id="tab-settings" class="tab-content"></section>
   </main>
 
@@ -1481,6 +1623,7 @@ const Store = {
       audits: [],
       cros: [],
       users: [],
+      caps: [],
       current_audit_id: null,
       current_user_id: null,
       auditor_name: '',
@@ -1516,6 +1659,157 @@ function toast(msg) {
   clearTimeout(toast._t);
   toast._t = setTimeout(() => { el.hidden = true; }, 1800);
 }
+
+// ---------------------------------------------------------------------------
+// CAPs — Corrective Action Plans (spec §9)
+//
+// Every audit FAIL spawns a CAP. CAP lifecycle:
+//   open → done → verified → closed
+//   open → aged (auto, when deadline < today)
+//   done → open (GM rejects verification)
+//
+// Roles: anyone can mark Done. Only GM / Owner verify, reject or close.
+// ---------------------------------------------------------------------------
+
+const CAP_STATUSES = ['open', 'done', 'verified', 'closed', 'aged'];
+const CAP_STATUS_LABEL = {
+  open: 'Open', done: 'Done', verified: 'Verified',
+  closed: 'Closed', aged: 'Aged',
+};
+
+function isoWeekOf(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function nextCapId(existingCaps, dateStr) {
+  const d = new Date(dateStr);
+  const year = d.getFullYear();
+  const week = isoWeekOf(d);
+  const prefix = `CAP-${year}-W${String(week).padStart(2, '0')}-`;
+  const used = existingCaps
+    .map(c => c.id || '')
+    .filter(id => id.startsWith(prefix))
+    .map(id => parseInt(id.slice(prefix.length), 10))
+    .filter(n => !isNaN(n));
+  const next = (used.length ? Math.max(...used) : 0) + 1;
+  return prefix + String(next).padStart(2, '0');
+}
+
+function addDays(dateStr, days) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+// Walks an audit's results and creates one CAP per FAIL.
+function autoCreateCapsForAudit(audit) {
+  const state = Store.load();
+  const existing = state.caps || [];
+  // Skip if CAPs for this audit already exist (replay-safe).
+  if (existing.some(c => c.audit_id === audit.id)) return [];
+
+  const deadline = addDays(audit.date, 7);
+  const newCaps = [];
+  Object.entries(audit.results).forEach(([cpId, r]) => {
+    if (r.result !== 'F') return;
+    const cp = CHECKPOINTS.find(c => c.id === cpId);
+    if (!cp) return;
+    newCaps.push({
+      id: nextCapId(existing.concat(newCaps), audit.date),
+      audit_id: audit.id,
+      audit_date: audit.date,
+      checkpoint_id: cpId,
+      sop_id: cp.sop_id,
+      finding: r.finding || '',
+      cro_id: r.cro_id || null,
+      photos: r.photos || [],
+      why1: '', why2: '', why3: '', why4: '', why5: '',
+      root_cause: '',
+      action_steps: [],
+      responsible_user_id: audit.auditor_id || null,
+      deadline,
+      status: 'open',
+      created_at: new Date().toISOString(),
+      done_at: null,
+      verified_at: null, verified_by: null, verify_notes: null,
+      closed_at: null, closed_by: null,
+    });
+  });
+  state.caps = existing.concat(newCaps);
+  Store.save(state);
+  return newCaps;
+}
+
+// Age open CAPs whose deadline has passed. Idempotent — call on every render.
+function ageOverdueCaps() {
+  const state = Store.load();
+  const t = today();
+  let changed = false;
+  (state.caps || []).forEach(c => {
+    if (c.status === 'open' && c.deadline && c.deadline < t) {
+      c.status = 'aged';
+      changed = true;
+    }
+  });
+  if (changed) Store.save(state);
+}
+
+const Caps = {
+  list(state) { return state.caps || []; },
+  byId(state, id) { return (state.caps || []).find(c => c.id === id) || null; },
+  byAudit(state, auditId) { return (state.caps || []).filter(c => c.audit_id === auditId); },
+
+  save(cap) {
+    const state = Store.load();
+    state.caps = state.caps || [];
+    const i = state.caps.findIndex(c => c.id === cap.id);
+    if (i >= 0) state.caps[i] = cap; else state.caps.push(cap);
+    Store.save(state);
+  },
+
+  // Status transitions
+  markDone(id) {
+    const state = Store.load();
+    const c = Caps.byId(state, id);
+    if (!c) return;
+    c.status = 'done';
+    c.done_at = new Date().toISOString();
+    Caps.save(c);
+  },
+  verify(id, verifiedBy, notes) {
+    const state = Store.load();
+    const c = Caps.byId(state, id);
+    if (!c) return;
+    c.status = 'verified';
+    c.verified_at = new Date().toISOString();
+    c.verified_by = verifiedBy;
+    c.verify_notes = notes || '';
+    Caps.save(c);
+  },
+  reject(id, rejectedBy, notes) {
+    const state = Store.load();
+    const c = Caps.byId(state, id);
+    if (!c) return;
+    c.status = 'open';
+    c.done_at = null;
+    c.verify_notes = notes || '';
+    c.last_rejected_by = rejectedBy;
+    Caps.save(c);
+  },
+  close(id, closedBy) {
+    const state = Store.load();
+    const c = Caps.byId(state, id);
+    if (!c) return;
+    c.status = 'closed';
+    c.closed_at = new Date().toISOString();
+    c.closed_by = closedBy;
+    Caps.save(c);
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Crypto — PIN hashing via Web Crypto PBKDF2 (no library needed).
@@ -1758,7 +2052,9 @@ function submitAudit() {
   a.score = s;
   state.current_audit_id = null;
   Store.save(state);
-  return a;
+  // Spawn CAPs for every FAIL. Spec §4.3: "every Fail produces a CAP."
+  const newCaps = autoCreateCapsForAudit(a);
+  return { audit: a, capsCreated: newCaps.length };
 }
 
 // ---------------------------------------------------------------------------
@@ -1790,11 +2086,24 @@ function render() {
   }
 
   // Authenticated — show normal UI
+  ageOverdueCaps(); // before reading state again for CAPs
+  const freshState = Store.load();
   document.body.classList.remove('locked');
   renderUserBadge(auth);
-  document.getElementById('tab-audit').innerHTML = renderAuditTab(state, auth);
-  document.getElementById('tab-history').innerHTML = renderHistoryTab(state, auth);
-  document.getElementById('tab-settings').innerHTML = renderSettingsTab(state, auth);
+  document.getElementById('tab-audit').innerHTML = renderAuditTab(freshState, auth);
+  document.getElementById('tab-history').innerHTML = renderHistoryTab(freshState, auth);
+  document.getElementById('tab-caps').innerHTML = renderCapsTab(freshState, auth);
+  document.getElementById('tab-settings').innerHTML = renderSettingsTab(freshState, auth);
+  renderCapsBadge(freshState);
+}
+
+function renderCapsBadge(state) {
+  const badge = document.getElementById('capsBadge');
+  if (!badge) return;
+  const need = (state.caps || []).filter(c => c.status === 'open' || c.status === 'aged').length;
+  if (need === 0) { badge.hidden = true; badge.textContent = ''; return; }
+  badge.hidden = false;
+  badge.textContent = String(need);
 }
 
 function renderUserBadge(user) {
@@ -2063,6 +2372,216 @@ function renderHistoryTab(state, auth) {
   `;
 }
 
+// ---------------------------------------------------------------------------
+// CAPs tab
+// ---------------------------------------------------------------------------
+
+function renderCapsTab(state, auth) {
+  const all = Caps.list(state).slice();
+  if (all.length === 0) {
+    return `
+      <div class="card">
+        <h2>No CAPs yet</h2>
+        <p class="muted">CAPs (Corrective Action Plans) are created automatically when an audit has FAILs. You'll see them here.</p>
+      </div>`;
+  }
+
+  const filter = window._capsFilter || 'open';
+  const counts = {
+    all: all.length,
+    open: all.filter(c => c.status === 'open').length,
+    aged: all.filter(c => c.status === 'aged').length,
+    done: all.filter(c => c.status === 'done').length,
+    verified: all.filter(c => c.status === 'verified').length,
+    closed: all.filter(c => c.status === 'closed').length,
+  };
+
+  const filtered = filter === 'all'
+    ? all
+    : all.filter(c => c.status === filter);
+
+  // Sort: aged first (most urgent), then open by deadline asc, then by created desc
+  filtered.sort((a, b) => {
+    const r = { aged: 0, open: 1, done: 2, verified: 3, closed: 4 };
+    const ra = r[a.status] || 9, rb = r[b.status] || 9;
+    if (ra !== rb) return ra - rb;
+    if (a.deadline !== b.deadline) return (a.deadline || '').localeCompare(b.deadline || '');
+    return (b.created_at || '').localeCompare(a.created_at || '');
+  });
+
+  const croById = Object.fromEntries(state.cros.map(c => [c.id, c]));
+  const userById = Object.fromEntries(state.users.map(u => [u.id, u]));
+  const sopById = Object.fromEntries(SOPS.map(s => [s.id, s]));
+  const t = today();
+
+  const filterChips = ['open', 'aged', 'done', 'verified', 'closed', 'all'].map(f => {
+    const n = counts[f] || 0;
+    const active = (filter === f) ? 'active' : '';
+    const label = f === 'all' ? 'All' : CAP_STATUS_LABEL[f];
+    return `<button class="filter-chip ${active}" data-action="cap-filter" data-filter="${f}">${label}${n > 0 ? ` · ${n}` : ''}</button>`;
+  }).join('');
+
+  const rows = filtered.map(c => {
+    const sop = sopById[c.sop_id];
+    const cp = CHECKPOINTS.find(x => x.id === c.checkpoint_id);
+    const responsible = userById[c.responsible_user_id];
+    const cro = c.cro_id ? croById[c.cro_id] : null;
+    const daysToDeadline = c.deadline
+      ? Math.round((new Date(c.deadline) - new Date(t)) / (24 * 60 * 60 * 1000))
+      : null;
+    const deadlineLabel = c.status === 'closed' || c.status === 'verified'
+      ? ''
+      : daysToDeadline === null ? ''
+        : daysToDeadline < 0 ? `<span class="cap-deadline overdue">${Math.abs(daysToDeadline)}d overdue</span>`
+        : daysToDeadline === 0 ? `<span class="cap-deadline today">due today</span>`
+        : `<span class="cap-deadline">due in ${daysToDeadline}d</span>`;
+    return `
+      <div class="cap-row ${c.status}" data-action="open-cap" data-id="${escapeHtml(c.id)}">
+        <div class="cap-row-top">
+          <span class="cap-id">${escapeHtml(c.id)}</span>
+          <span class="cap-pill ${c.status}">${escapeHtml(CAP_STATUS_LABEL[c.status])}</span>
+        </div>
+        <div class="cap-row-mid">
+          <span class="cap-cp ${sop && sop.critical ? 'critical' : ''}">${escapeHtml(sop ? sop.name : c.sop_id)} · ${escapeHtml(c.checkpoint_id)}</span>
+        </div>
+        <div class="cap-row-text">${escapeHtml(cp ? cp.text : '')}</div>
+        ${c.finding ? `<div class="cap-row-finding">${escapeHtml(c.finding)}</div>` : ''}
+        <div class="cap-row-bottom">
+          ${cro ? `<span class="cap-meta">CRO: ${escapeHtml(cro.name)}</span>` : ''}
+          ${responsible ? `<span class="cap-meta">Owner: ${escapeHtml(responsible.name)}</span>` : ''}
+          ${deadlineLabel}
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="filter-chips">${filterChips}</div>
+    ${rows || '<p class="muted" style="text-align:center;padding:20px">No CAPs in this filter.</p>'}
+  `;
+}
+
+// ---------------------------------------------------------------------------
+// CAP detail modal
+// ---------------------------------------------------------------------------
+
+function capDetailModal(capId) {
+  const state = Store.load();
+  const auth = AuthSession.current(state);
+  const c = Caps.byId(state, capId);
+  if (!c) return;
+  const cp = CHECKPOINTS.find(x => x.id === c.checkpoint_id);
+  const sop = SOPS.find(s => s.id === c.sop_id);
+  const cro = c.cro_id ? state.cros.find(x => x.id === c.cro_id) : null;
+  const userOptions = state.users
+    .filter(u => u.is_active)
+    .map(u => `<option value="${escapeHtml(u.id)}" ${u.id === c.responsible_user_id ? 'selected' : ''}>${escapeHtml(u.name)} — ${escapeHtml(roleLabel(u.role))}</option>`)
+    .join('');
+
+  const isVerifier = auth && (auth.role === 'OWNER' || auth.role === 'GM');
+  const isReadOnly = c.status === 'closed';
+
+  const actionStepsHtml = c.action_steps.length === 0
+    ? '<p class="muted" style="font-size:13px">No action steps yet. Add some below.</p>'
+    : c.action_steps.map((s, i) => `
+        <label class="step-row">
+          <input type="checkbox" data-action="toggle-step" data-cap="${escapeHtml(c.id)}" data-i="${i}" ${s.done ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''}>
+          <span class="${s.done ? 'step-done' : ''}">${escapeHtml(s.text)}</span>
+          ${!isReadOnly ? `<button class="iconbtn" style="color:var(--red);margin-left:auto" data-action="remove-step" data-cap="${escapeHtml(c.id)}" data-i="${i}">×</button>` : ''}
+        </label>`).join('');
+
+  const photosHtml = (c.photos && c.photos.length)
+    ? `<div class="photo-grid" style="margin-top:8px">${c.photos.map(p => `<div class="photo-tile"><img src="${p}" alt=""></div>`).join('')}</div>`
+    : '';
+
+  const verifyNotesHtml = c.verify_notes
+    ? `<div style="background:var(--gray-100);padding:10px;border-radius:8px;margin-top:8px;font-size:13px"><strong>Verifier note:</strong> ${escapeHtml(c.verify_notes)}</div>`
+    : '';
+
+  // Status-aware action buttons
+  let actionButtons = '';
+  if (c.status === 'open' || c.status === 'aged') {
+    const allStepsDone = c.action_steps.length > 0 && c.action_steps.every(s => s.done);
+    actionButtons = `
+      <button class="btn btn-primary" data-action="cap-mark-done" data-id="${escapeHtml(c.id)}" ${allStepsDone ? '' : 'disabled'}>
+        ${allStepsDone ? 'Mark all done →' : `Check ${c.action_steps.length === 0 ? 'add' : 'off'} all action steps to mark done`}
+      </button>`;
+  } else if (c.status === 'done') {
+    if (isVerifier) {
+      actionButtons = `
+        <button class="btn btn-primary" data-action="cap-verify" data-id="${escapeHtml(c.id)}">Verify</button>
+        <button class="btn btn-ghost" data-action="cap-reject" data-id="${escapeHtml(c.id)}" style="color:var(--red);border-color:var(--red)">Reject (re-open)</button>
+      `;
+    } else {
+      actionButtons = `<p class="muted" style="text-align:center">Waiting for GM or Owner to verify.</p>`;
+    }
+  } else if (c.status === 'verified') {
+    if (isVerifier) {
+      actionButtons = `<button class="btn btn-primary" data-action="cap-close" data-id="${escapeHtml(c.id)}">Close CAP</button>`;
+    } else {
+      actionButtons = `<p class="muted" style="text-align:center">Waiting for GM or Owner to close.</p>`;
+    }
+  } else if (c.status === 'closed') {
+    actionButtons = `<p class="muted" style="text-align:center">CAP closed on ${escapeHtml(new Date(c.closed_at).toLocaleDateString('en-IN'))}.</p>`;
+  }
+
+  openModal(`
+    <h3>${escapeHtml(c.id)}</h3>
+    <p class="muted">${escapeHtml(sop ? sop.name : c.sop_id)} · checkpoint ${escapeHtml(c.checkpoint_id)} · <span class="cap-pill ${c.status}">${escapeHtml(CAP_STATUS_LABEL[c.status])}</span></p>
+
+    <div style="background:var(--red-pale);border-left:3px solid var(--red);padding:10px 12px;border-radius:6px;margin-top:12px">
+      <div style="font-weight:600;font-size:13px;color:var(--red);margin-bottom:4px">Finding</div>
+      <div>${escapeHtml(cp ? cp.text : '')}${c.finding ? `<br><em style="color:var(--gray-600)">${escapeHtml(c.finding)}</em>` : ''}</div>
+      ${cro ? `<div style="font-size:12px;margin-top:6px">CRO involved: <strong>${escapeHtml(cro.name)}</strong></div>` : ''}
+    </div>
+    ${photosHtml}
+
+    <h4 style="margin-top:18px;margin-bottom:4px">5 Whys</h4>
+    <p class="muted" style="margin:0 0 8px;font-size:12px">Drill down from symptom to root cause. Aim for 5 levels.</p>
+    ${[1, 2, 3, 4, 5].map(n => `
+      <label class="field" style="margin-bottom:8px">
+        <span style="font-size:12px">Why ${n}?</span>
+        <input type="text" class="cap-why" data-n="${n}" value="${escapeHtml(c['why' + n] || '')}" ${isReadOnly ? 'disabled' : ''} placeholder="Because…">
+      </label>`).join('')}
+
+    <label class="field" style="margin-top:6px">
+      <span>Root cause</span>
+      <textarea class="cap-rootcause" maxlength="300" ${isReadOnly ? 'disabled' : ''} placeholder="One sentence summary of the underlying cause">${escapeHtml(c.root_cause || '')}</textarea>
+    </label>
+
+    <h4 style="margin-top:18px;margin-bottom:4px">Action steps</h4>
+    <p class="muted" style="margin:0 0 8px;font-size:12px">3 to 5 concrete steps. Tick each off as it's done.</p>
+    <div id="capStepsList">${actionStepsHtml}</div>
+    ${!isReadOnly ? `
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input type="text" id="capNewStep" placeholder="Add an action step" style="flex:1">
+        <button class="btn btn-secondary" data-action="add-step" data-cap="${escapeHtml(c.id)}" style="width:auto;padding:10px 16px">Add</button>
+      </div>` : ''}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+      <label class="field" style="margin:0">
+        <span>Responsible</span>
+        <select class="cap-responsible" ${isReadOnly ? 'disabled' : ''}>
+          <option value="">— unassigned —</option>
+          ${userOptions}
+        </select>
+      </label>
+      <label class="field" style="margin:0">
+        <span>Deadline</span>
+        <input type="date" class="cap-deadline-input" value="${escapeHtml(c.deadline || '')}" ${isReadOnly ? 'disabled' : ''}>
+      </label>
+    </div>
+
+    ${verifyNotesHtml}
+
+    ${!isReadOnly ? `<button class="btn btn-ghost" data-action="cap-save-edits" data-id="${escapeHtml(c.id)}" style="margin-top:14px">Save changes</button>` : ''}
+
+    <div style="margin-top:14px;display:grid;gap:10px">
+      ${actionButtons}
+      <button class="btn btn-ghost" data-action="modal-cancel">Close</button>
+    </div>
+  `);
+}
+
 function renderSettingsTab(state, auth) {
   const isOwner = auth && auth.role === 'OWNER';
   return `
@@ -2108,7 +2627,7 @@ function renderSettingsTab(state, auth) {
 
     <div class="card">
       <h2>Backup &amp; restore</h2>
-      <p class="muted">${state.audits.length} audit(s), ${state.users.length} user(s) and ${(() => { try { return JSON.parse(localStorage.getItem('np_capture_v1_records') || '[]').length; } catch (_) { return 0; } })()} non-purchase entry(ies) stored on this device. One backup file bundles everything — share to Drive, OneDrive, WhatsApp or any other app.</p>
+      <p class="muted">${state.audits.length} audit(s), ${state.cros.length} CRO(s), ${state.users.length} user(s) and ${(state.caps || []).length} CAP(s) stored on this device. One backup file bundles everything — share to Drive, OneDrive, WhatsApp or any other app.</p>
       <button class="btn btn-primary" data-action="backup-drive">Back up to Google Drive</button>
       <div class="spacer-12"></div>
       <button class="btn btn-ghost" data-action="restore-backup">Restore from backup file</button>
@@ -2436,8 +2955,9 @@ function printAudit(auditId) {
 // Backup & restore
 // ---------------------------------------------------------------------------
 
-// Unified backup — bundles audit state AND non-purchase records into one file.
-// Implementation lives in shell.js so both pages stay in sync.
+// Backup / restore — implementation lives in shell.js. The shell wraps the
+// localStorage state into a JSON file and uses the Android share sheet so
+// the user can hand it off to Drive / OneDrive / WhatsApp.
 async function backupToDrive() {
   if (!window.SaagarShell) { toast('Shell not loaded'); return; }
   try {
@@ -2460,7 +2980,13 @@ function restoreFromBackup() {
       return;
     }
     const c = res.counts;
-    const confirmMsg = `Restored ${c.audits} audit(s), ${c.cros} CRO(s), ${c.non_purchase} non-purchase entries.`;
+    const parts = [
+      `${c.audits} audit(s)`,
+      `${c.cros} CRO(s)`,
+      c.users ? `${c.users} user(s)` : null,
+      c.caps ? `${c.caps} CAP(s)` : null,
+    ].filter(Boolean);
+    const confirmMsg = `Restored ${parts.join(', ')}.`;
     render();
     switchTab('history');
     toast(confirmMsg);
@@ -2730,8 +3256,12 @@ document.addEventListener('click', async (e) => {
 
   if (action === 'submit-audit') {
     const submitted = submitAudit();
-    if (submitted) {
-      toast(`Audit submitted: ${submitted.score.pct.toFixed(1)}% ${bandLabel(submitted.score.band)}`);
+    if (submitted && submitted.audit) {
+      const sc = submitted.audit.score;
+      const capPart = submitted.capsCreated
+        ? ` · ${submitted.capsCreated} CAP${submitted.capsCreated > 1 ? 's' : ''} opened`
+        : '';
+      toast(`Audit submitted: ${sc.pct.toFixed(1)}% ${bandLabel(sc.band)}${capPart}`);
     }
     render();
     return;
@@ -2752,6 +3282,121 @@ document.addEventListener('click', async (e) => {
     if (found) historyDetailModal(found);
     return;
   }
+
+  // ----- CAPs -----
+  if (action === 'cap-filter') {
+    window._capsFilter = a.dataset.filter;
+    render();
+    return;
+  }
+  if (action === 'open-cap') {
+    capDetailModal(a.dataset.id);
+    return;
+  }
+  if (action === 'add-step') {
+    const inp = document.getElementById('capNewStep');
+    const text = (inp && inp.value || '').trim();
+    if (text.length < 3) { toast('Action step text too short'); return; }
+    const state = Store.load();
+    const c = Caps.byId(state, a.dataset.cap);
+    if (!c) return;
+    c.action_steps.push({ text, done: false, done_at: null });
+    Caps.save(c);
+    capDetailModal(c.id); // re-render modal
+    return;
+  }
+  if (action === 'toggle-step') {
+    const state = Store.load();
+    const c = Caps.byId(state, a.dataset.cap);
+    if (!c) return;
+    const i = parseInt(a.dataset.i, 10);
+    const step = c.action_steps[i];
+    if (!step) return;
+    step.done = !step.done;
+    step.done_at = step.done ? new Date().toISOString() : null;
+    Caps.save(c);
+    capDetailModal(c.id);
+    return;
+  }
+  if (action === 'remove-step') {
+    const state = Store.load();
+    const c = Caps.byId(state, a.dataset.cap);
+    if (!c) return;
+    const i = parseInt(a.dataset.i, 10);
+    c.action_steps.splice(i, 1);
+    Caps.save(c);
+    capDetailModal(c.id);
+    return;
+  }
+  if (action === 'cap-save-edits') {
+    const state = Store.load();
+    const c = Caps.byId(state, a.dataset.id);
+    if (!c) return;
+    document.querySelectorAll('.cap-why').forEach(el => {
+      c['why' + el.dataset.n] = el.value.trim();
+    });
+    const rc = document.querySelector('.cap-rootcause');
+    if (rc) c.root_cause = rc.value.trim();
+    const resp = document.querySelector('.cap-responsible');
+    if (resp) c.responsible_user_id = resp.value || null;
+    const dl = document.querySelector('.cap-deadline-input');
+    if (dl) c.deadline = dl.value || null;
+    Caps.save(c);
+    closeModal();
+    toast('CAP updated');
+    render();
+    return;
+  }
+  if (action === 'cap-mark-done') {
+    const state = Store.load();
+    const c = Caps.byId(state, a.dataset.id);
+    if (!c) return;
+    if (c.action_steps.length === 0 || !c.action_steps.every(s => s.done)) {
+      toast('Tick all action steps before marking done.');
+      return;
+    }
+    Caps.markDone(a.dataset.id);
+    closeModal();
+    toast('CAP marked done — waiting for verification');
+    render();
+    return;
+  }
+  if (action === 'cap-verify') {
+    const me = AuthSession.current();
+    if (!me || (me.role !== 'OWNER' && me.role !== 'GM')) {
+      toast('Only GM or Owner can verify'); return;
+    }
+    const notes = (prompt('Verification notes (optional):') || '').trim();
+    Caps.verify(a.dataset.id, me.id, notes);
+    closeModal();
+    toast('CAP verified');
+    render();
+    return;
+  }
+  if (action === 'cap-reject') {
+    const me = AuthSession.current();
+    if (!me || (me.role !== 'OWNER' && me.role !== 'GM')) {
+      toast('Only GM or Owner can reject'); return;
+    }
+    const notes = (prompt('Reason for rejection (required):') || '').trim();
+    if (notes.length < 3) { toast('Rejection needs a reason'); return; }
+    Caps.reject(a.dataset.id, me.id, notes);
+    closeModal();
+    toast('CAP rejected — back to open');
+    render();
+    return;
+  }
+  if (action === 'cap-close') {
+    const me = AuthSession.current();
+    if (!me || (me.role !== 'OWNER' && me.role !== 'GM')) {
+      toast('Only GM or Owner can close'); return;
+    }
+    Caps.close(a.dataset.id, me.id);
+    closeModal();
+    toast('CAP closed');
+    render();
+    return;
+  }
   if (action === 'print-audit') {
     printAudit(a.dataset.id);
     return;
@@ -2760,9 +3405,8 @@ document.addEventListener('click', async (e) => {
   if (action === 'backup-drive')   { backupToDrive(); return; }
   if (action === 'restore-backup') { restoreFromBackup(); return; }
   if (action === 'clear-data') {
-    if (!confirm('Erase ALL data on this device — audits, CROs, users and non-purchase entries? This cannot be undone.')) return;
+    if (!confirm('Erase ALL data on this device — audits, CROs, users and CAPs? This cannot be undone.')) return;
     localStorage.removeItem(STORE_KEY);
-    localStorage.removeItem('np_capture_v1_records');
     render();
     switchTab('audit');
     toast('All data erased');
