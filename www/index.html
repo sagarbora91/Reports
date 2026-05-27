@@ -1759,6 +1759,33 @@ function uuid() {
 
 function today() { return new Date().toISOString().slice(0, 10); }
 
+// Daily-reminder toggle in Settings. Delegates to SaagarShell so the
+// scheduling logic stays in one place.
+window.onDailyReminderToggle = async function (on) {
+  if (!window.SaagarShell) return;
+  window.SaagarShell.setDailyReminderEnabled(on);
+  try {
+    if (on) {
+      const ok = await window.SaagarShell.scheduleDailyReminder();
+      if (ok) {
+        toast('Daily reminder set for 10:00 AM');
+      } else {
+        toast('Could not schedule — check notification permission');
+        // Roll the checkbox back so the UI matches the real state.
+        window.SaagarShell.setDailyReminderEnabled(false);
+        const cb = document.getElementById('dailyReminderToggle');
+        if (cb) cb.checked = false;
+      }
+    } else {
+      await window.SaagarShell.cancelDailyReminder();
+      toast('Daily reminder turned off');
+    }
+  } catch (e) {
+    console.error(e);
+    toast('Reminder change failed');
+  }
+};
+
 // Show/hide the backdate reason field whenever the audit date != today.
 // Inlined onchange so it survives renderAuditTab re-renders.
 window.toggleBackdateField = function () {
@@ -2374,6 +2401,51 @@ function whatsappLink(phone, message) {
   return `https://wa.me/${p}?text=${encodeURIComponent(message)}`;
 }
 
+// Build a plain-text summary of one submitted audit, ready to paste into
+// WhatsApp / Telegram / email. Includes date, score band, top FAILs with
+// CRO attribution, audit notes if any. Kept short enough that the chat
+// preview reads cleanly.
+function buildAuditWhatsappText(a, state) {
+  const s = a.score || scoreAudit(a.results);
+  const croById = Object.fromEntries(state.cros.map(c => [c.id, c]));
+  const fails = CHECKPOINTS
+    .map(cp => ({ cp, r: a.results[cp.id] || {} }))
+    .filter(x => x.r.result === 'F')
+    .slice(0, 6);
+  const failLines = fails.length
+    ? fails.map(({ cp, r }) => {
+        const who = r.cro_id && croById[r.cro_id] ? ` — ${croById[r.cro_id].name}` : '';
+        const find = r.finding ? `: ${r.finding}` : '';
+        return `• CP ${cp.id}${find}${who}`;
+      }).join('\n')
+    : '(no fails)';
+
+  const lines = [
+    `📋 Saagar Audit — ${fmtDate(a.date)}`,
+    `Score: ${s.pct.toFixed(1)}% ${bandLabel(s.band)} (${s.raw}/${s.max})`,
+    `By: ${a.auditor_name || 'unknown'} · ${s.p}P · ${s.f}F · ${s.na}NA`,
+  ];
+  if (a.backdate_reason) lines.push(`⚠ Backdated: ${a.backdate_reason}`);
+  if (a.notes)           lines.push(`📝 Notes: ${a.notes}`);
+  lines.push('');
+  lines.push(`Fails (${s.f}):`);
+  lines.push(failLines);
+  lines.push('');
+  lines.push('— from Saagar Audit');
+  return lines.join('\n');
+}
+
+// Open WhatsApp with the audit summary text pre-filled. No specific
+// recipient — user picks the chat after WhatsApp opens.
+function shareAuditToWhatsApp(auditId) {
+  const state = Store.load();
+  const a = audit(auditId, state);
+  if (!a) return;
+  const text = buildAuditWhatsappText(a, state);
+  const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank', 'noopener');
+}
+
 // Pick the first active user matching a role (Owner takes precedence if multiple).
 function findRecipient(state, role) {
   return state.users.find(u => u.is_active && u.role === role) || null;
@@ -2658,19 +2730,40 @@ const FailDraft = {
 };
 
 function nextUnmarkedIndex(audit) {
+  // Pass 1: any checkpoint truly untouched (no row, or photo-only row with
+  // no verdict). The audit walks through these in spec order first.
   for (let i = 0; i < CHECKPOINTS.length; i++) {
     const r = audit.results[CHECKPOINTS[i].id];
-    // A row that exists only for photos (no verdict yet) still counts as
-    // unmarked — the user needs to set PASS / FAIL / NA on it.
     if (!r || !r.result) return i;
   }
+  // Pass 2: any checkpoint the user explicitly SKIPped. Those re-enter the
+  // flow at the end so the user is forced to give a final verdict before
+  // they can review + submit.
+  for (let i = 0; i < CHECKPOINTS.length; i++) {
+    const r = audit.results[CHECKPOINTS[i].id];
+    if (r && r.result === 'SKIP') return i;
+  }
   return CHECKPOINTS.length; // all done
+}
+
+// How many checkpoints the user has SKIPped so far. Used to surface
+// "X to revisit" both during the linear walk and on the review screen.
+function skippedCount(audit) {
+  let n = 0;
+  CHECKPOINTS.forEach(cp => {
+    const r = audit.results[cp.id];
+    if (r && r.result === 'SKIP') n++;
+  });
+  return n;
 }
 
 function submitAudit() {
   const state = Store.load();
   const a = currentAudit(state);
   if (!a) return null;
+  // Pull free-text notes from the review screen, if present.
+  const notesEl = document.getElementById('auditNotes');
+  if (notesEl) a.notes = notesEl.value.trim();
   const s = scoreAudit(a.results);
   a.status = 'submitted';
   a.submitted_at = new Date().toISOString();
@@ -2908,17 +3001,28 @@ function renderInProgressAudit(a) {
   const isFreshSession = !sessionStorage.getItem('audit_session_' + a.id);
   if (idx > 0 && isFreshSession) sessionStorage.setItem('audit_session_' + a.id, '1');
 
+  // Are we revisiting something the user already SKIPped? That happens once
+  // every truly-unmarked checkpoint has a verdict.
+  const currentResult = a.results[cp.id];
+  const isRevisitingSkip = currentResult && currentResult.result === 'SKIP';
+  const skipped = skippedCount(a);
+
   return `
     ${idx > 0 && isFreshSession ? `
       <div class="resume-banner">
         <h3>Resuming audit</h3>
         <p class="muted" style="margin:0">Picked up at checkpoint ${idx + 1} of ${CHECKPOINTS.length}. ${live.p} pass, ${live.f} fail, ${live.na} N/A so far.</p>
       </div>` : ''}
+    ${isRevisitingSkip ? `
+      <div class="resume-banner" style="background:#fff8e1;border-left-color:var(--amber)">
+        <h3>Revisiting skipped checkpoint${skipped > 1 ? ` (${skipped} left)` : ''}</h3>
+        <p class="muted" style="margin:0">All other checkpoints are done. Give this one a final verdict before you can submit.</p>
+      </div>` : ''}
     <div class="progress"><span style="width:${pct}%"></span></div>
     <div class="cp-meta">
       <span class="sop-chip ${sop.critical ? 'critical' : ''}">${escapeHtml(sop.name)}</span>
       <span>CP ${escapeHtml(cp.id)}</span>
-      <span style="margin-left:auto">${idx + 1} of ${CHECKPOINTS.length}</span>
+      <span style="margin-left:auto">${idx + 1} of ${CHECKPOINTS.length}${skipped > 0 && !isRevisitingSkip ? ` &middot; ${skipped} skipped` : ''}</span>
     </div>
     <div class="card">
       <div class="cp-text">${escapeHtml(cp.text)}</div>
@@ -2933,6 +3037,11 @@ function renderInProgressAudit(a) {
       <button class="btn btn-fail" data-action="mark" data-verdict="F">FAIL</button>
       ${allowsNa ? `<button class="btn btn-na" data-action="mark" data-verdict="NA">N / A</button>` : ''}
     </div>
+    ${!isRevisitingSkip ? `
+      <button class="btn btn-ghost" data-action="mark" data-verdict="SKIP"
+              style="margin-top:8px;color:var(--amber);border:1px dashed var(--amber)">
+        ⏭ Skip — come back later
+      </button>` : ''}
     <div class="minicounts">
       <div class="minicount p"><span class="n">${live.p}</span><span class="lbl">PASS</span></div>
       <div class="minicount f"><span class="n">${live.f}</span><span class="lbl">FAIL</span></div>
@@ -2975,6 +3084,17 @@ function renderReviewAudit(a) {
       <div class="score-pct ${s.band}">${s.pct.toFixed(1)}%</div>
       <div class="score-band ${s.band}">${bandLabel(s.band)}</div>
       <p class="muted">${s.raw} of ${s.max} weighted points &middot; ${s.p} pass &middot; ${s.f} fail &middot; ${s.na} N/A</p>
+    </div>
+    <div class="card">
+      <label class="field" style="margin:0">
+        <span>Audit notes <span class="muted" style="font-weight:400">(optional)</span></span>
+        <textarea id="auditNotes" maxlength="500" rows="3"
+                  placeholder="Context for this audit — e.g. rain today, low footfall, 3 staff out, festival rush"
+                  >${escapeHtml(a.notes || '')}</textarea>
+        <p class="tiny muted" style="margin:6px 0 0">
+          Shown on the report, in the History detail and the CSV. Use for one-off context that doesn't fit a checkpoint.
+        </p>
+      </label>
     </div>
     <button class="btn btn-primary" data-action="submit-audit">Submit audit</button>
     <div class="spacer-12"></div>
@@ -3298,6 +3418,18 @@ function renderSettingsTab(state, auth) {
     </div>
 
     <div class="card">
+      <h2>Notifications</h2>
+      <p class="muted">A daily reminder at 10:00 AM nudges you (or your Store Manager) to run the day's audit. Tap to open straight into the start screen.</p>
+      <label class="row-spread" style="margin-top:4px;cursor:pointer">
+        <span><strong>Daily audit reminder</strong> <span class="muted" style="font-weight:400">· 10:00 AM</span></span>
+        <input type="checkbox" id="dailyReminderToggle"
+               ${(window.SaagarShell && window.SaagarShell.isDailyReminderEnabled()) ? 'checked' : ''}
+               onchange="onDailyReminderToggle(this.checked)"
+               style="width:42px;height:24px;cursor:pointer">
+      </label>
+    </div>
+
+    <div class="card">
       <h2>Backup &amp; restore</h2>
       <p class="muted">${state.audits.length} audit(s), ${state.cros.length} CRO(s), ${state.users.length} user(s) and ${(state.caps || []).length} CAP(s) stored on this device. One backup file bundles everything — share to Drive, OneDrive, WhatsApp or any other app.</p>
       <button class="btn btn-primary" data-action="backup-drive">Back up to Google Drive</button>
@@ -3579,19 +3711,28 @@ function historyDetailModal(a) {
          <p style="margin:4px 0 0;font-size:13px;line-height:1.45">${escapeHtml(a.backdate_reason)}</p>
        </div>`
     : '';
+  const notesCard = a.notes
+    ? `<div class="card" style="margin-top:8px;padding:10px 12px">
+         <strong>Audit notes</strong>
+         <p style="margin:4px 0 0;font-size:13px;line-height:1.5;white-space:pre-wrap">${escapeHtml(a.notes)}</p>
+       </div>`
+    : '';
   openModal(`
     <h3>${escapeHtml(fmtDate(a.date))}</h3>
     <p class="muted">Submitted ${escapeHtml(new Date(a.submitted_at).toLocaleString('en-IN'))} by ${escapeHtml(a.auditor_name || '—')}</p>
     ${backdatedBadge}
+    ${notesCard}
     <div class="score-card" style="padding:12px">
       <div class="score-pct ${s.band}" style="font-size:48px">${s.pct.toFixed(1)}%</div>
       <div class="score-band ${s.band}">${bandLabel(s.band)}</div>
       <p class="muted">${s.raw} of ${s.max} weighted &middot; ${s.p} P &middot; ${s.f} F &middot; ${s.na} N/A</p>
     </div>
     <div class="row">
+      <button class="btn btn-secondary" data-action="share-audit-wa" data-id="${escapeHtml(a.id)}">📱 Send to WhatsApp</button>
       <button class="btn btn-secondary" data-action="print-audit" data-id="${escapeHtml(a.id)}">📄 Print / Save as PDF</button>
-      <button class="btn btn-ghost" data-action="modal-cancel">Close</button>
     </div>
+    <div class="spacer-12"></div>
+    <button class="btn btn-ghost" data-action="modal-cancel" style="width:100%">Close</button>
     ${groupsHtml}
   `);
 }
@@ -3632,6 +3773,11 @@ function printAudit(auditId) {
          <strong>Backdated audit:</strong> ${escapeHtml(a.backdate_reason)}
        </div>`
     : '';
+  const notesHtml = a.notes
+    ? `<div class="meta" style="padding:8px 10px;border:1px solid #ddd;border-radius:6px;margin-top:6px;background:#fafafa">
+         <strong>Audit notes:</strong> <span style="white-space:pre-wrap">${escapeHtml(a.notes)}</span>
+       </div>`
+    : '';
   document.getElementById('print-root').innerHTML = `
     <div class="print-page">
       <h1>Saagar Audit — Daily Compliance Report</h1>
@@ -3640,6 +3786,7 @@ function printAudit(auditId) {
         Submitted ${escapeHtml(new Date(a.submitted_at).toLocaleString('en-IN'))}
       </div>
       ${backdatedHtml}
+      ${notesHtml}
       <div class="pscore" style="color:${
         s.band === 'excellent' || s.band === 'good' ? '#166534'
         : s.band === 'fair' ? '#b45309' : '#b91c1c'
@@ -3708,7 +3855,7 @@ function exportCsv() {
   const state = Store.load();
   const submitted = state.audits.filter(a => a.status === 'submitted');
   if (submitted.length === 0) { toast('No submitted audits yet'); return; }
-  const rows = [['date', 'auditor', 'compliance_pct', 'band', 'raw', 'max', 'pass', 'fail', 'na', 'checkpoint_id', 'result', 'finding', 'cro_id', 'backdate_reason']];
+  const rows = [['date', 'auditor', 'compliance_pct', 'band', 'raw', 'max', 'pass', 'fail', 'na', 'checkpoint_id', 'result', 'finding', 'cro_id', 'backdate_reason', 'audit_notes']];
   submitted.forEach(a => {
     Object.entries(a.results).forEach(([cpId, r]) => {
       rows.push([
@@ -3726,6 +3873,7 @@ function exportCsv() {
         r.finding || '',
         r.cro_id || '',
         a.backdate_reason || '',
+        a.notes || '',
       ]);
     });
   });
@@ -3926,6 +4074,15 @@ document.addEventListener('click', async (e) => {
     if (verdict === 'P')  { markCheckpoint(cp.id, 'P'); render(); return; }
     if (verdict === 'F')  { failModal(cp, state.cros.filter(c => audit.cros.includes(c.id))); return; }
     if (verdict === 'NA') { naModal(cp); return; }
+    if (verdict === 'SKIP') {
+      // SKIP records a result row so nextUnmarkedIndex walks past it on the
+      // first pass and routes back to it after all other CPs are decided.
+      // Photos / findings on the row are preserved.
+      markCheckpoint(cp.id, 'SKIP');
+      toast('Skipped — we’ll come back to this checkpoint at the end.');
+      render();
+      return;
+    }
   }
 
   if (action === 'add-fail-photo') {
@@ -4196,6 +4353,10 @@ document.addEventListener('click', async (e) => {
   }
   if (action === 'print-audit') {
     printAudit(a.dataset.id);
+    return;
+  }
+  if (action === 'share-audit-wa') {
+    shareAuditToWhatsApp(a.dataset.id);
     return;
   }
   if (action === 'export-csv')     { exportCsv(); return; }

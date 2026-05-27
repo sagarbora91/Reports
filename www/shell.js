@@ -154,6 +154,76 @@
   }
 
   // ---------------------------------------------------------------------
+  // Daily 10 AM audit reminder
+  //
+  // Schedules a repeating local notification via @capacitor/local-notifications.
+  // Stable id so re-scheduling overwrites instead of stacking. The user can
+  // disable it from Settings; we track the on/off bit in localStorage so the
+  // preference survives an app restart and a backup/restore cycle.
+  // ---------------------------------------------------------------------
+
+  const DAILY_REMINDER_ID = 1001;          // stable numeric id for LocalNotifications
+  const DAILY_REMINDER_PREF = 'saagar_daily_reminder_enabled';
+
+  function isDailyReminderEnabled() {
+    const v = localStorage.getItem(DAILY_REMINDER_PREF);
+    // Default ON for any user who hasn't explicitly toggled it off.
+    return v == null ? true : v === '1';
+  }
+
+  function setDailyReminderEnabled(on) {
+    localStorage.setItem(DAILY_REMINDER_PREF, on ? '1' : '0');
+  }
+
+  async function ensureNotifPermission() {
+    const LN = plugin('LocalNotifications');
+    if (!LN) return false;
+    try {
+      const perm = await LN.checkPermissions();
+      if (perm.display === 'granted') return true;
+      const req = await LN.requestPermissions();
+      return req.display === 'granted';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function scheduleDailyReminder() {
+    const LN = plugin('LocalNotifications');
+    if (!LN) return false;
+    if (!isDailyReminderEnabled()) return false;
+    const ok = await ensureNotifPermission();
+    if (!ok) return false;
+    try {
+      // First cancel any previously scheduled instance so we don't stack.
+      try { await LN.cancel({ notifications: [{ id: DAILY_REMINDER_ID }] }); } catch (_) {}
+      await LN.schedule({
+        notifications: [{
+          id: DAILY_REMINDER_ID,
+          title: 'Saagar Audit reminder',
+          body: 'Time for today’s daily compliance audit. Tap to open.',
+          schedule: {
+            on: { hour: 10, minute: 0 },
+            every: 'day',
+            allowWhileIdle: true,
+          },
+          extra: { kind: 'daily-audit-reminder' },
+        }],
+      });
+      return true;
+    } catch (e) {
+      console.warn('Could not schedule daily reminder', e);
+      return false;
+    }
+  }
+
+  async function cancelDailyReminder() {
+    const LN = plugin('LocalNotifications');
+    if (!LN) return;
+    try { await LN.cancel({ notifications: [{ id: DAILY_REMINDER_ID }] }); } catch (_) {}
+  }
+
+  // ---------------------------------------------------------------------
   // Capacitor plugin boot
   // ---------------------------------------------------------------------
 
@@ -178,6 +248,12 @@
       try { await KB.setResizeMode({ mode: 'native' }); } catch (_) {}
       try { await KB.setScroll({ isDisabled: false }); } catch (_) {}
     }
+
+    // Set up the daily 10 AM audit reminder. Fire-and-forget — if the user
+    // hasn't granted notification permission yet, scheduleDailyReminder asks
+    // and silently skips if denied. Re-running on every boot is fine because
+    // we cancel the old id first.
+    scheduleDailyReminder();
 
     const App = plugin('App');
     if (App) {
@@ -219,5 +295,10 @@
     restore: restoreFromFilePicker,
     isNative: isNative,
     plugin: plugin,
+    // Daily reminder controls — Settings UI binds to these.
+    isDailyReminderEnabled: isDailyReminderEnabled,
+    setDailyReminderEnabled: setDailyReminderEnabled,
+    scheduleDailyReminder: scheduleDailyReminder,
+    cancelDailyReminder: cancelDailyReminder,
   };
 })();
