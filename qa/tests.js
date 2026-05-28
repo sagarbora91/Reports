@@ -400,6 +400,35 @@
   startNewAudit({ date: '2026-01-15', auditorName: 'BSM', auditorId: bo.id, croIds: [], templateId: 'tpl_daily', backdateReason: 'phone died' });
   eq('backdate reason stored', currentAudit(Store.load()).backdate_reason, 'phone died');
 
+  // ---- 17. Trends ----
+  reset();
+  (function () {
+    const st = Store.load();
+    const dailyTpl = Templates.byId(null, 'tpl_daily');
+    const firstCp = dailyTpl.checkpoints[0];
+    st.audits = [
+      { id: 't1', status: 'submitted', date: today(), template_id: 'tpl_daily', score: { pct: 90, band: 'good' }, results: { [firstCp.id]: { result: 'P' } } },
+      { id: 't2', status: 'submitted', date: today(), template_id: 'tpl_daily', score: { pct: 80, band: 'poor' }, results: { [firstCp.id]: { result: 'F' } } },
+    ];
+    Store.save(st);
+    const auds = st.audits;
+    const w = trendByWeek(auds, 12);
+    eq('trendByWeek → 12 buckets', w.length, 12);
+    eq('trendByWeek newest avg = 85', w[11].avgPct, 85);
+    eq('trendByWeek empty bucket null', w[0].avgPct, null);
+    const wd = trendByWeekday(auds);
+    eq('trendByWeekday → 7 days', wd.length, 7);
+    eq('trendByWeekday starts Mon', wd[0].name, 'Mon');
+    const sec = trendBySection(auds, 28);
+    ok('trendBySection returns array', Array.isArray(sec), '');
+    ok('trendBySection has the section with 1 fail of 2', sec.length >= 1 && sec[0].total === 2 && sec[0].fails === 1, JSON.stringify(sec[0]));
+    smoke('renderTrends', () => renderTrends(auds));
+    smoke('renderTrends empty', () => renderTrends([]));
+    HistoryView.mode = 'trends';
+    smoke('HistoryTab trends mode', () => renderHistoryTab(Store.load(), { role: 'OWNER', id: 'x' }));
+    HistoryView.mode = 'list';
+  })();
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

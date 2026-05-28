@@ -1180,6 +1180,33 @@ body.locked #auth-screen { display: block; }
   margin-bottom: 10px;
 }
 .cro-banner strong { color: var(--gold-light); }
+
+/* --- Trends --- */
+.t-bars { display: flex; align-items: flex-end; gap: 4px; height: 140px; margin-top: 8px; }
+.t-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
+.t-bar-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.t-bar { width: 100%; border-radius: 3px 3px 0 0; min-height: 2px; }
+.t-col-label { font-size: 9px; color: var(--gray-600); margin-top: 4px; }
+.t-bar.excellent, .t-bar.good, .t-sec-fill.excellent, .t-sec-fill.good { background: var(--green); }
+.t-bar.fair, .t-sec-fill.fair { background: var(--amber); }
+.t-bar.poor, .t-bar.critical, .t-sec-fill.poor, .t-sec-fill.critical { background: var(--red); }
+.t-heat { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 8px; }
+.t-cell { border-radius: 8px; padding: 8px 2px; text-align: center; color: var(--white); }
+.t-cell.empty { background: var(--gray-200); color: var(--gray-600); }
+.t-cell.excellent, .t-cell.good { background: var(--green); }
+.t-cell.fair { background: var(--amber); }
+.t-cell.poor, .t-cell.critical { background: var(--red); }
+.t-cell-day { font-size: 11px; font-weight: 600; }
+.t-cell-pct { font-size: 14px; font-weight: 700; font-family: 'DM Serif Display', serif; }
+.t-cell-n { font-size: 9px; opacity: 0.85; }
+.t-sec-row { margin-bottom: 12px; }
+.t-sec-head { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
+.t-sec-head .pct { font-weight: 700; }
+.t-sec-head .pct.excellent, .t-sec-head .pct.good { color: var(--green); }
+.t-sec-head .pct.fair { color: var(--amber); }
+.t-sec-head .pct.poor, .t-sec-head .pct.critical { color: var(--red); }
+.t-sec-track { height: 8px; background: var(--gray-200); border-radius: 999px; overflow: hidden; }
+.t-sec-fill { height: 8px; border-radius: 999px; }
   </style>
 </head>
 <body>
@@ -6404,6 +6431,151 @@ function renderReviewAudit(a) {
   `;
 }
 
+// ---------------------------------------------------------------------------
+// Trends — pure compute helpers (unit-tested) + a chart view inside History.
+// All operate on submitted non-weekly audits.
+// ---------------------------------------------------------------------------
+
+// Flat [{cpId, result}] across either results shape (store or per-CRO).
+function allResultEntries(audit) {
+  const out = [];
+  if (auditIsPerCro(audit)) {
+    Object.values(audit.cro_results || {}).forEach(bucket => {
+      Object.entries(bucket).forEach(([cpId, r]) => out.push({ cpId, result: r.result }));
+    });
+  } else {
+    Object.entries(audit.results || {}).forEach(([cpId, r]) => out.push({ cpId, result: r.result }));
+  }
+  return out;
+}
+
+// cpId → section label, across template / legacy-daily / legacy-weekly shapes.
+function sectionLabelMap(audit) {
+  const map = {};
+  const tpl = templateFor(audit);
+  const cps = checkpointsFor(audit);
+  if (tpl && tpl.sections) {
+    const byId = {}; tpl.sections.forEach(s => { byId[s.id] = s.name; });
+    cps.forEach(c => { map[c.id] = byId[c.section_id] || c.section_id || 'Other'; });
+  } else {
+    cps.forEach(c => {
+      if (c.sop_id) { const sop = SOPS.find(s => s.id === c.sop_id); map[c.id] = sop ? sop.name : c.sop_id; }
+      else if (c.group_en) map[c.id] = c.group_en;
+      else map[c.id] = 'Other';
+    });
+  }
+  return map;
+}
+
+function avg1(arr) { return arr.length ? Math.round((arr.reduce((s, x) => s + x, 0) / arr.length) * 10) / 10 : null; }
+
+function trendByWeek(audits, weeks) {
+  weeks = weeks || 12;
+  const now = new Date();
+  const buckets = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const ref = new Date(now); ref.setDate(ref.getDate() - i * 7);
+    buckets.push({ week: isoWeekOf(ref), year: ref.getFullYear(), pcts: [] });
+  }
+  audits.forEach(a => {
+    if (!a.score) return;
+    const d = new Date(a.date), wk = isoWeekOf(d), yr = d.getFullYear();
+    const b = buckets.find(x => x.week === wk && x.year === yr);
+    if (b) b.pcts.push(a.score.pct);
+  });
+  return buckets.map(b => {
+    const avg = avg1(b.pcts);
+    return { label: 'W' + b.week, avgPct: avg, count: b.pcts.length, band: avg != null ? bandFor(avg) : null };
+  });
+}
+
+function trendByWeekday(audits) {
+  const days = [[], [], [], [], [], [], []]; // JS getDay: 0=Sun..6=Sat
+  audits.forEach(a => { if (a.score) days[new Date(a.date).getDay()].push(a.score.pct); });
+  const order = [1, 2, 3, 4, 5, 6, 0];
+  const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  return order.map((d, i) => {
+    const avg = avg1(days[d]);
+    return { name: names[i], avgPct: avg, count: days[d].length, band: avg != null ? bandFor(avg) : null };
+  });
+}
+
+function trendBySection(audits, days) {
+  days = days || 28;
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  const agg = {};
+  audits.forEach(a => {
+    if (a.date < cutoffStr) return;
+    const map = sectionLabelMap(a);
+    allResultEntries(a).forEach(({ cpId, result }) => {
+      if (result !== 'P' && result !== 'F') return;
+      const sec = map[cpId] || 'Other';
+      agg[sec] = agg[sec] || { pass: 0, total: 0 };
+      agg[sec].total++;
+      if (result === 'P') agg[sec].pass++;
+    });
+  });
+  return Object.entries(agg).map(([section, v]) => {
+    const pct = v.total ? Math.round((v.pass / v.total) * 1000) / 10 : 0;
+    return { section, passRate: pct, fails: v.total - v.pass, total: v.total, band: bandFor(pct) };
+  }).sort((a, b) => a.passRate - b.passRate); // worst first
+}
+
+const HistoryView = { mode: 'list' }; // 'list' | 'trends'
+
+function renderTrends(dailyAudits) {
+  if (dailyAudits.length === 0) {
+    return '<div class="card"><p class="muted">No submitted daily audits yet — trends appear once you have a few.</p></div>';
+  }
+  const weeks = trendByWeek(dailyAudits, 12);
+  const wkMax = 100;
+  const weekday = trendByWeekday(dailyAudits);
+  const sections = trendBySection(dailyAudits, 28);
+
+  const weekBars = weeks.map(w => `
+    <div class="t-col" title="${w.label}: ${w.avgPct == null ? 'no data' : w.avgPct + '%'}">
+      <div class="t-bar-wrap">
+        ${w.avgPct == null ? '' : `<div class="t-bar ${w.band}" style="height:${Math.max(2, (w.avgPct / wkMax) * 100)}%"></div>`}
+      </div>
+      <div class="t-col-label">${w.label}</div>
+    </div>`).join('');
+
+  const dayCells = weekday.map(d => `
+    <div class="t-cell ${d.avgPct == null ? 'empty' : d.band}">
+      <div class="t-cell-day">${d.name}</div>
+      <div class="t-cell-pct">${d.avgPct == null ? '—' : d.avgPct + '%'}</div>
+      <div class="t-cell-n">${d.count ? d.count + ' audit' + (d.count > 1 ? 's' : '') : ''}</div>
+    </div>`).join('');
+
+  const secBars = sections.length === 0
+    ? '<p class="muted" style="font-size:13px">No section data in the last 4 weeks.</p>'
+    : sections.map(s => `
+      <div class="t-sec-row">
+        <div class="t-sec-head"><span>${escapeHtml(s.section)}</span><span class="pct ${s.band}">${s.passRate}%</span></div>
+        <div class="t-sec-track"><div class="t-sec-fill ${s.band}" style="width:${s.passRate}%"></div></div>
+        <div class="tiny muted">${s.fails} fail(s) of ${s.total} checks</div>
+      </div>`).join('');
+
+  return `
+    <div class="card">
+      <h2>12-week compliance</h2>
+      <p class="muted">Average daily score per week.</p>
+      <div class="t-bars">${weekBars}</div>
+    </div>
+    <div class="card">
+      <h2>By day of week</h2>
+      <p class="muted">Which days run weakest. Average daily score per weekday.</p>
+      <div class="t-heat">${dayCells}</div>
+    </div>
+    <div class="card">
+      <h2>By section · last 4 weeks</h2>
+      <p class="muted">Pass-rate per section, weakest first — where to focus.</p>
+      ${secBars}
+    </div>
+  `;
+}
+
 function renderHistoryTab(state, auth) {
   // SM sees own audits only; GM and Owner see all.
   const submitted = state.audits
@@ -6413,8 +6585,21 @@ function renderHistoryTab(state, auth) {
       return a.auditor_id === auth.id || !a.auditor_id; // legacy audits with no auditor_id are visible too
     })
     .sort((a, b) => b.date.localeCompare(a.date));
+
+  // Sub-view toggle (List | Trends)
+  const toggle = `
+    <div class="template-picker" style="margin-bottom:12px">
+      <button class="tpl-pick ${HistoryView.mode === 'list' ? 'active' : ''}" data-action="history-view" data-mode="list">Audits</button>
+      <button class="tpl-pick ${HistoryView.mode === 'trends' ? 'active' : ''}" data-action="history-view" data-mode="trends">📊 Trends</button>
+    </div>`;
+
+  if (HistoryView.mode === 'trends') {
+    const dailyAudits = submitted.filter(a => frequencyOf(a) !== 'weekly');
+    return toggle + renderTrends(dailyAudits);
+  }
+
   if (submitted.length === 0) {
-    return `<div class="card"><h2>No submitted audits yet</h2><p class="muted">Once you submit a daily audit it'll appear here.</p></div>`;
+    return toggle + `<div class="card"><h2>No submitted audits yet</h2><p class="muted">Once you submit a daily audit it'll appear here.</p></div>`;
   }
 
   // CRO performance summary — count FAILs attributed per CRO in last 30 days
@@ -6443,7 +6628,7 @@ function renderHistoryTab(state, auth) {
         </div>`).join('')}
     </div>` : '';
 
-  return croSummaryHtml + submitted.map(a => {
+  return toggle + croSummaryHtml + submitted.map(a => {
     const s = a.score;
     const backdatedChip = a.backdate_reason
       ? ` &middot; <span style="color:var(--amber);font-weight:600">backdated</span>`
@@ -8050,6 +8235,11 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  if (action === 'history-view') {
+    HistoryView.mode = a.dataset.mode === 'trends' ? 'trends' : 'list';
+    document.getElementById('tab-history').innerHTML = renderHistoryTab(Store.load(), AuthSession.current());
+    return;
+  }
   if (action === 'open-history') {
     const state = Store.load();
     const found = audit(a.dataset.id, state);
