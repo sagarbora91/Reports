@@ -1124,15 +1124,10 @@ body.locked #auth-screen { display: block; }
   </style>
 </head>
 <body>
-
   <header class="topbar">
-    <div class="brand">
-      <span class="brand-serif">Saagar</span>
-      <span class="brand-sans">AUDIT</span>
-    </div>
+    <div class="brand"><span class="brand-serif">Saagar</span><span class="brand-sans">AUDIT</span></div>
     <div id="userBadge"></div>
   </header>
-
   <nav class="tabs" id="tabs">
     <button class="tab active" data-tab="audit">Audit</button>
     <button class="tab" data-tab="history">History</button>
@@ -1140,7 +1135,6 @@ body.locked #auth-screen { display: block; }
     <button class="tab" data-tab="reference">Reference</button>
     <button class="tab" data-tab="settings">Settings</button>
   </nav>
-
   <main>
     <section id="tab-audit" class="tab-content active"></section>
     <section id="tab-history" class="tab-content"></section>
@@ -1148,12 +1142,10 @@ body.locked #auth-screen { display: block; }
     <section id="tab-reference" class="tab-content"></section>
     <section id="tab-settings" class="tab-content"></section>
   </main>
-
   <div id="auth-screen" hidden></div>
   <div id="toast" class="toast" hidden></div>
   <div id="modal-root"></div>
   <div id="print-root"></div>
-
   <script src="shell.js"></script>
   <script>
 window.I18N_DATA = {
@@ -4247,7 +4239,6 @@ const WEEKLY_CHECKPOINTS = [
     "sequence": 12
   }
 ];
-
 'use strict';
 
 // ---------------------------------------------------------------------------
@@ -4296,10 +4287,141 @@ const Store = {
       users: [],
       caps: [],
       escalations: [],
+      templates: [],          // audit templates (editable checklists)
       current_audit_id: null,
       current_user_id: null,
       auditor_name: '',
     };
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Audit templates — checklists are DATA now, not code. Built-ins (daily,
+// weekly) are seeded from the factory constants below; the user can edit them
+// and create new daily/weekly/monthly/custom templates in the builder UI.
+//
+// Template shape:
+//   { id, name, name_mr, frequency, cro_mode, built_in, active,
+//     sections: [ {id, name, name_mr, critical} ],
+//     checkpoints: [ {id, section_id, text, text_mr, evidence, weight,
+//                     critical, allows_na, photo_required_on_fail, order} ],
+//     created_at, updated_at, version }
+//
+//   frequency : 'daily' | 'weekly' | 'monthly' | 'custom'
+//   cro_mode  : 'store'  (one score)
+//             | 'per_cro' (run the whole checklist once per CRO)
+//             | 'matrix'  (mark every checkpoint P/F/NA per CRO; per-CRO score)
+// ---------------------------------------------------------------------------
+
+// Factory default DAILY template — rebuilt from the code constants so
+// "reset to default" always has a clean source of truth.
+function factoryDailyTemplate() {
+  const sections = SOPS.slice().sort((a, b) => a.display_order - b.display_order)
+    .map(s => ({ id: s.id, name: s.name, name_mr: tSop(s.id, s.name), critical: !!s.critical }));
+  const checkpoints = CHECKPOINTS.slice()
+    .sort((a, b) => a.order - b.order)
+    .map(c => ({
+      id: c.id, section_id: c.sop_id,
+      text: c.text, text_mr: tCheckpoint(c.id, c.text),
+      evidence: c.evidence || '',
+      weight: c.weight, critical: !!c.critical,
+      allows_na: !!c.allows_na,
+      photo_required_on_fail: !!c.photo_required_on_fail,
+      order: c.order,
+    }));
+  return {
+    id: 'tpl_daily', name: 'Daily Audit', name_mr: 'दैनिक ऑडिट',
+    frequency: 'daily', cro_mode: 'store', built_in: true, active: true,
+    sections, checkpoints,
+    created_at: new Date().toISOString(), updated_at: new Date().toISOString(), version: 1,
+  };
+}
+
+// Factory default WEEKLY template — from WEEKLY_CHECKPOINTS (grouped).
+function factoryWeeklyTemplate() {
+  const groupOrder = ['operations', 'cash_weekly', 'reporting_service', 'inventory_weekly'];
+  const seen = {};
+  const sections = [];
+  WEEKLY_CHECKPOINTS.forEach(c => {
+    if (!seen[c.group]) {
+      seen[c.group] = true;
+      sections.push({ id: c.group, name: c.group_en, name_mr: c.group_mr || c.group_en, critical: !!c.critical });
+    }
+  });
+  sections.sort((a, b) => groupOrder.indexOf(a.id) - groupOrder.indexOf(b.id));
+  const checkpoints = WEEKLY_CHECKPOINTS.slice()
+    .sort((a, b) => a.sequence - b.sequence)
+    .map((c, i) => ({
+      id: c.id, section_id: c.group,
+      text: c.text, text_mr: c.text_mr || '',
+      evidence: c.evidence || '',
+      weight: c.weight, critical: !!c.critical,
+      allows_na: !!c.allows_na,
+      photo_required_on_fail: !!c.photo_required_on_fail,
+      order: i + 1,
+    }));
+  return {
+    id: 'tpl_weekly', name: 'Weekly Audit', name_mr: 'साप्ताहिक ऑडिट',
+    frequency: 'weekly', cro_mode: 'store', built_in: true, active: true,
+    sections, checkpoints,
+    created_at: new Date().toISOString(), updated_at: new Date().toISOString(), version: 1,
+  };
+}
+
+const Templates = {
+  all(state) { return (state || Store.load()).templates || []; },
+  active(state) { return Templates.all(state).filter(t => t.active); },
+  byId(state, id) { return Templates.all(state).find(t => t.id === id) || null; },
+
+  // Seed built-ins on first run (or restore a deleted built-in).
+  ensureSeeded() {
+    const state = Store.load();
+    state.templates = state.templates || [];
+    let changed = false;
+    if (!state.templates.some(t => t.id === 'tpl_daily')) {
+      state.templates.push(factoryDailyTemplate()); changed = true;
+    }
+    if (!state.templates.some(t => t.id === 'tpl_weekly')) {
+      state.templates.push(factoryWeeklyTemplate()); changed = true;
+    }
+    if (changed) Store.save(state);
+  },
+
+  save(tpl) {
+    const state = Store.load();
+    tpl.updated_at = new Date().toISOString();
+    const i = state.templates.findIndex(t => t.id === tpl.id);
+    if (i >= 0) state.templates[i] = tpl; else state.templates.push(tpl);
+    Store.save(state);
+  },
+
+  create({ name, frequency, cro_mode }) {
+    const state = Store.load();
+    const tpl = {
+      id: 'tpl_' + uuid(),
+      name: name || 'New audit',
+      name_mr: '',
+      frequency: frequency || 'daily',
+      cro_mode: cro_mode || 'store',
+      built_in: false, active: true,
+      sections: [{ id: 's_' + uuid(), name: 'Section 1', name_mr: '', critical: false }],
+      checkpoints: [],
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(), version: 1,
+    };
+    state.templates.push(tpl);
+    Store.save(state);
+    return tpl;
+  },
+
+  remove(id) {
+    const state = Store.load();
+    state.templates = state.templates.filter(t => t.id !== id);
+    Store.save(state);
+  },
+
+  resetToDefault(id) {
+    if (id === 'tpl_daily') Templates.save(factoryDailyTemplate());
+    else if (id === 'tpl_weekly') Templates.save(factoryWeeklyTemplate());
   },
 };
 
@@ -5192,16 +5314,17 @@ async function capturePhotoWithStamp({ cpId, quality = 0.72, maxDim = 1024 } = {
 // Score (Spec §6.1 – §6.2)
 // ---------------------------------------------------------------------------
 
-function scoreAudit(results) {
+function scoreAudit(results, cps) {
+  const set = cps || CHECKPOINTS;
   let raw = 0, max = 0, p = 0, f = 0, na = 0;
-  CHECKPOINTS.forEach(cp => {
+  set.forEach(cp => {
     const r = (results[cp.id] || {}).result;
     if (r === 'P') { raw += cp.weight; max += cp.weight; p++; }
     else if (r === 'F') { max += cp.weight; f++; }
     else if (r === 'NA') { na++; }
   });
   const pct = max > 0 ? Math.round((raw / max) * 1000) / 10 : 100;
-  return { raw, max, pct, band: bandFor(pct), p, f, na, total: CHECKPOINTS.length };
+  return { raw, max, pct, band: bandFor(pct), p, f, na, total: set.length };
 }
 
 // Shared band function so daily + weekly agree on the boundaries (Spec §6.2).
@@ -5234,7 +5357,8 @@ function round1(x) { return Math.round(x * 10) / 10; }
 
 // dailyPcts: array of up to 7 numbers (compliance % per day). Missing days
 // should be passed as 0 (caller fills gaps). weeklyResults: { cpId: 'P'|'F'|'NA' }.
-function scoreWeekly(dailyPcts, weeklyResults) {
+function scoreWeekly(dailyPcts, weeklyResults, cps) {
+  const set = cps || WEEKLY_CHECKPOINTS;
   // Daily component — always averaged over 7 slots (missing = 0%).
   const slots = 7;
   const filled = dailyPcts.slice(0, slots);
@@ -5244,7 +5368,7 @@ function scoreWeekly(dailyPcts, weeklyResults) {
 
   // Weekly-only component.
   let weeklyRaw = 0, weeklyMax = 0, p = 0, f = 0, na = 0;
-  WEEKLY_CHECKPOINTS.forEach(cp => {
+  set.forEach(cp => {
     const r = (weeklyResults || {})[cp.id];
     if (r === 'P') { weeklyRaw += cp.weight; weeklyMax += cp.weight; p++; }
     else if (r === 'F') { weeklyMax += cp.weight; f++; }
@@ -5261,7 +5385,7 @@ function scoreWeekly(dailyPcts, weeklyResults) {
     weeklyRaw, weeklyMax,
     raw: totalRaw, max: totalMax,
     pct, band: bandFor(pct),
-    p, f, na, total: WEEKLY_CHECKPOINTS.length,
+    p, f, na, total: set.length,
   };
 }
 
@@ -5365,12 +5489,17 @@ function audit(id, state) {
   return state.audits.find(a => a.id === id) || null;
 }
 
-function startNewAudit({ date, auditorName, auditorId, croIds, backdateReason }) {
+function startNewAudit({ date, auditorName, auditorId, croIds, backdateReason, templateId }) {
   const state = Store.load();
-  // If an unsubmitted draft already exists for today, replace it.
-  state.audits = state.audits.filter(a => !(a.date === date && a.status === 'draft'));
+  const tplId = templateId || 'tpl_daily';
+  // If an unsubmitted draft already exists for this date + template, replace it.
+  state.audits = state.audits.filter(
+    a => !(a.date === date && a.status === 'draft' && (a.template_id || 'tpl_daily') === tplId)
+  );
   const newAudit = {
     id: uuid(),
+    template_id: tplId,
+    audit_type: 'daily',         // legacy field kept for back-compat
     date,
     auditor_id: auditorId || null,
     auditor_name: auditorName,
@@ -5379,7 +5508,6 @@ function startNewAudit({ date, auditorName, auditorId, croIds, backdateReason })
     results: {},
     started_at: new Date().toISOString(),
     submitted_at: null,
-    // Empty string for same-day audits; populated when date != today.
     backdate_reason: (backdateReason || '').trim(),
   };
   state.audits.push(newAudit);
@@ -5400,14 +5528,16 @@ function currentIsoWeekYear() {
 
 // Start a GM-led weekly audit for an ISO week. Replaces any existing weekly
 // draft for the same week.
-function startWeeklyAudit({ weekNumber, year, gmId, gmName }) {
+function startWeeklyAudit({ weekNumber, year, gmId, gmName, templateId }) {
   const state = Store.load();
+  const tplId = templateId || 'tpl_weekly';
   state.audits = state.audits.filter(
-    a => !(a.audit_type === 'weekly' && a.week_number === weekNumber && a.year === year && a.status === 'draft')
+    a => !(frequencyOf(a) === 'weekly' && a.week_number === weekNumber && a.year === year && a.status === 'draft')
   );
   const newAudit = {
     id: uuid(),
-    audit_type: 'weekly',
+    template_id: tplId,
+    audit_type: 'weekly',        // legacy field kept for back-compat
     week_number: weekNumber,
     year: year,
     date: today(),               // submission date; daily contribution pulled by week
@@ -5501,7 +5631,26 @@ const FailDraft = {
 // WEEKLY_CHECKPOINTS, everything else walks the 68 daily CHECKPOINTS.
 // By construction this is identical to the old behavior for daily audits.
 function checkpointsFor(audit) {
+  // New audits carry a template_id → use the template's checkpoints.
+  if (audit && audit.template_id) {
+    const tpl = Templates.byId(null, audit.template_id);
+    if (tpl && Array.isArray(tpl.checkpoints)) return tpl.checkpoints;
+  }
+  // Legacy audits (pre-templates) fall back to the hard-wired sets.
   return (audit && audit.audit_type === 'weekly') ? WEEKLY_CHECKPOINTS : CHECKPOINTS;
+}
+
+// The full template behind an audit (or null for pure-legacy audits).
+function templateFor(audit) {
+  if (audit && audit.template_id) return Templates.byId(null, audit.template_id);
+  return null;
+}
+
+// Effective frequency: template's if present, else the legacy audit_type.
+function frequencyOf(audit) {
+  const tpl = templateFor(audit);
+  if (tpl) return tpl.frequency;
+  return audit && audit.audit_type === 'weekly' ? 'weekly' : 'daily';
 }
 
 function nextUnmarkedIndex(audit) {
@@ -5555,7 +5704,10 @@ function submitAudit() {
   const notesEl = document.getElementById('auditNotes');
   if (notesEl) a.notes = notesEl.value.trim();
 
-  if (a.audit_type === 'weekly') {
+  const cps = checkpointsFor(a);
+  const freq = frequencyOf(a);
+
+  if (freq === 'weekly') {
     // Daily contribution is computed from the 7 submitted daily audits of
     // the same ISO week — the GM does not re-enter daily data.
     const dailyPcts = dailyPctsForWeek(a.week_number, a.year, state);
@@ -5563,27 +5715,26 @@ function submitAudit() {
     Object.keys(a.results || {}).forEach(id => {
       verdicts[id] = a.results[id].result;
     });
-    a.score = scoreWeekly(dailyPcts, verdicts);
+    a.score = scoreWeekly(dailyPcts, verdicts, cps);
     a.daily_pcts_used = dailyPcts;
     a.status = 'submitted';
     a.submitted_at = new Date().toISOString();
     state.current_audit_id = null;
     Store.save(state);
-    // Weekly fails also spawn CAPs (Spec §4.3). Escalation T4/T7 wiring lands
-    // in the follow-up commit.
     const newCaps = autoCreateCapsForAudit(a);
     return { audit: a, capsCreated: newCaps.length, escalationsRaised: 0 };
   }
 
-  // Daily audit path (unchanged).
-  const s = scoreAudit(a.results);
+  // Daily / monthly / custom — simple weighted score over the template's set.
+  const s = scoreAudit(a.results, cps);
   a.status = 'submitted';
   a.submitted_at = new Date().toISOString();
   a.score = s;
   state.current_audit_id = null;
   Store.save(state);
   const newCaps = autoCreateCapsForAudit(a);
-  const newEscalations = processEscalationsForAudit(a);
+  // Escalation engine is daily-tuned; only run it for daily-frequency audits.
+  const newEscalations = freq === 'daily' ? processEscalationsForAudit(a) : 0;
   return { audit: a, capsCreated: newCaps.length, escalationsRaised: newEscalations };
 }
 
@@ -5814,34 +5965,57 @@ function liveCounts(audit) {
   return { p, f, na };
 }
 
-// Localized checkpoint text for either checkpoint set.
-function cpText(audit, cp) {
-  if (audit.audit_type === 'weekly') {
-    return (I18n.current === 'mr' && cp.text_mr && !cp.text_mr.startsWith('[REVIEW]'))
-      ? cp.text_mr : cp.text;
-  }
-  return tCheckpoint(cp.id, cp.text);
+function _localMr(s) {
+  return (I18n.current === 'mr' && s && !String(s).startsWith('[REVIEW]')) ? s : null;
 }
+
+// Unified display info for a checkpoint, across all three shapes:
+//   template checkpoint  → section via template.sections, text/text_mr
+//   legacy weekly        → group/group_en/group_mr, text/text_mr
+//   legacy daily         → sop_id via SOPS, tCheckpoint() for MR
+// Returns { sectionLabel, critical, text }.
+function cpDisplay(audit, cp) {
+  const tpl = templateFor(audit);
+  if (tpl) {
+    const section = (tpl.sections || []).find(s => s.id === cp.section_id);
+    const sectionLabel = section ? (_localMr(section.name_mr) || section.name) : '';
+    return {
+      sectionLabel,
+      critical: !!cp.critical,
+      text: _localMr(cp.text_mr) || cp.text,
+    };
+  }
+  if (audit.audit_type === 'weekly') {
+    return {
+      sectionLabel: _localMr(cp.group_mr) || cp.group_en,
+      critical: !!cp.critical,
+      text: _localMr(cp.text_mr) || cp.text,
+    };
+  }
+  const sop = SOPS.find(s => s.id === cp.sop_id);
+  return {
+    sectionLabel: sop ? tSop(sop.id, sop.name) : '',
+    critical: sop ? !!sop.critical : false,
+    text: tCheckpoint(cp.id, cp.text),
+  };
+}
+
+// Back-compat shim — some callers still ask for just the text.
+function cpText(audit, cp) { return cpDisplay(audit, cp).text; }
 
 function renderInProgressAudit(a) {
   const cps = checkpointsFor(a);
-  const isWeekly = a.audit_type === 'weekly';
+  const freq = frequencyOf(a);
   const idx = nextUnmarkedIndex(a);
   if (idx >= cps.length) return renderReviewAudit(a);
 
   const cp = cps[idx];
-  const sop = isWeekly ? null : SOPS.find(s => s.id === cp.sop_id);
+  const disp = cpDisplay(a, cp);
   const live = liveCounts(a);
   const pct = Math.round(((idx) / cps.length) * 100);
   const allowsNa = cp.allows_na;
   const isFreshSession = !sessionStorage.getItem('audit_session_' + a.id);
   if (idx > 0 && isFreshSession) sessionStorage.setItem('audit_session_' + a.id, '1');
-
-  // Chip label + critical flag differ between daily (SOP) and weekly (group).
-  const chipLabel = isWeekly
-    ? (I18n.current === 'mr' && cp.group_mr ? cp.group_mr : cp.group_en)
-    : tSop(sop.id, sop.name);
-  const chipCritical = isWeekly ? cp.critical : sop.critical;
 
   // Are we revisiting something the user already SKIPped? That happens once
   // every truly-unmarked checkpoint has a verdict.
@@ -5852,7 +6026,7 @@ function renderInProgressAudit(a) {
   return `
     ${idx > 0 && isFreshSession ? `
       <div class="resume-banner">
-        <h3>Resuming ${isWeekly ? 'weekly ' : ''}audit</h3>
+        <h3>Resuming ${freq === 'weekly' ? 'weekly ' : ''}audit</h3>
         <p class="muted" style="margin:0">Picked up at checkpoint ${idx + 1} of ${cps.length}. ${live.p} pass, ${live.f} fail, ${live.na} N/A so far.</p>
       </div>` : ''}
     ${isRevisitingSkip ? `
@@ -5862,12 +6036,12 @@ function renderInProgressAudit(a) {
       </div>` : ''}
     <div class="progress"><span style="width:${pct}%"></span></div>
     <div class="cp-meta">
-      <span class="sop-chip ${chipCritical ? 'critical' : ''}">${escapeHtml(chipLabel)}</span>
-      <span>${isWeekly ? '' : 'CP '}${escapeHtml(cp.id)}</span>
+      <span class="sop-chip ${disp.critical ? 'critical' : ''}">${escapeHtml(disp.sectionLabel)}</span>
+      <span>${escapeHtml(cp.id)}</span>
       <span style="margin-left:auto">${idx + 1} of ${cps.length}${skipped > 0 && !isRevisitingSkip ? ` &middot; ${skipped} skipped` : ''}</span>
     </div>
     <div class="card">
-      <div class="cp-text">${escapeHtml(cpText(a, cp))}</div>
+      <div class="cp-text">${escapeHtml(disp.text)}</div>
       ${cp.evidence ? `<div class="cp-evidence">Evidence: ${escapeHtml(cp.evidence)}</div>` : ''}
       ${cp.photo_required_on_fail
         ? `<div class="photo-required-badge">Photo required if FAIL</div>`
@@ -5919,16 +6093,17 @@ function renderCheckpointPhotoStrip(audit, cpId) {
 }
 
 function renderReviewAudit(a) {
-  const isWeekly = a.audit_type === 'weekly';
+  const cps = checkpointsFor(a);
+  const isWeekly = frequencyOf(a) === 'weekly';
   let s, extra = '';
   if (isWeekly) {
     const dailyPcts = dailyPctsForWeek(a.week_number, a.year, Store.load());
     const verdicts = {};
     Object.keys(a.results || {}).forEach(id => { verdicts[id] = a.results[id].result; });
-    s = scoreWeekly(dailyPcts, verdicts);
+    s = scoreWeekly(dailyPcts, verdicts, cps);
     extra = `<p class="muted">Daily contribution ${s.dailyContribution}/68 (avg ${s.avgDaily}% over ${dailyPcts.length} day${dailyPcts.length === 1 ? '' : 's'}) + weekly ${s.weeklyRaw}/${s.weeklyMax}</p>`;
   } else {
-    s = scoreAudit(a.results);
+    s = scoreAudit(a.results, cps);
   }
   return `
     <div class="card score-card">
@@ -6685,11 +6860,22 @@ function historyDetailModal(a) {
   const s = a.score;
   const state = Store.load();
   const croById = Object.fromEntries(state.cros.map(c => [c.id, c]));
-  const isWeekly = a.audit_type === 'weekly';
+  const isWeekly = frequencyOf(a) === 'weekly';
+  const tpl = templateFor(a);
 
-  // Group results by SOP (daily) or by weekly group (weekly).
+  // Group results by the template's sections (preferred), else by the legacy
+  // SOP (daily) or weekly group.
   let groups;
-  if (isWeekly) {
+  if (tpl) {
+    groups = (tpl.sections || []).map(sec => ({
+      sop: { name: (_localMr(sec.name_mr) || sec.name), critical: !!sec.critical },
+      cps: tpl.checkpoints.filter(c => c.section_id === sec.id),
+    })).filter(g => g.cps.length);
+    // Any checkpoints not in a known section → catch-all bucket.
+    const grouped = new Set(groups.flatMap(g => g.cps.map(c => c.id)));
+    const orphans = tpl.checkpoints.filter(c => !grouped.has(c.id));
+    if (orphans.length) groups.push({ sop: { name: 'Other', critical: false }, cps: orphans });
+  } else if (isWeekly) {
     const order = ['operations', 'cash_weekly', 'reporting_service', 'inventory_weekly'];
     groups = order.map(g => {
       const cps = WEEKLY_CHECKPOINTS.filter(c => c.group === g);
@@ -7591,6 +7777,7 @@ function applyHashTab() {
 window.addEventListener('hashchange', applyHashTab);
 
 I18n.init();
+Templates.ensureSeeded();
 _selfTestWeeklyScore();
 render();
 renderTabBar();
