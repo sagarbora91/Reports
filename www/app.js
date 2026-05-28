@@ -577,8 +577,8 @@ function evaluateEscalationsForAudit(audit, state) {
     });
   }
 
-  // -- T4: Inventory variance > 2% weekly — needs weekly audit (Phase 2)
-  // (intentional stub — uncomment when weekly audits ship)
+  // -- T4 (inventory variance) & T7 (declining trend) are weekly-only and
+  //    live in evaluateWeeklyEscalations(), run when a weekly audit submits.
 
   // -- T5: Theft / security / legal keywords — one escalation per audit -
   const t5Hits = fails
@@ -626,7 +626,73 @@ function evaluateEscalationsForAudit(audit, state) {
     });
   }
 
-  // -- T7: Declining trend 3+ weeks — needs weekly aggregation (Phase 3)
+  // -- T7: Declining trend — weekly-only (see evaluateWeeklyEscalations).
+
+  return out;
+}
+
+// Weekly-only escalations, run when a weekly audit is submitted.
+//  T4 — Inventory variance: any weekly Inventory checkpoint FAILed (proxy for
+//       a > ~1% variance; the engine has no live stock count, the GM's FAIL is
+//       the signal). Routed to the Owner — stock loss is direct money risk.
+//  T7 — Declining trend: this week's pct is lower than each of the prior two
+//       weekly audits (a three-week slide), routed to the Owner.
+function evaluateWeeklyEscalations(audit, state) {
+  const out = [];
+  const score = audit.score;
+  const set = checkpointsFor(audit);
+  const isInv = cp => cp.group === 'inventory_weekly' || /^IW\./.test(cp.id);
+  const fails = Object.entries(audit.results || {})
+    .filter(([, r]) => r.result === 'F')
+    .map(([cpId, r]) => ({ cpId, ...r }));
+
+  // -- T4: Inventory variance (weekly) ---------------------------------
+  const invIds = new Set(set.filter(isInv).map(c => c.id));
+  const invFails = fails.filter(f => invIds.has(f.cpId));
+  if (invFails.length > 0) {
+    const evidence = invFails
+      .map(f => f.finding ? `${f.cpId}: ${f.finding}` : `${f.cpId}: inventory checkpoint FAIL`)
+      .join('  |  ');
+    out.push({
+      trigger_number: 4,
+      trigger_label: ESC_TRIGGERS[4],
+      severity: 'critical',
+      recipient_role: 'OWNER',
+      message: composeMessage({
+        what: `Weekly inventory control FAILed in Week ${audit.week_number}, ${audit.year} (${invFails.length} checkpoint${invFails.length > 1 ? 's' : ''}).`,
+        evidence,
+        impact: 'Inventory variance/shrinkage is direct stock loss and can mask theft. Titan stock is high value.',
+        action: 'Order a physical re-count of the flagged lines, reconcile against the system, and review who handled stock this week.',
+      }),
+    });
+  }
+
+  // -- T7: Declining trend across three weekly audits ------------------
+  if (score) {
+    const prior = (state.audits || [])
+      .filter(a => a.id !== audit.id && frequencyOf(a) === 'weekly' && isFinalized(a) && a.score)
+      .filter(a => a.year < audit.year || (a.year === audit.year && a.week_number < audit.week_number))
+      .sort((a, b) => (b.year - a.year) || (b.week_number - a.week_number));
+    if (prior.length >= 2) {
+      const w0 = score.pct;            // this week
+      const w1 = prior[0].score.pct;   // last week
+      const w2 = prior[1].score.pct;   // two weeks ago
+      if (w0 < w1 && w1 < w2) {
+        out.push({
+          trigger_number: 7,
+          trigger_label: ESC_TRIGGERS[7],
+          severity: 'high',
+          recipient_role: 'OWNER',
+          message: composeMessage({
+            what: `Weekly compliance has fallen three weeks running: ${w2.toFixed(1)}% → ${w1.toFixed(1)}% → ${w0.toFixed(1)}%.`,
+            evidence: `Weeks ${prior[1].week_number}, ${prior[0].week_number} and ${audit.week_number} of ${audit.year}.`,
+            impact: 'A sustained slide is a systemic problem, not a bad day — left alone it compounds.',
+            action: 'Sit in on the next weekly review, pick the top recurring failure, and own a CAP personally until the trend reverses.',
+          }),
+        });
+      }
+    }
+  }
 
   return out;
 }
@@ -682,6 +748,14 @@ const Escalations = {
 function processEscalationsForAudit(audit) {
   const state = Store.load();
   const drafts = evaluateEscalationsForAudit(audit, state);
+  const saved = Escalations.saveDrafts(drafts, audit);
+  return saved.length;
+}
+
+// Run on weekly audit submit (T4 inventory + T7 declining trend).
+function processWeeklyEscalations(audit) {
+  const state = Store.load();
+  const drafts = evaluateWeeklyEscalations(audit, state);
   const saved = Escalations.saveDrafts(drafts, audit);
   return saved.length;
 }
@@ -1589,7 +1663,8 @@ function submitAudit() {
     state.current_audit_id = null;
     Store.save(state);
     const newCaps = autoCreateCapsForAudit(a);
-    return { audit: a, capsCreated: newCaps.length, escalationsRaised: 0 };
+    const newEscalations = processWeeklyEscalations(a);
+    return { audit: a, capsCreated: newCaps.length, escalationsRaised: newEscalations };
   }
 
   // Per-CRO: pooled aggregate score + per-CRO breakdown.
@@ -3406,13 +3481,44 @@ function verifyAuditModal(auditId) {
 // Print / PDF — builds a self-contained printable view, calls window.print()
 // ---------------------------------------------------------------------------
 
-function printAudit(auditId) {
-  const state = Store.load();
-  const a = audit(auditId, state);
-  if (!a) return;
+// Band → print colour (green / amber / red).
+function printBandColor(band) {
+  return band === 'excellent' || band === 'good' ? '#166534'
+    : band === 'fair' ? '#b45309' : '#b91c1c';
+}
+
+// The 7 calendar dates (YYYY-MM-DD) of an ISO week, Monday→Sunday.
+function isoWeekDateRange(week, year) {
+  // The week that contains Jan 4 is ISO week 1; weeks start Monday.
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;          // Mon=1 … Sun=7
+  const week1Monday = new Date(jan4);
+  week1Monday.setUTCDate(jan4.getUTCDate() - (jan4Day - 1));
+  const monday = new Date(week1Monday);
+  monday.setUTCDate(week1Monday.getUTCDate() + (week - 1) * 7);
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setUTCDate(monday.getUTCDate() + i);
+    dates.push(d.toISOString().slice(0, 10));
+  }
+  return { monday: dates[0], sunday: dates[6], dates };
+}
+
+// Submitted daily audits that fall in a given ISO week+year, oldest first.
+function dailyAuditsForWeek(week, year, state) {
+  return (state.audits || []).filter(a => {
+    if (frequencyOf(a) === 'weekly') return false;
+    if (!isFinalized(a) || !a.score) return false;
+    const d = new Date(a.date);
+    return d.getFullYear() === year && isoWeekOf(d) === week;
+  }).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// Build the printable daily compliance report (one A4 page).
+function dailyReportHtml(a, state) {
   const croById = Object.fromEntries(state.cros.map(c => [c.id, c]));
   const s = a.score;
-
   const sopSections = SOPS.slice().sort((x, y) => x.number - y.number).map(sop => {
     const cps = CHECKPOINTS.filter(c => c.sop_id === sop.id);
     const rows = cps.map(cp => {
@@ -3443,7 +3549,7 @@ function printAudit(auditId) {
          <strong>Audit notes:</strong> <span style="white-space:pre-wrap">${escapeHtml(a.notes)}</span>
        </div>`
     : '';
-  document.getElementById('print-root').innerHTML = `
+  return `
     <div class="print-page">
       <h1>Saagar Audit — Daily Compliance Report</h1>
       <div class="meta">
@@ -3452,14 +3558,244 @@ function printAudit(auditId) {
       </div>
       ${backdatedHtml}
       ${notesHtml}
-      <div class="pscore" style="color:${
-        s.band === 'excellent' || s.band === 'good' ? '#166534'
-        : s.band === 'fair' ? '#b45309' : '#b91c1c'
-      }">${s.pct.toFixed(1)}% &middot; ${bandLabel(s.band)}</div>
+      <div class="pscore" style="color:${printBandColor(s.band)}">${s.pct.toFixed(1)}% &middot; ${bandLabel(s.band)}</div>
       <div class="meta">${s.raw} of ${s.max} points &middot; ${s.p} Pass &middot; ${s.f} Fail &middot; ${s.na} N/A</div>
       ${sopSections}
     </div>
   `;
+}
+
+// Build the printable WEEKLY report — the 9-section one-pager (header + 7
+// content groups + signature). See agent_outputs/weekly_report_spec.md.
+function weeklyReportHtml(a, state) {
+  const s = a.score || {};
+  const week = a.week_number, year = a.year;
+  const { sunday, dates } = isoWeekDateRange(week, year);
+  const cps = checkpointsFor(a);
+  const cpById = {}; cps.forEach(c => { cpById[c.id] = c; });
+  const labelOf = sectionLabelMap(a);                 // cpId → component label
+  const isStar = cp => /★/.test(labelOf[cp.id] || '') || cp.critical || cp.group === 'cash_weekly' || cp.group === 'inventory_weekly';
+  const TARGET = 92;
+
+  // ---- §3 data: the 7 daily audits of this week ----
+  const dailies = dailyAuditsForWeek(week, year, state);
+  const dailyByDate = {}; dailies.forEach(d => { dailyByDate[d.date] = d; });
+  const dailyFailCount = d => Object.values(d.results || {}).filter(r => r.result === 'F').length;
+
+  // ---- §1 Headline ----
+  const gap = round1(TARGET - (s.pct || 0));
+  const judgment = (s.pct >= TARGET)
+    ? `on target (≥ ${TARGET}%)`
+    : `below target by ${gap.toFixed(1)}pp`;
+  const headline = `Week ${week}: ${(s.pct || 0).toFixed(1)}% ${bandLabel(s.band).toUpperCase()} — ${judgment}`;
+
+  // ---- §2 Trend vs last week ----
+  const priorWeeklies = (state.audits || [])
+    .filter(x => x.id !== a.id && frequencyOf(x) === 'weekly' && isFinalized(x) && x.score)
+    .filter(x => x.year < year || (x.year === year && x.week_number < week))
+    .sort((p, q) => (q.year - p.year) || (q.week_number - p.week_number));
+  let trendHtml;
+  if (priorWeeklies.length === 0) {
+    trendHtml = `<p>No prior week on record — this is the first weekly report.</p>`;
+  } else {
+    const last = priorWeeklies[0].score.pct;
+    const delta = round1((s.pct || 0) - last);
+    const arrow = delta > 0 ? `▲ +${delta.toFixed(1)}pp` : delta < 0 ? `▼ ${delta.toFixed(1)}pp` : `▬ flat`;
+    const window4 = priorWeeklies.slice(0, 4).map(x => x.score.pct);
+    const avg4 = round1([(s.pct || 0)].concat(window4).reduce((x, y) => x + y, 0) / (window4.length + 1));
+    trendHtml = `<p><strong>${arrow}</strong> vs last week (Week ${priorWeeklies[0].week_number}: ${last.toFixed(1)}%) &middot; ${Math.min(window4.length + 1, 4)}-wk avg ${avg4.toFixed(1)}%</p>`;
+  }
+
+  // ---- §3 Daily Audit Health ----
+  const presentPcts = dates.map(dt => dailyByDate[dt] ? dailyByDate[dt].score.pct : null).filter(v => v != null);
+  const dailyAvg = (s.avgDaily != null) ? s.avgDaily
+    : (presentPcts.length ? round1(presentPcts.reduce((x, y) => x + y, 0) / presentPcts.length) : 0);
+  const dist = {};
+  presentPcts.forEach(p => { const b = bandFor(p); dist[b] = (dist[b] || 0) + 1; });
+  const distStr = Object.entries(dist).map(([b, n]) => `${bandLabel(b)} ×${n}`).join(', ') || '—';
+  const dayRows = dates.map(dt => {
+    const d = dailyByDate[dt];
+    const dow = new Date(dt + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'UTC' });
+    if (!d) {
+      return `<tr style="color:#b91c1c"><td>${dow} ${escapeHtml(dt.slice(8))}</td><td colspan="3"><strong>— / MISSING</strong> (counts as 0%)</td></tr>`;
+    }
+    return `<tr>
+      <td>${dow} ${escapeHtml(dt.slice(8))}</td>
+      <td>${d.score.pct.toFixed(1)}%</td>
+      <td>${escapeHtml(bandLabel(d.score.band))}</td>
+      <td>${dailyFailCount(d)}</td>
+    </tr>`;
+  }).join('');
+  // Honesty flags (auto): suspicious-uniform, zero-fail-week, masked decline.
+  const flags = [];
+  if (presentPcts.length >= 3 && (Math.max(...presentPcts) - Math.min(...presentPcts)) < 2) {
+    flags.push('All daily scores within a 2-point band — unusually uniform; spot-check on the floor.');
+  }
+  if (presentPcts.length >= 5 && dailies.every(d => dailyFailCount(d) === 0)) {
+    flags.push('Zero fails across the week — verify the audits are not being rubber-stamped.');
+  }
+  if (dailies.length >= 3) {
+    let declining = true;
+    for (let i = 1; i < dailies.length; i++) { if (dailies[i].score.pct >= dailies[i - 1].score.pct) { declining = false; break; } }
+    if (declining && dailyAvg >= 90) flags.push('Scores fall every day but the average still looks healthy — the trend is the warning.');
+  }
+  if (dates.some(dt => !dailyByDate[dt])) {
+    flags.push(`${dates.filter(dt => !dailyByDate[dt]).length} day(s) missing a daily audit.`);
+  }
+  const flagsHtml = flags.length
+    ? `<ul style="margin:4px 0 0 16px;color:#b45309">${flags.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul>`
+    : `<p style="color:#166534">No honesty flags — the week looks genuine.</p>`;
+
+  // ---- §4 Compliance Breakdown (5 components) ----
+  const dailyMax = (s.max != null && s.weeklyMax != null) ? round1(s.max - s.weeklyMax) : dailyTemplateCount();
+  const comps = {}; const order = [];
+  cps.forEach(cp => {
+    const label = labelOf[cp.id] || 'Other';
+    if (!comps[label]) { comps[label] = { passed: 0, scored: 0 }; order.push(label); }
+    const r = (a.results || {})[cp.id];
+    if (r && r.result === 'P') { comps[label].passed++; comps[label].scored++; }
+    else if (r && r.result === 'F') { comps[label].scored++; }
+  });
+  const compRows = order.map(label => {
+    const c = comps[label];
+    const pct = c.scored > 0 ? round1((c.passed / c.scored) * 100) : 100;
+    return `<tr><td>${escapeHtml(label)}</td><td>${c.passed} / ${c.scored}</td><td>${pct.toFixed(1)}%</td></tr>`;
+  }).join('');
+  const breakdownHtml = `
+    <table>
+      <thead><tr><th>Component</th><th style="width:90px">Passed / Scored</th><th style="width:60px">%</th></tr></thead>
+      <tbody>
+        <tr><td>Daily Audit Average</td><td>${(s.dailyContribution != null ? s.dailyContribution : 0)} / ${dailyMax} <em>(contribution)</em></td><td>${dailyAvg.toFixed(1)}%</td></tr>
+        ${compRows}
+        <tr style="font-weight:700;background:#f0f0f0"><td>TOTAL</td><td>${(s.raw != null ? s.raw : 0)} / ${(s.max != null ? s.max : 0)}</td><td>${(s.pct || 0).toFixed(1)}%</td></tr>
+      </tbody>
+    </table>`;
+
+  // ---- §5 Critical Findings (≤6, weekly fails; star components first) ----
+  const weeklyFails = Object.entries(a.results || {})
+    .filter(([, r]) => r.result === 'F')
+    .map(([cpId, r]) => ({ cpId, cp: cpById[cpId], finding: r.finding || '', star: cpById[cpId] ? isStar(cpById[cpId]) : false }));
+  weeklyFails.sort((x, y) => (y.star ? 1 : 0) - (x.star ? 1 : 0));
+  const findingsShown = weeklyFails.slice(0, 6);
+  const findingsHtml = findingsShown.length
+    ? `<ul style="margin:4px 0 0 16px">${findingsShown.map(f =>
+        `<li>${f.star ? '★ ' : ''}<strong>${escapeHtml(f.cpId)}</strong>${f.cp ? ' ' + escapeHtml(f.cp.text) : ''}${f.finding ? ' — ' + escapeHtml(f.finding) : ''}</li>`).join('')}${
+        weeklyFails.length > 6 ? `<li><em>+${weeklyFails.length - 6} more in the audit folder</em></li>` : ''}</ul>`
+    : `<p style="color:#166534">No weekly-control failures this week.</p>`;
+
+  // ---- §6 Patterns (≤3: same daily checkpoint failing on ≥2 days) ----
+  const dayFailMap = {};
+  dailies.forEach(d => {
+    Object.entries(d.results || {}).forEach(([cpId, r]) => {
+      if (r.result !== 'F') return;
+      (dayFailMap[cpId] = dayFailMap[cpId] || new Set()).add(d.date);
+    });
+  });
+  const patterns = Object.entries(dayFailMap)
+    .filter(([, set]) => set.size >= 2)
+    .sort((x, y) => y[1].size - x[1].size)
+    .slice(0, 3)
+    .map(([cpId, set]) => {
+      const cp = CHECKPOINTS.find(c => c.id === cpId);
+      return `${cpId}${cp ? ' "' + cp.text + '"' : ''} failed on ${set.size} days.`;
+    });
+  const patternsHtml = patterns.length
+    ? `<ul style="margin:4px 0 0 16px">${patterns.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>`
+    : `<p style="color:#166534">No repeating daily failures this week.</p>`;
+
+  // ---- §7 CAP activity ----
+  const caps = state.caps || [];
+  const inWeek = iso => iso && iso.slice(0, 10) >= dates[0] && iso.slice(0, 10) <= dates[6];
+  const userById = Object.fromEntries((state.users || []).map(u => [u.id, u]));
+  const capName = c => { const u = userById[c.responsible_user_id]; return u ? u.name : '—'; };
+  const opened = caps.filter(c => inWeek(c.created_at) || inWeek(c.audit_date));
+  const openNow = caps.filter(c => c.status === 'open' && !opened.includes(c));
+  const closed = caps.filter(c => c.status === 'closed' && inWeek(c.closed_at));
+  const aged = caps.filter(c => c.status === 'aged');
+  const capTable = (title, rows, head) => rows.length
+    ? `<p style="margin:8px 0 2px;font-weight:600">${title}</p><table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>` : '';
+  const openedRows = opened.map(c => `<tr><td>${escapeHtml(c.id)}</td><td>${escapeHtml(c.checkpoint_id || '—')}</td><td>${escapeHtml(capName(c))}</td><td>${escapeHtml(c.deadline || '—')}</td></tr>`).join('');
+  const openRows = openNow.map(c => {
+    const days = c.created_at ? Math.max(0, Math.round((Date.now() - new Date(c.created_at)) / 86400000)) : '—';
+    return `<tr><td>${escapeHtml(c.id)}</td><td>${escapeHtml(c.status)}</td><td>${days}</td><td>${escapeHtml(c.deadline || '—')}</td></tr>`;
+  }).join('');
+  const closedRows = closed.map(c => `<tr><td>${escapeHtml(c.id)}</td><td>${escapeHtml(c.checkpoint_id || '—')}</td><td>${escapeHtml((c.closed_at || '').slice(0, 10))}</td></tr>`).join('');
+  const agedRows = aged.map(c => `<tr><td>${escapeHtml(c.id)}</td><td>${escapeHtml(c.checkpoint_id || '—')}</td><td>${escapeHtml(c.deadline || '—')}</td></tr>`).join('');
+  const capHtml = (openedRows || openRows || closedRows || agedRows) ? (
+    capTable('Opened this week', openedRows, '<th>CAP</th><th>Origin</th><th>Owner</th><th>Deadline</th>')
+    + capTable('Open from prior weeks', openRows, '<th>CAP</th><th>Status</th><th>Days open</th><th>Anticipated close</th>')
+    + capTable('Closed this week', closedRows, '<th>CAP</th><th>Origin</th><th>Closed on</th>')
+    + capTable('Aged (auto-escalated)', agedRows, '<th>CAP</th><th>Origin</th><th>Deadline missed</th>')
+  ) : `<p style="color:#166534">No CAP activity this week.</p>`;
+
+  // ---- §8 Escalations + Recommendation ----
+  const escs = (state.escalations || []).filter(e => e.audit_id === a.id).slice(0, 3);
+  const escHtml = escs.length
+    ? `<ul style="margin:4px 0 0 16px">${escs.map(e =>
+        `<li><strong>Trigger ${e.trigger_number} — ${escapeHtml(e.trigger_label || '')}</strong><br><span style="white-space:pre-wrap;font-size:11px">${escapeHtml(e.message || '')}</span></li>`).join('')}</ul>`
+    : `<p>No escalations raised by this report.</p>`;
+  const recommendation = (s.pct >= TARGET)
+    ? 'Daily and weekly controls are on target — no Owner action needed this week.'
+    : `Below the ${TARGET}% target by ${gap.toFixed(1)}pp. Owner: review the escalations and confirm each new CAP has an owner and a deadline.`;
+
+  return `
+    <div class="print-page">
+      <h1>Saagar Audit — Weekly Report</h1>
+      <div class="meta">
+        Week ${week} &middot; ${year} &middot; ending ${escapeHtml(fmtDate(sunday))}<br>
+        Saagar Traders — Titan World + Helios, Latur &middot; GM: ${escapeHtml(a.auditor_name || '—')} &middot; Target ≥ ${TARGET}%
+      </div>
+
+      <h2>1 · Headline</h2>
+      <div class="pscore" style="color:${printBandColor(s.band)}">${(s.pct || 0).toFixed(1)}% &middot; ${bandLabel(s.band)}</div>
+      <div class="meta">${escapeHtml(headline)}</div>
+
+      <h2>2 · Trend vs Last Week</h2>
+      ${trendHtml}
+
+      <h2>3 · Daily Audit Health (7-day review)</h2>
+      <div class="meta">Daily average ${dailyAvg.toFixed(1)}% &middot; ${escapeHtml(distStr)}</div>
+      <table><thead><tr><th>Day</th><th>Score</th><th>Band</th><th>Fails</th></tr></thead><tbody>${dayRows}</tbody></table>
+      <p style="margin:6px 0 0;font-weight:600">Honesty check:</p>${flagsHtml}
+
+      <h2>4 · Compliance Breakdown</h2>
+      ${breakdownHtml}
+
+      <h2>5 · Critical Findings</h2>
+      ${findingsHtml}
+
+      <h2>6 · Patterns</h2>
+      ${patternsHtml}
+
+      <h2>7 · Corrective Action Plans (CAPs)</h2>
+      ${capHtml}
+
+      <h2>8 · Escalations &amp; Recommendation</h2>
+      ${escHtml}
+      <p style="margin-top:6px"><strong>Recommendation:</strong> ${escapeHtml(recommendation)}</p>
+
+      <h2>9 · Sign-off</h2>
+      <div class="meta">
+        Prepared by: ${escapeHtml(a.auditor_name || '—')} (GM) &middot;
+        Submitted: ${escapeHtml(a.submitted_at ? new Date(a.submitted_at).toLocaleString('en-IN') : '—')} &middot;
+        Owner read: Not yet read
+      </div>
+      <div style="margin-top:24px;display:flex;gap:40px">
+        <div style="border-top:1px solid #333;padding-top:4px;flex:1">GM signature</div>
+        <div style="border-top:1px solid #333;padding-top:4px;flex:1">Owner signature</div>
+      </div>
+    </div>
+  `;
+}
+
+function printAudit(auditId) {
+  const state = Store.load();
+  const a = audit(auditId, state);
+  if (!a) return;
+  const pageHtml = frequencyOf(a) === 'weekly'
+    ? weeklyReportHtml(a, state)
+    : dailyReportHtml(a, state);
+  document.getElementById('print-root').innerHTML = pageHtml;
   document.body.classList.add('printing');
   const cleanup = () => {
     document.body.classList.remove('printing');

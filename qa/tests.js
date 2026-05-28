@@ -492,6 +492,72 @@
      renderHistoryTab(Store.load(), AuthSession.current()).includes('✓ verified'), '');
   smoke('historyDetailModal (verified)', () => historyDetailModal(vDone));
 
+  // ---- 19. Weekly report (9 sections) + T4/T7 escalations ----
+  // 19a. ISO week date range helper.
+  (function () {
+    const rng = isoWeekDateRange(24, 2026);
+    eq('isoWeekDateRange: 7 dates', rng.dates.length, 7);
+    eq('isoWeekDateRange: starts Monday', new Date(rng.monday + 'T00:00:00Z').getUTCDay(), 1);
+    eq('isoWeekDateRange: ends Sunday', new Date(rng.sunday + 'T00:00:00Z').getUTCDay(), 0);
+    eq('isoWeekDateRange: Thursday lands in week 24', isoWeekOf(new Date(rng.dates[3] + 'T00:00:00Z')), 24);
+  })();
+
+  // 19b. Build a weekly audit (with one daily in the same week) and render it.
+  reset();
+  const wrGm = await Users.create({ name: 'WkGM', role: 'GM', pin: '7777', phone: '9876522222' });
+  const wrSm = await Users.create({ name: 'WkSM', role: 'SM', pin: '8888' });
+  AuthSession.login(wrSm.id);
+  startNewAudit({ date: today(), auditorName: 'WkSM', auditorId: wrSm.id, croIds: [], templateId: 'tpl_daily' });
+  CHECKPOINTS.forEach((cp, i) => markCheckpoint(cp.id, i < 4 ? 'F' : 'P', i < 4 ? { finding: 'wk daily fail ' + i } : {}));
+  submitAudit();
+  const wkc = currentIsoWeekYear();
+  AuthSession.login(wrGm.id);
+  startWeeklyAudit({ weekNumber: wkc.week, year: wkc.year, gmId: wrGm.id, gmName: 'WkGM', templateId: 'tpl_weekly' });
+  WEEKLY_CHECKPOINTS.forEach((cp, i) => markCheckpoint(cp.id, i % 5 === 0 ? 'F' : 'P', i % 5 === 0 ? { finding: 'weekly fail ' + i } : {}));
+  const wkRes = submitAudit();
+  eq('weekly: submitted', wkRes.audit.status, 'submitted');
+  ok('weekly: numeric score', typeof wkRes.audit.score.pct === 'number', '');
+  const wHtml = weeklyReportHtml(wkRes.audit, Store.load());
+  ok('weekly report: title', wHtml.includes('Weekly Report'), '');
+  ok('weekly report: §4 compliance breakdown', wHtml.includes('Compliance Breakdown'), '');
+  ok('weekly report: §3 7-day review', wHtml.includes('7-day review'), '');
+  ok('weekly report: §9 sign-off', wHtml.includes('9 · Sign-off'), '');
+  ok('weekly report: shows the headline pct', wHtml.includes(wkRes.audit.score.pct.toFixed(1) + '%'), '');
+  smoke('weeklyReportHtml', () => weeklyReportHtml(wkRes.audit, Store.load()));
+
+  // 19c. T4 — inventory weekly FAIL raises trigger 4 to the Owner.
+  reset();
+  (function () {
+    const t4 = {
+      id: 'wk-t4', template_id: 'tpl_weekly', audit_type: 'weekly',
+      week_number: 10, year: 2099, status: 'submitted',
+      results: { 'IW.1': { result: 'F', finding: '2 trays short on physical count' }, 'O.1': { result: 'P' } },
+      score: { pct: 85, band: 'fair' },
+    };
+    const st = Store.load(); st.audits = [t4]; Store.save(st);
+    const drafts = evaluateWeeklyEscalations(t4, Store.load());
+    ok('T4: inventory FAIL raises trigger 4', drafts.some(e => e.trigger_number === 4), JSON.stringify(drafts.map(e => e.trigger_number)));
+    eq('T4: routed to Owner', (drafts.find(e => e.trigger_number === 4) || {}).recipient_role, 'OWNER');
+  })();
+
+  // 19d. T7 — three weeks of decline raises trigger 7; an up-week does not.
+  reset();
+  (function () {
+    const mk = (wkNum, pct, id) => ({
+      id, template_id: 'tpl_weekly', audit_type: 'weekly',
+      week_number: wkNum, year: 2099, status: 'submitted', results: {},
+      score: { pct, band: bandFor(pct) },
+    });
+    const wA = mk(10, 90, 'wkA'), wB = mk(11, 86, 'wkB'), wC = mk(12, 82, 'wkC');
+    let st = Store.load(); st.audits = [wA, wB, wC]; Store.save(st);
+    const d7 = evaluateWeeklyEscalations(wC, Store.load());
+    ok('T7: 3-week decline raises trigger 7', d7.some(e => e.trigger_number === 7), JSON.stringify(d7.map(e => e.trigger_number)));
+    const wUp = mk(12, 95, 'wkUp');
+    st = Store.load(); st.audits = [wA, wB, wUp]; Store.save(st);
+    const d7b = evaluateWeeklyEscalations(wUp, Store.load());
+    ok('T7: an improving week does NOT raise trigger 7', !d7b.some(e => e.trigger_number === 7), '');
+  })();
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);
