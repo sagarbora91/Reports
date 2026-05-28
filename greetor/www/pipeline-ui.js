@@ -28,8 +28,10 @@
       followLine = '<div class="entry-meta" style="color:#e67e22">⏰ follow ' + escapeHtml(record.followDate) + '</div>';
     }
 
+    var canLeads = !window.can || window.can('manageLeads');
+    var canEdit = !window.can || window.can('editAny');
     var convertBtn = '';
-    if (stage !== 'Converted') {
+    if (stage !== 'Converted' && canLeads) {
       convertBtn = '<button class="entry-action" data-action="open-convert" data-id="' + escapeHtml(id) + '" style="min-height:44px">Convert</button>';
     }
 
@@ -46,10 +48,10 @@
       '<div class="entry-meta">' + [store, category, brand, reason].filter(Boolean).join(' · ') + '</div>' +
       followLine +
       '<div class="entry-actions">' +
-        '<button class="entry-action" data-action="p-move" data-id="' + escapeHtml(id) + '" style="min-height:44px">Move</button>' +
+        (canLeads ? '<button class="entry-action" data-action="p-move" data-id="' + escapeHtml(id) + '" style="min-height:44px">Move</button>' : '') +
         convertBtn +
         waBtn +
-        '<button class="entry-action" data-action="edit-entry" data-id="' + escapeHtml(id) + '" style="min-height:44px">Edit</button>' +
+        (canEdit ? '<button class="entry-action" data-action="edit-entry" data-id="' + escapeHtml(id) + '" style="min-height:44px">Edit</button>' : '') +
       '</div>' +
     '</div>';
   }

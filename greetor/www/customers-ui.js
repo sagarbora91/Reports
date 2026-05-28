@@ -105,10 +105,12 @@
       '</div>' +
       '<div><strong>' + safeEscape(v.reason || '') + '</strong>' + saleStr + '</div>' +
       followStr +
-      '<div class="entry-actions" style="margin-top:8px">' +
-      '<button class="btn btn-secondary entry-action" data-action="edit-entry" data-id="' +
-      safeEscape(v.recordId) + '">Edit</button>' +
-      '</div>' +
+      ((!window.can || window.can('editAny'))
+        ? '<div class="entry-actions" style="margin-top:8px">' +
+          '<button class="btn btn-secondary entry-action" data-action="edit-entry" data-id="' +
+          safeEscape(v.recordId) + '">Edit</button>' +
+          '</div>'
+        : '') +
       '</div>';
   }
 
@@ -126,7 +128,7 @@
     var latestId = visits.length ? safeEscape(visits[0].recordId) : '';
     var name = safeEscape(c.name || 'Unnamed');
 
-    var convertBtn = (!c.converted && latestId)
+    var convertBtn = (!c.converted && latestId && (!window.can || window.can('manageLeads')))
       ? '<button class="btn btn-primary btn-full" style="margin-top:12px"' +
         ' data-action="open-convert" data-id="' + latestId + '">Convert latest to sale</button>'
       : '';

@@ -151,7 +151,8 @@
         var storeStr = escapeHtml(rec.store || '');
         var catStr = [rec.category, rec.brand, rec.reason].filter(Boolean).map(escapeHtml).join(' · ');
 
-        html += '<div class="entry-card" data-action="edit-entry" data-id="' + escapeHtml(rec.recordId || '') + '" style="cursor:pointer;">';
+        var canEdit = !window.can || window.can('editAny');
+        html += '<div class="entry-card"' + (canEdit ? ' data-action="edit-entry" data-id="' + escapeHtml(rec.recordId || '') + '" style="cursor:pointer;"' : '') + '>';
         html += '<div class="entry-row"><span class="entry-name">' + name + '</span><span class="pill ' + pClass + '">' + escapeHtml(status) + '</span></div>';
         html += '<div class="entry-mobile muted">' + timeStr + (timeStr && storeStr ? ' · ' : '') + storeStr + '</div>';
         if (catStr) html += '<div class="entry-meta tiny muted">' + catStr + '</div>';

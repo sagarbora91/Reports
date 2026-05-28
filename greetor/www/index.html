@@ -857,6 +857,24 @@ function roleLabel(r) { return { OWNER: "Owner", MANAGER: "Manager", GREETOR: "G
 function canManageUsers(auth) { return auth && auth.role === "OWNER"; }
 function canEditMasters(auth) { return auth && (auth.role === "OWNER" || auth.role === "MANAGER"); }
 
+// Role capability matrix.
+//  GREETOR  → create entries + view own + WhatsApp/call only.
+//  MANAGER  → + edit/delete any, convert, move stage, view all, edit masters.
+//  OWNER    → + manage users.
+const ROLE_PERMS = {
+  OWNER:   ["create", "editAny", "deleteAny", "manageLeads", "viewAll", "editMasters", "manageUsers"],
+  MANAGER: ["create", "editAny", "deleteAny", "manageLeads", "viewAll", "editMasters"],
+  GREETOR: ["create"],
+};
+// can(perm) — reads the signed-in user. Exposed globally so the UI modules
+// (reports-ui / customers-ui / pipeline-ui) can hide privileged buttons.
+function can(perm) {
+  const auth = AuthSession.current();
+  if (!auth) return false;
+  return (ROLE_PERMS[auth.role] || []).indexOf(perm) !== -1;
+}
+window.can = can;
+
 const LoginGuard = {
   attempts: 0,
   lockedUntil: 0,
@@ -1022,15 +1040,42 @@ function emptyData() {
 }
 
 function stepIsValid(step, d) {
-  if (step === 1) return !!(d.store && d.visitDate && d.visitTime);
-  if (step === 2) return isValidMobile(d.mobile);
-  if (step === 3) return !!(d.category && d.brand);
-  if (step === 4) {
-    if (!d.reason) return false;
-    if (d.followUp === "Yes" && !d.followDate) return false;
-    return true;
+  return missingFields(step, d).length === 0;
+}
+
+// Returns the human-readable labels of required fields not yet filled for a
+// given wizard step. Drives the "please fill these" popup so the greetor knows
+// exactly what's blocking them (instead of a dead, silently-disabled button).
+function missingFields(step, d) {
+  const miss = [];
+  if (step === 1) {
+    if (!d.store)     miss.push("Store");
+    if (!d.visitDate) miss.push("Visit date");
+    if (!d.visitTime) miss.push("Visit time");
+  } else if (step === 2) {
+    if (!isValidMobile(d.mobile)) miss.push("Mobile number (valid 10 digits)");
+  } else if (step === 3) {
+    if (!d.category) miss.push("Category");
+    if (!d.brand)    miss.push("Brand");
+  } else if (step === 4) {
+    if (!d.reason) miss.push("Primary reason");
+    if (d.followUp === "Yes" && !d.followDate) miss.push("Follow-up date");
   }
-  return true;
+  return miss;
+}
+
+// Shows a blocking "required fields" popup listing what's missing.
+function showRequiredPopup(miss) {
+  openModal(`
+    <h2>Please complete these fields</h2>
+    <p class="muted">The following are required before you can continue:</p>
+    <ul style="margin:8px 0 4px;padding-left:20px;line-height:1.8">
+      ${miss.map(f => `<li><strong>${escapeHtml(f)}</strong></li>`).join("")}
+    </ul>
+    <div class="modal-actions single">
+      <button class="btn btn-primary" data-action="modal-cancel">Got it</button>
+    </div>
+  `);
 }
 
 // =====================================================================
@@ -1334,14 +1379,15 @@ function renderCapture(state, auth) {
   const isLast = step === 4;
   const nextLabel = isLast ? (editingRecordId ? "Update" : "Save") : "Next →";
   const nextAction = isLast ? "save-record" : "wizard-next";
-  const nextDisabled = !stepIsValid(step, Wizard.data) ? "disabled" : "";
 
+  // Note: the Next/Save button is intentionally NOT disabled. Tapping it with
+  // missing fields shows a popup naming them — a dead button confused greetors.
   const saveBar = `
     <div class="savebar">
       ${step > 1
         ? `<button class="btn btn-secondary" data-action="wizard-back">← Back</button>`
         : `<button class="btn btn-secondary" data-action="wizard-reset">Reset</button>`}
-      <button class="btn btn-primary" data-action="${nextAction}" ${nextDisabled}>${nextLabel}</button>
+      <button class="btn btn-primary" data-action="${nextAction}">${nextLabel}</button>
     </div>
   `;
 
@@ -2046,7 +2092,11 @@ document.addEventListener("click", async (e) => {
     if (m) window.location.href = "tel:+91" + m;
     return;
   }
-  if (action === "open-convert") { openConvertModal(a.dataset.id); return; }
+  if (action === "open-convert") {
+    if (!can("manageLeads")) { toast("Only Owner/Manager can convert a lead."); return; }
+    openConvertModal(a.dataset.id);
+    return;
+  }
   if (action === "save-convert") {
     const val = $("convertValue") ? $("convertValue").value : "";
     const s = Store.load();
@@ -2110,9 +2160,9 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (action === "wizard-next") {
-    const state = Store.load();
-    if (!stepIsValid(Wizard.step, Wizard.data)) {
-      toast("Fill required fields first.");
+    const miss = missingFields(Wizard.step, Wizard.data);
+    if (miss.length) {
+      showRequiredPopup(miss);
       return;
     }
     // Step 2 → check dedup once mobile is entered
@@ -2137,6 +2187,16 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (action === "save-record") {
+    // Validate every step; if anything's missing, jump to the first incomplete
+    // step and tell the user exactly what to fill.
+    for (let st = 1; st <= 4; st++) {
+      const miss = missingFields(st, Wizard.data);
+      if (miss.length) {
+        if (Wizard.step !== st) Wizard.goto(st);
+        showRequiredPopup(miss);
+        return;
+      }
+    }
     saveRecord();
     window._dedupSeen = null;
     window._reasonsMoreOpen = false;
@@ -2159,9 +2219,17 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
-  // ===== Today actions =====
-  if (action === "edit-entry") { editRecord(a.dataset.id); return; }
-  if (action === "delete-entry") { deleteRecord(a.dataset.id); return; }
+  // ===== Entry actions (edit/delete gated; greetors can't) =====
+  if (action === "edit-entry") {
+    if (!can("editAny")) { toast("Only Owner/Manager can edit entries."); return; }
+    editRecord(a.dataset.id);
+    return;
+  }
+  if (action === "delete-entry") {
+    if (!can("deleteAny")) { toast("Only Owner/Manager can delete entries."); return; }
+    deleteRecord(a.dataset.id);
+    return;
+  }
   if (action === "wa-customer") { waCustomer(a.dataset.id); return; }
 
   // ===== Settings =====
