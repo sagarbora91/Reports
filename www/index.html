@@ -5314,17 +5314,28 @@ async function capturePhotoWithStamp({ cpId, quality = 0.72, maxDim = 1024 } = {
 // Score (Spec §6.1 – §6.2)
 // ---------------------------------------------------------------------------
 
+// Equal-weight scoring: every checkpoint counts as 1. Score = % of marked
+// checkpoints that passed. N/A drops out of both numerator and denominator.
+// The `weight` field on checkpoints is intentionally ignored (scoring model
+// chosen: all points equal).
 function scoreAudit(results, cps) {
   const set = cps || CHECKPOINTS;
   let raw = 0, max = 0, p = 0, f = 0, na = 0;
   set.forEach(cp => {
     const r = (results[cp.id] || {}).result;
-    if (r === 'P') { raw += cp.weight; max += cp.weight; p++; }
-    else if (r === 'F') { max += cp.weight; f++; }
+    if (r === 'P') { raw += 1; max += 1; p++; }
+    else if (r === 'F') { max += 1; f++; }
     else if (r === 'NA') { na++; }
   });
   const pct = max > 0 ? Math.round((raw / max) * 1000) / 10 : 100;
   return { raw, max, pct, band: bandFor(pct), p, f, na, total: set.length };
+}
+
+// How many checkpoints the daily template currently has — used to weight the
+// daily component of the weekly score (replaces the old hardcoded 68).
+function dailyTemplateCount() {
+  const tpl = Templates.byId(null, 'tpl_daily');
+  return (tpl && tpl.checkpoints.length) || CHECKPOINTS.length;
 }
 
 // Shared band function so daily + weekly agree on the boundaries (Spec §6.2).
@@ -5357,26 +5368,31 @@ function round1(x) { return Math.round(x * 10) / 10; }
 
 // dailyPcts: array of up to 7 numbers (compliance % per day). Missing days
 // should be passed as 0 (caller fills gaps). weeklyResults: { cpId: 'P'|'F'|'NA' }.
-function scoreWeekly(dailyPcts, weeklyResults, cps) {
+// Equal-weight weekly score. The daily component is weighted by the daily
+// template's current checkpoint COUNT (dailyMax) — not a hardcoded 68 — so an
+// edited daily checklist flows through correctly. The weekly-only component
+// counts each weekly checkpoint as 1.
+function scoreWeekly(dailyPcts, weeklyResults, cps, dailyMax) {
   const set = cps || WEEKLY_CHECKPOINTS;
+  const dMax = dailyMax || dailyTemplateCount();
   // Daily component — always averaged over 7 slots (missing = 0%).
   const slots = 7;
   const filled = dailyPcts.slice(0, slots);
   while (filled.length < slots) filled.push(0);
   const avgDaily = filled.reduce((a, b) => a + b, 0) / slots;
-  const dailyContribution = round1((avgDaily / 100) * DAILY_MAX_WEIGHTED);
+  const dailyContribution = round1((avgDaily / 100) * dMax);
 
-  // Weekly-only component.
+  // Weekly-only component (equal weight: each checkpoint = 1).
   let weeklyRaw = 0, weeklyMax = 0, p = 0, f = 0, na = 0;
   set.forEach(cp => {
     const r = (weeklyResults || {})[cp.id];
-    if (r === 'P') { weeklyRaw += cp.weight; weeklyMax += cp.weight; p++; }
-    else if (r === 'F') { weeklyMax += cp.weight; f++; }
+    if (r === 'P') { weeklyRaw += 1; weeklyMax += 1; p++; }
+    else if (r === 'F') { weeklyMax += 1; f++; }
     else if (r === 'NA') { na++; }
   });
 
   const totalRaw = round1(dailyContribution + weeklyRaw);
-  const totalMax = DAILY_MAX_WEIGHTED + weeklyMax;
+  const totalMax = dMax + weeklyMax;
   const pct = totalMax > 0 ? round1((totalRaw / totalMax) * 100) : 100;
 
   return {
@@ -5389,24 +5405,23 @@ function scoreWeekly(dailyPcts, weeklyResults, cps) {
   };
 }
 
-// Self-test against the canonical case — logs to console at boot. Cheap
-// insurance that a future refactor doesn't silently break the formula.
+// Self-test of the weekly formula mechanics (equal-weight model). Uses clean
+// synthetic invariants rather than the old weighted spec example.
 function _selfTestWeeklyScore() {
-  // Synthesize a weekly-results map that yields Ops 7/10, Cash 10/16,
-  // R&S 4/6, Inv 22/24 from the actual WEEKLY_CHECKPOINTS weights.
-  const target = { operations: 7, cash_weekly: 16, reporting_service: 4, inventory_weekly: 22 };
-  // Simpler: directly verify the arithmetic with synthetic component sums,
-  // independent of which specific items pass.
-  const dailyPcts = [92.2, 91.1, 90.0, 88.8, 93.3, 89.7, 91.4];
-  const avg = dailyPcts.reduce((a, b) => a + b, 0) / 7;       // 90.928…
-  const contrib = round1((avg / 100) * 68);                   // 61.8
-  const totalRaw = round1(contrib + 43);                      // 104.8
-  const pct = round1((totalRaw / 124) * 100);                 // 84.5
-  const ok = (contrib === 61.8 && totalRaw === 104.8 && pct === 84.5 && bandFor(pct) === 'poor');
+  // 1. All 7 days 100% + every weekly checkpoint passed → 100%.
+  const allPass = {};
+  WEEKLY_CHECKPOINTS.forEach(c => { allPass[c.id] = 'P'; });
+  const top = scoreWeekly([100,100,100,100,100,100,100], allPass, WEEKLY_CHECKPOINTS, 68);
+  // 2. All 7 days 0% + every weekly checkpoint failed → 0%.
+  const allFail = {};
+  WEEKLY_CHECKPOINTS.forEach(c => { allFail[c.id] = 'F'; });
+  const bottom = scoreWeekly([0,0,0,0,0,0,0], allFail, WEEKLY_CHECKPOINTS, 68);
+  const ok = (top.pct === 100 && top.band === 'excellent'
+    && bottom.pct === 0 && bottom.band === 'critical');
   if (!ok) {
-    console.error('WEEKLY SCORE SELF-TEST FAILED', { contrib, totalRaw, pct, band: bandFor(pct) });
+    console.error('WEEKLY SCORE SELF-TEST FAILED', { top: top.pct, bottom: bottom.pct });
   } else {
-    console.log('Weekly score self-test OK: 104.8/124 = 84.5% Poor');
+    console.log('Weekly score self-test OK (equal-weight: 100%↔0% invariants hold)');
   }
   return ok;
 }
@@ -5631,7 +5646,11 @@ const FailDraft = {
 // WEEKLY_CHECKPOINTS, everything else walks the 68 daily CHECKPOINTS.
 // By construction this is identical to the old behavior for daily audits.
 function checkpointsFor(audit) {
-  // New audits carry a template_id → use the template's checkpoints.
+  // Submitted audits carry a frozen snapshot — always render from that so a
+  // later template edit never changes a past record.
+  if (audit && audit.template_snapshot && Array.isArray(audit.template_snapshot.checkpoints))
+    return audit.template_snapshot.checkpoints;
+  // In-progress audits use the live template.
   if (audit && audit.template_id) {
     const tpl = Templates.byId(null, audit.template_id);
     if (tpl && Array.isArray(tpl.checkpoints)) return tpl.checkpoints;
@@ -5640,8 +5659,9 @@ function checkpointsFor(audit) {
   return (audit && audit.audit_type === 'weekly') ? WEEKLY_CHECKPOINTS : CHECKPOINTS;
 }
 
-// The full template behind an audit (or null for pure-legacy audits).
+// The template (or frozen snapshot) behind an audit; null for pure-legacy.
 function templateFor(audit) {
+  if (audit && audit.template_snapshot) return audit.template_snapshot;
   if (audit && audit.template_id) return Templates.byId(null, audit.template_id);
   return null;
 }
@@ -5706,6 +5726,18 @@ function submitAudit() {
 
   const cps = checkpointsFor(a);
   const freq = frequencyOf(a);
+
+  // Freeze the checklist into the audit so later template edits can't alter
+  // this record's score or wording.
+  const liveTpl = templateFor(a);
+  if (liveTpl && !a.template_snapshot) {
+    a.template_snapshot = {
+      name: liveTpl.name, name_mr: liveTpl.name_mr,
+      frequency: liveTpl.frequency, cro_mode: liveTpl.cro_mode,
+      sections: JSON.parse(JSON.stringify(liveTpl.sections || [])),
+      checkpoints: JSON.parse(JSON.stringify(liveTpl.checkpoints || [])),
+    };
+  }
 
   if (freq === 'weekly') {
     // Daily contribution is computed from the 7 submitted daily audits of
