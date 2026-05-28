@@ -137,6 +137,45 @@
   }
 
   // ---------------------------------------------------------------------
+  // Durable state file — survives WebView localStorage eviction.
+  // localStorage stays the fast synchronous working copy; every save
+  // write-throughs (debounced) to a JSON file in the app's Data directory.
+  // At boot, if localStorage is empty but the file exists, we restore it.
+  // (The file is app-private: it survives eviction, but NOT uninstall —
+  //  the JSON backup / Drive is the reinstall safety net.)
+  // ---------------------------------------------------------------------
+
+  const STATE_FILE = 'saagar_greetor_state.json';
+  let _durTimer = null;
+  let _durPending = null;
+
+  async function durableRead() {
+    const FS = plugin('Filesystem');
+    if (!FS) return null;
+    try {
+      const res = await FS.readFile({ path: STATE_FILE, directory: 'DATA', encoding: 'utf8' });
+      return (res && typeof res.data === 'string') ? res.data : null;
+    } catch (_) {
+      return null; // not found / unreadable
+    }
+  }
+
+  function durableWrite(text) {
+    const FS = plugin('Filesystem');
+    if (!FS) return;
+    _durPending = text;
+    clearTimeout(_durTimer);
+    _durTimer = setTimeout(async () => {
+      const data = _durPending; _durPending = null;
+      try {
+        await FS.writeFile({ path: STATE_FILE, directory: 'DATA', data: data, encoding: 'utf8' });
+      } catch (e) {
+        console.warn('durable state write failed', e);
+      }
+    }, 400);
+  }
+
+  // ---------------------------------------------------------------------
   // Daily backup reminder (default 8:30 PM)
   // ---------------------------------------------------------------------
 
@@ -227,6 +266,8 @@
     scheduleFollowupReminder: scheduleFollowupReminder,
     cancelFollowupReminder: cancelFollowupReminder,
     exportFile: exportFile,
+    durableRead: durableRead,
+    durableWrite: durableWrite,
     isBackupReminderEnabled: isBackupReminderEnabled,
     setBackupReminderEnabled: setBackupReminderEnabled,
     scheduleBackupReminder: scheduleBackupReminder,

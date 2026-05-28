@@ -774,7 +774,12 @@ const Store = {
       auditLog: [],
     };
   },
-  save(s) { localStorage.setItem(STATE_KEY, JSON.stringify(s)); },
+  save(s) {
+    const json = JSON.stringify(s);
+    localStorage.setItem(STATE_KEY, json);           // fast synchronous working copy
+    // Durable write-through to a file (survives localStorage eviction).
+    if (window.SaagarShell && window.SaagarShell.durableWrite) window.SaagarShell.durableWrite(json);
+  },
 };
 
 // =====================================================================
@@ -2602,25 +2607,40 @@ function sweepReminders() {
 // Boot
 // =====================================================================
 
-// Seed editable masters once (idempotent) and persist so every later
-// Store.load() sees state.masters.
-if (window.Masters || window.Comms) {
-  const _s = Store.load();
-  if (window.Masters) window.Masters.ensureSeeded(_s);
-  if (window.Comms) window.Comms.ensureSeeded(_s);
-  Store.save(_s);
+async function boot() {
+  // 1. Eviction recovery: if localStorage was wiped but the durable file
+  //    survived, restore the working copy from it before anything reads it.
+  try {
+    if (window.SaagarShell && window.SaagarShell.durableRead && !localStorage.getItem(STATE_KEY)) {
+      const fileText = await window.SaagarShell.durableRead();
+      if (fileText) {
+        JSON.parse(fileText);                  // validate before adopting
+        localStorage.setItem(STATE_KEY, fileText);
+      }
+    }
+  } catch (e) { console.warn("durable hydrate skipped", e); }
+
+  // 2. Seed editable masters/comms once (idempotent); also primes the file.
+  if (window.Masters || window.Comms) {
+    const _s = Store.load();
+    if (window.Masters) window.Masters.ensureSeeded(_s);
+    if (window.Comms) window.Comms.ensureSeeded(_s);
+    Store.save(_s);
+  }
+
+  render();
+  sweepReminders();
+
+  if (window.SaagarShell && window.SaagarShell.boot) {
+    window.SaagarShell.boot({
+      // Hardware back shares the exact logic of the topbar Back arrow.
+      // Returns false only at the Capture home, letting the shell confirm exit.
+      onBack: () => goBack(),
+    });
+  }
 }
 
-render();
-sweepReminders();
-
-if (window.SaagarShell && window.SaagarShell.boot) {
-  window.SaagarShell.boot({
-    // Hardware back shares the exact logic of the topbar Back arrow.
-    // Returns false only at the Capture home, letting the shell confirm exit.
-    onBack: () => goBack(),
-  });
-}
+boot();
   </script>
 </body>
 </html>
