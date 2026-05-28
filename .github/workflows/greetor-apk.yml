@@ -85,10 +85,10 @@ jobs:
           ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Rename APK to saagar-greetor.apk
+        # This run step inherits the job default working-directory: greetor,
+        # so paths are relative to greetor/ (NOT the repo root).
         run: |
-          SRC=greetor/android/app/build/outputs/apk/debug/app-debug.apk
-          DEST=greetor/android/app/build/outputs/apk/debug/saagar-greetor.apk
-          cp "$SRC" "$DEST"
+          cp android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/saagar-greetor.apk
           echo "Renamed APK -> saagar-greetor.apk"
 
       - name: Upload APK artifact

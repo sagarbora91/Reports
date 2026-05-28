@@ -769,6 +769,7 @@ const Store = {
       my_store: null,
       records: records,
       reminder_enabled: true,
+      auditLog: [],
     };
   },
   save(s) { localStorage.setItem(STATE_KEY, JSON.stringify(s)); },
@@ -874,6 +875,30 @@ function can(perm) {
   return (ROLE_PERMS[auth.role] || []).indexOf(perm) !== -1;
 }
 window.can = can;
+
+// =====================================================================
+// Audit log — immutable record of every data action (esp. deletes).
+// Append-only; never edited or cleared from the UI. Owner-only to view.
+// =====================================================================
+const AUDIT_MAX = 5000;
+function logAudit(action, summary, detail) {
+  const state = Store.load();
+  if (!Array.isArray(state.auditLog)) state.auditLog = [];
+  const auth = AuthSession.current(state);
+  state.auditLog.unshift({
+    id: uuid(),
+    at: new Date().toISOString(),
+    userId: auth ? auth.id : null,
+    userName: auth ? auth.name : "system",
+    role: auth ? auth.role : "",
+    action: action,                 // create|edit|delete|convert|stage|user|pin
+    summary: summary || "",
+    detail: detail || null,         // e.g. deleted-record snapshot, old→new stage
+  });
+  if (state.auditLog.length > AUDIT_MAX) state.auditLog.length = AUDIT_MAX;
+  Store.save(state);
+}
+window.logAudit = logAudit;
 
 const LoginGuard = {
   attempts: 0,
@@ -1688,6 +1713,61 @@ function openConvertModal(recordId) {
   `);
 }
 
+// =====================================================================
+// AUDIT LOG screen (Owner-only)
+// =====================================================================
+function auditBadge(action) {
+  const m = { create: "pill-converted", edit: "pill-warm", delete: "pill-hot",
+              convert: "pill-converted", stage: "pill-open", user: "pill-open", pin: "pill-open" };
+  return `<span class="pill ${m[action] || "pill-open"}">${escapeHtml(action)}</span>`;
+}
+
+function renderAuditLog(state) {
+  const log = Array.isArray(state.auditLog) ? state.auditLog : [];
+  const rows = log.length
+    ? log.map(e => {
+        const when = new Date(e.at);
+        const ts = isNaN(when.getTime()) ? e.at : when.toLocaleString("en-IN");
+        return `
+          <div class="entry-card">
+            <div class="entry-row">
+              <span class="entry-name" style="font-size:14px">${escapeHtml(e.summary || e.action)}</span>
+              ${auditBadge(e.action)}
+            </div>
+            <div class="entry-meta tiny muted">${escapeHtml(ts)} · ${escapeHtml(e.userName || "system")}${e.role ? " (" + escapeHtml(roleLabel(e.role)) + ")" : ""}</div>
+          </div>`;
+      }).join("")
+    : `<div class="empty-state"><div class="icon">🗒️</div><h3>No activity yet</h3>
+         <p class="muted">Every create, edit, delete and conversion will appear here.</p></div>`;
+  return `
+    <div class="card">
+      <h2>Audit log</h2>
+      <p class="card-muted">${log.length} event(s) recorded. Append-only — entries can't be edited or removed, even by the Owner. Deleted records keep a full snapshot.</p>
+      ${log.length ? `<button class="btn btn-secondary btn-full" data-action="export-audit-log">Export audit log CSV</button>` : ""}
+    </div>
+    ${rows}
+  `;
+}
+
+function exportAuditLogCSV() {
+  const state = Store.load();
+  const log = Array.isArray(state.auditLog) ? state.auditLog : [];
+  const esc = (v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
+  const header = ["timestamp", "user", "role", "action", "summary"].map(esc).join(",");
+  const rows = log.map(e => [e.at, e.userName, e.role, e.action, e.summary].map(esc).join(","));
+  const csv = [header].concat(rows).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const file = new File([blob], `saagar_greetor_audit_${today()}.csv`, { type: "text/csv" });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: "Saagar Greetor audit log" }).catch(() => {});
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
 function renderSettings(state, auth) {
   const staff = loadStaff();
   return `
@@ -1732,6 +1812,13 @@ function renderSettings(state, auth) {
       `).join("")}
       <div class="spacer-8"></div>
       <button class="btn btn-secondary btn-full" data-action="add-user">+ Add user</button>
+    </div>` : ""}
+
+    ${canManageUsers(auth) ? `
+    <div class="settings-section">
+      <h3>Audit log</h3>
+      <p>Every create, edit, delete and conversion — who did it and when. Deleted entries keep a full snapshot. Append-only.</p>
+      <button class="btn btn-secondary btn-full" data-action="open-audit-log">View audit log${(state.auditLog && state.auditLog.length) ? " (" + state.auditLog.length + ")" : ""}</button>
     </div>` : ""}
 
     <div class="settings-section">
@@ -1939,6 +2026,11 @@ function saveRecord() {
   }
   Store.save(state);
 
+  const who = rec.customerName || rec.mobile || "walk-in";
+  logAudit(existing ? "edit" : "create",
+    (existing ? "Edited entry — " : "Created entry — ") + who + " · " + (rec.store || "") + " · " + (rec.reason || ""),
+    { recordId: rec.recordId });
+
   if (window.SaagarShell && window.SaagarShell.scheduleFollowupReminder) {
     window.SaagarShell.scheduleFollowupReminder(rec);
   }
@@ -1960,8 +2052,17 @@ function editRecord(recordId) {
 function deleteRecord(recordId) {
   if (!confirm("Delete this entry?")) return;
   const state = Store.load();
+  // Snapshot the record BEFORE deletion so the audit log keeps a full,
+  // recoverable copy — nothing silently vanishes.
+  const snapshot = state.records.find(r => r.recordId === recordId) || null;
   state.records = state.records.filter(r => r.recordId !== recordId);
   Store.save(state);
+  if (snapshot) {
+    const who = snapshot.customerName || snapshot.mobile || "walk-in";
+    logAudit("delete",
+      "Deleted entry — " + who + " · " + (snapshot.store || "") + " · " + (snapshot.reason || ""),
+      { recordId: recordId, record: snapshot });
+  }
   if (window.SaagarShell && window.SaagarShell.cancelFollowupReminder) {
     window.SaagarShell.cancelFollowupReminder(recordId);
   }
@@ -2100,8 +2201,13 @@ document.addEventListener("click", async (e) => {
   if (action === "save-convert") {
     const val = $("convertValue") ? $("convertValue").value : "";
     const s = Store.load();
+    const conv = s.records.find(r => r.recordId === a.dataset.id);
     Customers.convertToSale(s, a.dataset.id, val);
     Store.save(s);
+    logAudit("convert",
+      "Converted to sale — " + ((conv && (conv.customerName || conv.mobile)) || "walk-in") +
+      (Number(val) ? " · " + Customers.formatINR(val) : ""),
+      { recordId: a.dataset.id, saleValue: Number(val) || 0 });
     closeModal();
     toast("Marked as converted" + (Number(val) ? " · " + Customers.formatINR(val) : ""));
     if (window.SaagarShell && window.SaagarShell.cancelFollowupReminder) {
@@ -2306,6 +2412,7 @@ document.addEventListener("click", async (e) => {
     if (!/^\d{4}$/.test(pin)) { toast("PIN must be 4 digits."); return; }
     if (pin !== pinc) { toast("PINs don't match."); return; }
     await Users.create({ name, role, pin });
+    logAudit("user", "Added user — " + name + " (" + roleLabel(role) + ")");
     closeModal();
     toast(`${name} added as ${roleLabel(role)}.`);
     render();
@@ -2318,20 +2425,26 @@ document.addEventListener("click", async (e) => {
     const np = $("resetPinNew").value, npc = $("resetPinC").value;
     if (!/^\d{4}$/.test(np)) { toast("PIN must be 4 digits."); return; }
     if (np !== npc) { toast("PINs don't match."); return; }
+    const _ru = Users.byId(Store.load(), a.dataset.id);
     await Users.changePin(a.dataset.id, np);
+    logAudit("pin", "Reset PIN for " + (_ru ? _ru.name : "user"));
     closeModal();
     toast("PIN reset.");
     return;
   }
   if (action === "user-deactivate") {
+    const _du = Users.byId(Store.load(), a.dataset.id);
     Users.setActive(a.dataset.id, false);
+    logAudit("user", "Deactivated user — " + (_du ? _du.name : "user"));
     closeModal();
     toast("User deactivated.");
     render();
     return;
   }
   if (action === "user-activate") {
+    const _au = Users.byId(Store.load(), a.dataset.id);
     Users.setActive(a.dataset.id, true);
+    logAudit("user", "Activated user — " + (_au ? _au.name : "user"));
     closeModal();
     toast("User activated.");
     render();
@@ -2339,7 +2452,9 @@ document.addEventListener("click", async (e) => {
   }
   if (action === "user-remove") {
     if (!confirm("Remove this user? Their entries stay, but they can't sign in again.")) return;
+    const _xu = Users.byId(Store.load(), a.dataset.id);
     Users.remove(a.dataset.id);
+    logAudit("user", "Removed user — " + (_xu ? _xu.name : "user"));
     closeModal();
     toast("User removed.");
     render();

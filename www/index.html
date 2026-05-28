@@ -1121,6 +1121,53 @@ body.locked #auth-screen { display: block; }
   color: var(--gray-600);
   line-height: 1.4;
 }
+
+/* --- Template picker (Start screen, when >1 template) --- */
+.template-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+.tpl-pick {
+  background: var(--white);
+  border: 1px solid var(--gray-300);
+  color: var(--gray-800);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.tpl-pick.active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--gold-light);
+}
+
+/* --- Template Builder --- */
+.builder-cp-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gray-200);
+}
+.builder-cp-row:last-of-type { border-bottom: 0; }
+.builder-cp-text { flex: 1; font-size: 14px; color: var(--gray-800); }
+.builder-cp-flags { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; }
+.mini-flag {
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-weight: 600;
+}
+.mini-flag.photo { background: var(--red-pale); color: var(--red); }
+.builder-cp-actions { display: flex; gap: 2px; flex-shrink: 0; }
+.builder-cp-actions .iconbtn { padding: 4px 7px; font-size: 15px; color: var(--navy); }
+.builder-cp-actions .iconbtn[disabled] { opacity: 0.3; }
+.builder-section-name {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--white);
+}
   </style>
 </head>
 <body>
@@ -5571,22 +5618,25 @@ function startWeeklyAudit({ weekNumber, year, gmId, gmName, templateId }) {
 }
 
 // Entry card on the Audit tab (GM/Owner) — shows this week's daily coverage.
-function renderWeeklyEntryCard(state) {
+function renderWeeklyEntryCard(state, tpl) {
+  const tplId = tpl ? tpl.id : 'tpl_weekly';
+  const name = tpl ? tpl.name : 'Weekly audit';
   const { week, year } = currentIsoWeekYear();
   const dailyPcts = dailyPctsForWeek(week, year, state);
   const avg = dailyPcts.length ? round1(dailyPcts.reduce((a, b) => a + b, 0) / dailyPcts.length) : null;
   const submittedWeekly = state.audits.find(
-    a => a.audit_type === 'weekly' && a.week_number === week && a.year === year && a.status === 'submitted'
+    a => frequencyOf(a) === 'weekly' && (a.template_id || 'tpl_weekly') === tplId
+      && a.week_number === week && a.year === year && a.status === 'submitted'
   );
   return `
     <div class="card" style="border-color:var(--gold);background:var(--gold-pale)">
-      <h2>Weekly audit · Week ${week}, ${year}</h2>
+      <h2>${escapeHtml(name)} · Week ${week}, ${year}</h2>
       <p class="muted">${dailyPcts.length} of 7 daily audits submitted this week${avg != null ? ` · avg ${avg}%` : ''}.</p>
       ${submittedWeekly
         ? `<p class="muted">Submitted: ${submittedWeekly.score.pct.toFixed(1)}% · ${bandLabel(submittedWeekly.score.band)}</p>`
         : ''}
       <div class="spacer-12"></div>
-      <button class="btn btn-primary" data-action="start-weekly-audit" data-week="${week}" data-year="${year}">
+      <button class="btn btn-primary" data-action="start-weekly-audit" data-week="${week}" data-year="${year}" data-tpl="${escapeHtml(tplId)}">
         ${submittedWeekly ? 'Re-run weekly audit' : 'Start weekly audit'}
       </button>
     </div>
@@ -5924,19 +5974,55 @@ function renderAuditTab(state, auth) {
   return renderStartAudit(state, auth);
 }
 
+// Which templates a role may run.
+function canRunTemplate(auth, tpl) {
+  if (!auth) return false;
+  if (tpl.frequency === 'weekly') return auth.role === 'GM' || auth.role === 'OWNER';
+  if (tpl.frequency === 'monthly') return auth.role === 'OWNER';
+  return true; // daily / custom — anyone
+}
+
+// Selected non-weekly template on the Start screen.
+const StartState = { templateId: null };
+
 function renderStartAudit(state, auth) {
-  const todays = state.audits.find(x => x.date === today() && x.status === 'submitted');
-  const cros = state.cros;
-  // Daily audits are SM's job per spec. GM and Owner can still run them
-  // (pinch-hit) but we surface that with a hint.
-  const showPinchHitHint = auth && auth.role !== 'SM';
-  // Weekly audit is GM/Owner-led (Spec Tier 2).
-  const canWeekly = auth && (auth.role === 'GM' || auth.role === 'OWNER');
+  const active = Templates.active(state).filter(t => canRunTemplate(auth, t));
+  const weeklies = active.filter(t => t.frequency === 'weekly');
+  const others = active.filter(t => t.frequency !== 'weekly');
+
+  if (!StartState.templateId || !others.some(t => t.id === StartState.templateId)) {
+    StartState.templateId = others.length ? others[0].id : null;
+  }
+  const selected = others.find(t => t.id === StartState.templateId);
+
   return `
     ${renderEscalationCards(state, auth)}
-    ${canWeekly ? renderWeeklyEntryCard(state) : ''}
+    ${weeklies.map(t => renderWeeklyEntryCard(state, t)).join('')}
+    ${others.length > 1 ? `
+      <div class="card">
+        <h2>Start an audit</h2>
+        <div class="template-picker">
+          ${others.map(t => `
+            <button class="tpl-pick ${t.id === StartState.templateId ? 'active' : ''}" data-action="pick-template" data-id="${escapeHtml(t.id)}">
+              ${escapeHtml(t.name)}
+            </button>`).join('')}
+        </div>
+      </div>` : ''}
+    ${selected ? renderTemplateStartConfig(state, auth, selected)
+      : (weeklies.length === 0 ? '<div class="card"><p class="muted">No audit templates available for your role. Ask the Owner to add one in Settings → Audit templates.</p></div>' : '')}
+  `;
+}
+
+// Date + CROs + Start, for a single non-weekly template.
+function renderTemplateStartConfig(state, auth, tpl) {
+  const cros = state.cros;
+  const todays = state.audits.find(
+    x => x.date === today() && x.status === 'submitted' && (x.template_id || 'tpl_daily') === tpl.id
+  );
+  const showPinchHitHint = tpl.frequency === 'daily' && auth && auth.role !== 'SM';
+  return `
     <div class="card">
-      <h2>Daily audit</h2>
+      <h2>${escapeHtml(tpl.name)}</h2>
       <p class="muted">${escapeHtml(fmtDate(today()))} &middot; auditor: <strong>${escapeHtml(auth.name)}</strong> (${escapeHtml(roleLabel(auth.role))})</p>
       ${showPinchHitHint
         ? `<p class="tiny" style="color:var(--amber);margin-top:4px">Daily audits are usually run by the Store Manager. You can still proceed.</p>`
@@ -5950,19 +6036,14 @@ function renderStartAudit(state, auth) {
       <div class="spacer-12"></div>
       <label class="field">
         <span>Audit date</span>
-        <input type="date" id="auditDate" value="${today()}" max="${today()}"
-               onchange="toggleBackdateField()">
+        <input type="date" id="auditDate" value="${today()}" max="${today()}" onchange="toggleBackdateField()">
       </label>
       <div class="field" id="backdateField" hidden>
-        <span style="font-size:13px;color:var(--amber);font-weight:600">
-          Backdated audit — please record why
-        </span>
+        <span style="font-size:13px;color:var(--amber);font-weight:600">Backdated audit — please record why</span>
         <textarea id="backdateReason" maxlength="200" rows="2"
                   placeholder="e.g. phone died yesterday; logging late so the day isn't missed"
                   style="margin-top:6px"></textarea>
-        <p class="tiny muted" style="margin:4px 0 0">
-          The reason is stored with the audit, shown on the report, and included in exports.
-        </p>
+        <p class="tiny muted" style="margin:4px 0 0">Stored with the audit, shown on the report and exports.</p>
       </div>
       <div class="field">
         <div class="row-spread">
@@ -5981,9 +6062,9 @@ function renderStartAudit(state, auth) {
             </div>`).join('')}
       </div>
       <div id="startError" class="error" hidden></div>
-      <button class="btn btn-primary" data-action="start-audit">Start daily audit</button>
+      <button class="btn btn-primary" data-action="start-audit" data-tpl="${escapeHtml(tpl.id)}">Start ${escapeHtml(tpl.name)}</button>
     </div>
-    <p class="tiny" style="text-align:center;margin-top:16px">68 checkpoints &middot; ~30 to 45 minutes &middot; target 90% Good or above</p>
+    <p class="tiny" style="text-align:center;margin-top:16px">${tpl.checkpoints.length} point(s) &middot; target 90%+ &middot; score = % passed</p>
   `;
 }
 
@@ -6582,8 +6663,168 @@ function renderRefGlossary(rows) {
   `;
 }
 
+// ---------------------------------------------------------------------------
+// Template Builder (Owner) — create/edit audit checklists as data.
+// Lives inside the Settings tab; Builder.editingId !== null shows the editor.
+// ---------------------------------------------------------------------------
+
+const Builder = {
+  editingId: null,
+  open(id) { this.editingId = id; render(); switchTab('settings'); },
+  close() { this.editingId = null; render(); },
+};
+
+const FREQ_LABELS = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', custom: 'Custom' };
+const CRO_MODE_LABELS = {
+  store: 'Once for the store',
+  per_cro: 'One run per CRO',
+  matrix: 'Score each CRO (matrix)',
+};
+
+function renderTemplatesCard(state) {
+  const tpls = Templates.all(state);
+  return `
+    <div class="card">
+      <h2>Audit templates</h2>
+      <p class="muted">Create and edit the checklists your staff run. Add daily, weekly, monthly or custom audits — no code needed.</p>
+      ${tpls.map(t => `
+        <div class="user-row">
+          <div class="info">
+            <div class="name">${escapeHtml(t.name)}
+              <span class="role-pill ${t.frequency === 'weekly' ? 'GM' : (t.frequency === 'monthly' ? 'OWNER' : 'SM')}">${escapeHtml(FREQ_LABELS[t.frequency] || t.frequency)}</span>
+              ${t.active ? '' : '<span class="role-pill inactive">OFF</span>'}
+            </div>
+            <div class="meta">${t.checkpoints.length} point(s) · ${(t.sections || []).length} section(s) · ${escapeHtml(CRO_MODE_LABELS[t.cro_mode] || t.cro_mode)}${t.built_in ? ' · built-in' : ''}</div>
+          </div>
+          <button class="iconbtn" style="color:var(--navy)" data-action="builder-open" data-id="${escapeHtml(t.id)}">Edit ›</button>
+        </div>`).join('')}
+      <div class="spacer-12"></div>
+      <button class="btn btn-secondary" data-action="builder-new">+ New audit template</button>
+    </div>
+  `;
+}
+
+function renderTemplateEditor(tpl) {
+  const sectionsHtml = (tpl.sections || []).map(sec => {
+    const cps = tpl.checkpoints.filter(c => c.section_id === sec.id)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+    return `
+      <div class="card" style="margin-bottom:10px">
+        <div class="row-spread">
+          <input type="text" class="builder-section-name" data-section="${escapeHtml(sec.id)}"
+                 value="${escapeHtml(sec.name)}" placeholder="Section name"
+                 style="font-weight:600;border:1px solid var(--gray-200);flex:1;margin-right:8px">
+          <button class="iconbtn" style="color:var(--red)" data-action="builder-del-section" data-tpl="${escapeHtml(tpl.id)}" data-section="${escapeHtml(sec.id)}">✕</button>
+        </div>
+        <div class="spacer-12"></div>
+        ${cps.length === 0 ? '<p class="muted" style="font-size:13px">No points yet.</p>' : cps.map((c, i) => `
+          <div class="builder-cp-row">
+            <div class="builder-cp-text">
+              ${escapeHtml(c.text)}
+              <div class="builder-cp-flags">
+                ${c.allows_na ? '<span class="mini-flag">N/A ok</span>' : ''}
+                ${c.photo_required_on_fail ? '<span class="mini-flag photo">📷 required</span>' : ''}
+              </div>
+            </div>
+            <div class="builder-cp-actions">
+              <button class="iconbtn" data-action="builder-move-cp" data-tpl="${escapeHtml(tpl.id)}" data-cp="${escapeHtml(c.id)}" data-dir="up" ${i === 0 ? 'disabled' : ''}>↑</button>
+              <button class="iconbtn" data-action="builder-move-cp" data-tpl="${escapeHtml(tpl.id)}" data-cp="${escapeHtml(c.id)}" data-dir="down" ${i === cps.length - 1 ? 'disabled' : ''}>↓</button>
+              <button class="iconbtn" data-action="builder-edit-cp" data-tpl="${escapeHtml(tpl.id)}" data-cp="${escapeHtml(c.id)}">✎</button>
+              <button class="iconbtn" style="color:var(--red)" data-action="builder-del-cp" data-tpl="${escapeHtml(tpl.id)}" data-cp="${escapeHtml(c.id)}">✕</button>
+            </div>
+          </div>`).join('')}
+        <div class="spacer-12"></div>
+        <button class="btn btn-ghost" data-action="builder-add-cp" data-tpl="${escapeHtml(tpl.id)}" data-section="${escapeHtml(sec.id)}" style="font-size:14px;padding:10px">+ Add point to ${escapeHtml(sec.name)}</button>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="row-spread" style="margin-bottom:12px">
+      <button class="btn btn-ghost" data-action="builder-close" style="width:auto;padding:8px 14px">‹ Back</button>
+      <span class="tiny">${tpl.checkpoints.length} point(s)</span>
+    </div>
+    <div class="card">
+      <label class="field">
+        <span>Audit name</span>
+        <input type="text" id="builderName" value="${escapeHtml(tpl.name)}" data-tpl="${escapeHtml(tpl.id)}">
+      </label>
+      <label class="field">
+        <span>How often?</span>
+        <select id="builderFreq" data-tpl="${escapeHtml(tpl.id)}">
+          ${Object.keys(FREQ_LABELS).map(f => `<option value="${f}" ${tpl.frequency === f ? 'selected' : ''}>${FREQ_LABELS[f]}</option>`).join('')}
+        </select>
+      </label>
+      <label class="field" style="margin-bottom:0">
+        <span>Who is scored?</span>
+        <select id="builderCroMode" data-tpl="${escapeHtml(tpl.id)}">
+          ${Object.keys(CRO_MODE_LABELS).map(m => `<option value="${m}" ${tpl.cro_mode === m ? 'selected' : ''}>${CRO_MODE_LABELS[m]}</option>`).join('')}
+        </select>
+      </label>
+      <p class="tiny muted" style="margin-top:6px">"One run per CRO" and "matrix" repeat the checklist across staff — set up in the next update; "Once for the store" works now.</p>
+    </div>
+
+    <h2 style="font-family:'DM Serif Display',serif;color:var(--navy);font-size:18px;margin:16px 0 8px">Sections &amp; points</h2>
+    ${sectionsHtml}
+    <button class="btn btn-secondary" data-action="builder-add-section" data-tpl="${escapeHtml(tpl.id)}">+ Add section</button>
+
+    <div class="spacer-24"></div>
+    <div class="card" style="border-color:var(--gray-200)">
+      ${tpl.built_in
+        ? `<button class="btn btn-ghost" data-action="builder-reset" data-tpl="${escapeHtml(tpl.id)}">↺ Reset to original (undo all my edits)</button>`
+        : `<button class="btn btn-ghost" data-action="builder-delete" data-tpl="${escapeHtml(tpl.id)}" style="color:var(--red);border-color:var(--red)">Delete this template</button>`}
+      <div class="spacer-12"></div>
+      <button class="btn btn-ghost" data-action="builder-toggle-active" data-tpl="${escapeHtml(tpl.id)}">${tpl.active ? 'Turn OFF (hide from Start)' : 'Turn ON'}</button>
+    </div>
+  `;
+}
+
+function builderNewModal() {
+  openModal(`
+    <h3>New audit template</h3>
+    <label class="field"><span>Name</span>
+      <input type="text" id="newTplName" placeholder="e.g. Monthly Owner Audit" autocapitalize="words"></label>
+    <label class="field" style="margin-bottom:0"><span>How often?</span>
+      <select id="newTplFreq">
+        ${Object.keys(FREQ_LABELS).map(f => `<option value="${f}">${FREQ_LABELS[f]}</option>`).join('')}
+      </select></label>
+    <div class="row">
+      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="modal-create-tpl">Create</button>
+    </div>
+  `);
+}
+
+function builderCpModal(tplId, sectionId, cpId) {
+  const tpl = Templates.byId(null, tplId);
+  if (!tpl) return;
+  const cp = cpId ? tpl.checkpoints.find(c => c.id === cpId) : null;
+  const sections = tpl.sections || [];
+  const selSection = cp ? cp.section_id : sectionId;
+  openModal(`
+    <h3>${cp ? 'Edit point' : 'Add point'}</h3>
+    <label class="field"><span>Checkpoint text</span>
+      <textarea id="cpText" maxlength="200" rows="2" placeholder="e.g. Name badge worn">${cp ? escapeHtml(cp.text) : ''}</textarea></label>
+    <label class="field"><span>Section</span>
+      <select id="cpSection">
+        ${sections.map(s => `<option value="${escapeHtml(s.id)}" ${s.id === selSection ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
+      </select></label>
+    <label class="cro-row" style="cursor:pointer"><input type="checkbox" id="cpNa" ${cp && cp.allows_na ? 'checked' : ''} style="width:18px;height:18px;margin-right:8px"> Allow "N/A" on this point</label>
+    <label class="cro-row" style="cursor:pointer"><input type="checkbox" id="cpPhoto" ${cp && cp.photo_required_on_fail ? 'checked' : ''} style="width:18px;height:18px;margin-right:8px"> Photo required if this fails</label>
+    <div class="row">
+      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="modal-save-cp" data-tpl="${escapeHtml(tplId)}" data-cp="${escapeHtml(cpId || '')}">${cp ? 'Save' : 'Add'}</button>
+    </div>
+  `);
+}
+
 function renderSettingsTab(state, auth) {
   const isOwner = auth && auth.role === 'OWNER';
+  // Builder takes over the Settings tab when editing a template.
+  if (isOwner && Builder.editingId) {
+    const tpl = Templates.byId(state, Builder.editingId);
+    if (tpl) return renderTemplateEditor(tpl);
+    Builder.editingId = null;
+  }
   return `
     <div class="card">
       <h2>My account</h2>
@@ -6620,6 +6861,8 @@ function renderSettingsTab(state, auth) {
       <div class="spacer-12"></div>
       <button class="btn btn-secondary" data-action="add-user">+ Add user</button>
     </div>` : ''}
+
+    ${isOwner ? renderTemplatesCard(state) : ''}
 
     <div class="card">
       <h2>CROs</h2>
@@ -7241,6 +7484,115 @@ document.addEventListener('click', async (e) => {
     toast(a.dataset.locale === 'mr' ? 'भाषा बदलली' : 'Language changed');
     return;
   }
+
+  // ----- Template Builder -----
+  if (action === 'builder-open')  { Builder.open(a.dataset.id); return; }
+  if (action === 'builder-close') { Builder.close(); return; }
+  if (action === 'builder-new')   { builderNewModal(); return; }
+  if (action === 'modal-create-tpl') {
+    const name = document.getElementById('newTplName').value.trim();
+    const frequency = document.getElementById('newTplFreq').value;
+    if (name.length < 2) { toast('Give it a name'); return; }
+    const tpl = Templates.create({ name, frequency });
+    closeModal();
+    Builder.open(tpl.id);
+    return;
+  }
+  if (action === 'builder-add-section') {
+    const tpl = Templates.byId(null, a.dataset.tpl);
+    if (!tpl) return;
+    tpl.sections = tpl.sections || [];
+    tpl.sections.push({ id: 's_' + uuid(), name: 'New section', name_mr: '', critical: false });
+    Templates.save(tpl);
+    render();
+    return;
+  }
+  if (action === 'builder-del-section') {
+    const tpl = Templates.byId(null, a.dataset.tpl);
+    if (!tpl) return;
+    const inSection = tpl.checkpoints.filter(c => c.section_id === a.dataset.section).length;
+    if (!confirm(`Delete this section${inSection ? ` and its ${inSection} point(s)` : ''}?`)) return;
+    tpl.sections = tpl.sections.filter(s => s.id !== a.dataset.section);
+    tpl.checkpoints = tpl.checkpoints.filter(c => c.section_id !== a.dataset.section);
+    Templates.save(tpl);
+    render();
+    return;
+  }
+  if (action === 'builder-add-cp')  { builderCpModal(a.dataset.tpl, a.dataset.section, null); return; }
+  if (action === 'builder-edit-cp') { builderCpModal(a.dataset.tpl, null, a.dataset.cp); return; }
+  if (action === 'modal-save-cp') {
+    const tpl = Templates.byId(null, a.dataset.tpl);
+    if (!tpl) return;
+    const text = document.getElementById('cpText').value.trim();
+    if (text.length < 3) { toast('Checkpoint text too short'); return; }
+    const sectionId = document.getElementById('cpSection').value;
+    const allowsNa = document.getElementById('cpNa').checked;
+    const photoReq = document.getElementById('cpPhoto').checked;
+    const cpId = a.dataset.cp;
+    if (cpId) {
+      const cp = tpl.checkpoints.find(c => c.id === cpId);
+      if (cp) { cp.text = text; cp.section_id = sectionId; cp.allows_na = allowsNa; cp.photo_required_on_fail = photoReq; }
+    } else {
+      const maxOrder = tpl.checkpoints.reduce((m, c) => Math.max(m, c.order || 0), 0);
+      tpl.checkpoints.push({
+        id: 'c_' + uuid(), section_id: sectionId, text, text_mr: '', evidence: '',
+        weight: 1, critical: false, allows_na: allowsNa, photo_required_on_fail: photoReq,
+        order: maxOrder + 1,
+      });
+    }
+    Templates.save(tpl);
+    closeModal();
+    render();
+    return;
+  }
+  if (action === 'builder-del-cp') {
+    if (!confirm('Delete this point?')) return;
+    const tpl = Templates.byId(null, a.dataset.tpl);
+    if (!tpl) return;
+    tpl.checkpoints = tpl.checkpoints.filter(c => c.id !== a.dataset.cp);
+    Templates.save(tpl);
+    render();
+    return;
+  }
+  if (action === 'builder-move-cp') {
+    const tpl = Templates.byId(null, a.dataset.tpl);
+    if (!tpl) return;
+    const cp = tpl.checkpoints.find(c => c.id === a.dataset.cp);
+    if (!cp) return;
+    const sibs = tpl.checkpoints.filter(c => c.section_id === cp.section_id)
+      .sort((x, y) => (x.order || 0) - (y.order || 0));
+    const i = sibs.indexOf(cp);
+    const j = a.dataset.dir === 'up' ? i - 1 : i + 1;
+    if (j < 0 || j >= sibs.length) return;
+    const o1 = sibs[i].order || 0, o2 = sibs[j].order || 0;
+    sibs[i].order = o2; sibs[j].order = o1;
+    Templates.save(tpl);
+    render();
+    return;
+  }
+  if (action === 'builder-reset') {
+    if (!confirm('Reset this built-in checklist to its original points? Your edits to it will be lost (past audits keep their frozen copies).')) return;
+    Templates.resetToDefault(a.dataset.tpl);
+    render();
+    toast('Reset to original');
+    return;
+  }
+  if (action === 'builder-delete') {
+    if (!confirm('Delete this template? Past audits that used it keep their frozen copies.')) return;
+    Templates.remove(a.dataset.tpl);
+    Builder.close();
+    toast('Template deleted');
+    return;
+  }
+  if (action === 'builder-toggle-active') {
+    const tpl = Templates.byId(null, a.dataset.tpl);
+    if (!tpl) return;
+    tpl.active = !tpl.active;
+    Templates.save(tpl);
+    render();
+    return;
+  }
+
   if (action === 'set-my-phone')   { setPhoneModal(null); return; }
   if (action === 'user-set-phone') { setPhoneModal(a.dataset.id); return; }
   if (action === 'modal-save-phone') {
@@ -7324,7 +7676,13 @@ document.addEventListener('click', async (e) => {
         return;
       }
     }
-    startNewAudit({ date, auditorName: me.name, auditorId: me.id, croIds, backdateReason });
+    startNewAudit({ date, auditorName: me.name, auditorId: me.id, croIds, backdateReason, templateId: a.dataset.tpl || StartState.templateId });
+    render();
+    return;
+  }
+
+  if (action === 'pick-template') {
+    StartState.templateId = a.dataset.id;
     render();
     return;
   }
@@ -7344,7 +7702,7 @@ document.addEventListener('click', async (e) => {
         return;
       }
     }
-    startWeeklyAudit({ weekNumber: week, year, gmId: me.id, gmName: me.name });
+    startWeeklyAudit({ weekNumber: week, year, gmId: me.id, gmName: me.name, templateId: a.dataset.tpl || 'tpl_weekly' });
     render();
     return;
   }
@@ -7766,6 +8124,25 @@ document.addEventListener('change', (e) => {
     window._loginUserId = e.target.value;
     PinBuf.reset();
     render();
+    return;
+  }
+  // Builder: persist template name / frequency / cro_mode on change.
+  if (e.target.id === 'builderName' || e.target.id === 'builderFreq' || e.target.id === 'builderCroMode') {
+    const tpl = Templates.byId(null, e.target.dataset.tpl);
+    if (!tpl) return;
+    if (e.target.id === 'builderName') tpl.name = e.target.value.trim() || tpl.name;
+    if (e.target.id === 'builderFreq') tpl.frequency = e.target.value;
+    if (e.target.id === 'builderCroMode') tpl.cro_mode = e.target.value;
+    Templates.save(tpl);
+    return;
+  }
+  // Builder: persist a section name on change.
+  if (e.target.classList && e.target.classList.contains('builder-section-name')) {
+    const tpl = Templates.byId(null, Builder.editingId);
+    if (!tpl) return;
+    const sec = (tpl.sections || []).find(s => s.id === e.target.dataset.section);
+    if (sec) { sec.name = e.target.value.trim() || sec.name; Templates.save(tpl); }
+    return;
   }
 });
 

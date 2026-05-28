@@ -185,8 +185,16 @@
         var newStage = dataset.stage;
         if (!id2 || !newStage) return false;
         var s2 = Store.load();
+        var rec2 = (s2.records || []).filter(function (r) { return r.recordId === id2; })[0];
+        var fromStage = rec2 ? (rec2.leadStatus || 'Open') : '';
         window.Customers.setStage(s2, id2, newStage);
         Store.save(s2);
+        if (window.logAudit) {
+          window.logAudit('stage',
+            'Moved lead ' + ((rec2 && (rec2.customerName || rec2.mobile)) || '') +
+            ' from ' + fromStage + ' to ' + newStage,
+            { recordId: id2, from: fromStage, to: newStage });
+        }
         closeModal();
         render();
         toast('Moved to ' + newStage);
