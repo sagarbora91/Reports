@@ -429,6 +429,69 @@
     HistoryView.mode = 'list';
   })();
 
+  // ---- 18. Verify gate (GM/Owner signs off a submitted daily audit) ----
+  reset();
+  const vgm = await Users.create({ name: 'GMVerify', role: 'GM', pin: '4242' });
+  const vsm = await Users.create({ name: 'SMAuditor', role: 'SM', pin: '5252' });
+
+  // SM runs + submits a daily audit (3 fails → a realistic record to check).
+  AuthSession.login(vsm.id);
+  startNewAudit({ date: today(), auditorName: 'SMAuditor', auditorId: vsm.id, croIds: [], templateId: 'tpl_daily' });
+  CHECKPOINTS.forEach((cp, i) => markCheckpoint(cp.id, i < 3 ? 'F' : 'P', i < 3 ? { finding: 'vg fail ' + i } : {}));
+  const vres = submitAudit();
+  const vaid = vres.audit.id;
+  eq('verify: submitted not yet verified', vres.audit.status, 'submitted');
+  eq('verify: submitted is finalized', isFinalized(vres.audit), true);
+  const vFresh = () => audit(vaid, Store.load());
+
+  // Eligibility (verifyControlsHtml) — GM (not auditor) gets a button.
+  AuthSession.login(vgm.id);
+  ok('verify: GM (not auditor) sees verify button', /data-action="audit-verify"/.test(verifyControlsHtml(vFresh())), '');
+  // The auditor (SM) does not — only an awaiting note.
+  AuthSession.login(vsm.id);
+  ok('verify: SM auditor sees awaiting, no button',
+     !/data-action="audit-verify"/.test(verifyControlsHtml(vFresh())) && /Awaiting/.test(verifyControlsHtml(vFresh())), '');
+
+  // The spot-check modal renders a confirm button + FAIL verdicts for the GM.
+  AuthSession.login(vgm.id);
+  verifyAuditModal(vaid);
+  const vModal = document.getElementById('modal-root').innerHTML;
+  ok('verify: modal has confirm button', /data-action="modal-confirm-verify"/.test(vModal), '');
+  ok('verify: modal spot-checks a FAIL', /verdict-pill F/.test(vModal), '');
+  closeModal();
+
+  // GM cannot verify their OWN audit.
+  AuthSession.login(vgm.id);
+  startNewAudit({ date: today(), auditorName: 'GMVerify', auditorId: vgm.id, croIds: [], templateId: 'tpl_daily' });
+  CHECKPOINTS.forEach(cp => markCheckpoint(cp.id, 'P'));
+  const vOwn = submitAudit();
+  ok('verify: GM cannot verify own audit', !/data-action="audit-verify"/.test(verifyControlsHtml(vOwn.audit, vgm)), '');
+
+  // Apply verification (mirrors the modal-confirm-verify handler).
+  (function () {
+    const st = Store.load();
+    const au = audit(vaid, st);
+    au.status = 'verified';
+    au.verifier_id = vgm.id;
+    au.verifier_name = vgm.name;
+    au.verified_at = new Date().toISOString();
+    au.verify_note = 'spot-checked on floor';
+    Store.save(st);
+  })();
+  const vDone = vFresh();
+  eq('verify: status now verified', vDone.status, 'verified');
+  eq('verify: verifier stamped', vDone.verifier_id, vgm.id);
+  eq('verify: still finalized after verify', isFinalized(vDone), true);
+  ok('verify: badge shows verifier name',
+     /Verified by/.test(verifyControlsHtml(vDone)) && /GMVerify/.test(verifyControlsHtml(vDone)), '');
+
+  // Verified audit still appears in history with a "verified" chip.
+  AuthSession.login(vgm.id);
+  HistoryView.mode = 'list';
+  ok('verify: verified audit shows in history with chip',
+     renderHistoryTab(Store.load(), AuthSession.current()).includes('✓ verified'), '');
+  smoke('historyDetailModal (verified)', () => historyDetailModal(vDone));
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

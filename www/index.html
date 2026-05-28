@@ -4846,7 +4846,7 @@ function evaluateEscalationsForAudit(audit, state) {
   const cutoff = new Date(auditDate); cutoff.setDate(cutoff.getDate() - 6);
   const cutoffStr = cutoff.toISOString().slice(0, 10);
   const recent = (state.audits || []).filter(a =>
-    a.status === 'submitted' && a.date >= cutoffStr && a.date <= audit.date);
+    isFinalized(a) && a.date >= cutoffStr && a.date <= audit.date);
   const failCounts = {};
   const failDates = {};
   recent.forEach(a => {
@@ -4885,7 +4885,7 @@ function evaluateEscalationsForAudit(audit, state) {
     const yest = new Date(auditDate); yest.setDate(yest.getDate() - 1);
     const yestStr = yest.toISOString().slice(0, 10);
     const yesterdayAudit = (state.audits || []).find(a =>
-      a.status === 'submitted' && a.date === yestStr);
+      isFinalized(a) && a.date === yestStr);
     const yesterdayCash = yesterdayAudit && Object.entries(yesterdayAudit.results || {})
       .some(([cpId, r]) => r.result === 'F' && cpId.startsWith('6.'));
     out.push({
@@ -5606,6 +5606,13 @@ function audit(id, state) {
   return state.audits.find(a => a.id === id) || null;
 }
 
+// A finalized audit is one that counts as "done" — submitted OR verified.
+// (Verifying a daily audit moves it to status 'verified'; it must still show
+// in history, trends, weekly rollups and exports.)
+function isFinalized(a) {
+  return !!(a && (a.status === 'submitted' || a.status === 'verified'));
+}
+
 function startNewAudit({ date, auditorName, auditorId, croIds, backdateReason, templateId }) {
   const state = Store.load();
   const tplId = templateId || 'tpl_daily';
@@ -5689,7 +5696,7 @@ function renderWeeklyEntryCard(state, tpl) {
   const avg = dailyPcts.length ? round1(dailyPcts.reduce((a, b) => a + b, 0) / dailyPcts.length) : null;
   const submittedWeekly = state.audits.find(
     a => frequencyOf(a) === 'weekly' && (a.template_id || 'tpl_weekly') === tplId
-      && a.week_number === week && a.year === year && a.status === 'submitted'
+      && a.week_number === week && a.year === year && isFinalized(a)
   );
   return `
     <div class="card" style="border-color:var(--gold);background:var(--gold-pale)">
@@ -5862,7 +5869,7 @@ function dailyPctsForWeek(weekNumber, year, state) {
   const pcts = [];
   (state.audits || []).forEach(a => {
     if (a.audit_type === 'weekly') return;
-    if (a.status !== 'submitted' || !a.score) return;
+    if (!isFinalized(a) || !a.score) return;
     const d = new Date(a.date);
     if (d.getFullYear() === year && isoWeekOf(d) === weekNumber) {
       pcts.push(a.score.pct);
@@ -6136,7 +6143,7 @@ function renderStartAudit(state, auth) {
 function renderTemplateStartConfig(state, auth, tpl) {
   const cros = state.cros;
   const todays = state.audits.find(
-    x => x.date === today() && x.status === 'submitted' && (x.template_id || 'tpl_daily') === tpl.id
+    x => x.date === today() && isFinalized(x) && (x.template_id || 'tpl_daily') === tpl.id
   );
   const showPinchHitHint = tpl.frequency === 'daily' && auth && auth.role !== 'SM';
   return `
@@ -6579,7 +6586,7 @@ function renderTrends(dailyAudits) {
 function renderHistoryTab(state, auth) {
   // SM sees own audits only; GM and Owner see all.
   const submitted = state.audits
-    .filter(a => a.status === 'submitted')
+    .filter(a => isFinalized(a))
     .filter(a => {
       if (!auth || auth.role !== 'SM') return true;
       return a.auditor_id === auth.id || !a.auditor_id; // legacy audits with no auditor_id are visible too
@@ -6637,11 +6644,14 @@ function renderHistoryTab(state, auth) {
     const title = isWeekly
       ? `Weekly · Week ${a.week_number}, ${a.year}`
       : escapeHtml(fmtDate(a.date));
+    const verifiedChip = a.status === 'verified'
+      ? ` &middot; <span style="color:var(--green,#166534);font-weight:600">✓ verified</span>`
+      : '';
     return `
       <div class="hist-row" data-action="open-history" data-id="${a.id}">
         <div>
           <strong>${title}</strong>
-          <div class="tiny">${isWeekly ? '<span class="role-pill GM" style="font-size:9px">WEEKLY</span> ' : ''}${s.p} P &middot; ${s.f} F &middot; ${s.na} N/A &middot; by ${escapeHtml(a.auditor_name || '—')}${backdatedChip}</div>
+          <div class="tiny">${isWeekly ? '<span class="role-pill GM" style="font-size:9px">WEEKLY</span> ' : ''}${s.p} P &middot; ${s.f} F &middot; ${s.na} N/A &middot; by ${escapeHtml(a.auditor_name || '—')}${backdatedChip}${verifiedChip}</div>
         </div>
         <div class="pct ${s.band}">${s.pct.toFixed(1)}%</div>
       </div>`;
@@ -7515,6 +7525,7 @@ function perCroHistoryDetailModal(a, tpl, croById) {
       <div class="score-band ${s.band}">${bandLabel(s.band)} · pooled across ${order.length} CRO(s)</div>
       <p class="muted">${s.p} pass · ${s.f} fail · ${s.na} N/A</p>
     </div>
+    ${verifyControlsHtml(a)}
     <div class="row">
       <button class="btn btn-secondary" data-action="print-audit" data-id="${escapeHtml(a.id)}">📄 Print / Save as PDF</button>
       <button class="btn btn-ghost" data-action="modal-cancel">Close</button>
@@ -7616,8 +7627,9 @@ function historyDetailModal(a) {
     <div class="score-card" style="padding:12px">
       <div class="score-pct ${s.band}" style="font-size:48px">${s.pct.toFixed(1)}%</div>
       <div class="score-band ${s.band}">${bandLabel(s.band)}</div>
-      <p class="muted">${s.raw} of ${s.max} weighted &middot; ${s.p} P &middot; ${s.f} F &middot; ${s.na} N/A</p>
+      <p class="muted">${s.raw} of ${s.max} points &middot; ${s.p} P &middot; ${s.f} F &middot; ${s.na} N/A</p>
     </div>
+    ${verifyControlsHtml(a)}
     <div class="row">
       <button class="btn btn-secondary" data-action="share-audit-wa" data-id="${escapeHtml(a.id)}">📱 Send to WhatsApp</button>
       <button class="btn btn-secondary" data-action="print-audit" data-id="${escapeHtml(a.id)}">📄 Print / Save as PDF</button>
@@ -7625,6 +7637,95 @@ function historyDetailModal(a) {
     <div class="spacer-12"></div>
     <button class="btn btn-ghost" data-action="modal-cancel" style="width:100%">Close</button>
     ${groupsHtml}
+  `);
+}
+
+// ---------------------------------------------------------------------------
+// Verify gate — a GM or the Owner signs off a submitted audit. They spot-check
+// a few of the auditor's recorded verdicts, then confirm. Confirming moves the
+// audit to status 'verified' and stamps who/when. An auditor can't verify their
+// own work. Verified audits still count everywhere (isFinalized covers both).
+// ---------------------------------------------------------------------------
+
+// Badge (verified) / button (eligible) / waiting note (everyone else) for the
+// detail modals. `me` defaults to the logged-in user.
+function verifyControlsHtml(a, me) {
+  me = me || AuthSession.current();
+  if (a.status === 'verified') {
+    const when = a.verified_at ? new Date(a.verified_at).toLocaleString('en-IN') : '';
+    return `<div style="margin-top:8px;padding:10px 12px;border-radius:8px;background:#e7f6ec;border:1px solid #9bd3ad;color:#166534;font-size:13px;line-height:1.5">
+      <strong>✓ Verified by ${escapeHtml(a.verifier_name || '—')}</strong>${when ? ` · ${escapeHtml(when)}` : ''}${a.verify_note ? `<div style="margin-top:4px;font-style:italic;color:#15532c">&ldquo;${escapeHtml(a.verify_note)}&rdquo;</div>` : ''}
+    </div>`;
+  }
+  const canVerify = me && (me.role === 'OWNER' || me.role === 'GM') && !(a.auditor_id && a.auditor_id === me.id);
+  if (canVerify) {
+    return `<button class="btn btn-primary" data-action="audit-verify" data-id="${escapeHtml(a.id)}" style="width:100%;margin-top:8px">✓ Verify this audit</button>`;
+  }
+  return `<div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#fff8e1;border:1px solid #f4c674;color:#6a4a00;font-size:13px">⏳ Awaiting verification</div>`;
+}
+
+// Spot-check modal: shows up to 3 of the auditor's recorded verdicts (FAILs
+// preferred — those are the riskiest to fake), a note field, and a confirm.
+function verifyAuditModal(auditId) {
+  const state = Store.load();
+  const a = audit(auditId, state);
+  if (!a) { toast('Audit not found'); return; }
+  const me = AuthSession.current(state);
+  if (!me || (me.role !== 'OWNER' && me.role !== 'GM')) { toast('Only GM or Owner can verify'); return; }
+  if (a.auditor_id && a.auditor_id === me.id) { toast("You can't verify your own audit"); return; }
+  if (a.status === 'verified') { toast('Already verified'); return; }
+
+  const cpById = {};
+  checkpointsFor(a).forEach(cp => { cpById[cp.id] = cp; });
+  const croById = Object.fromEntries(state.cros.map(c => [c.id, c]));
+
+  // Gather marked verdicts (flatten per-CRO buckets if needed).
+  let entries = [];
+  if (auditIsPerCro(a)) {
+    Object.entries(a.cro_results || {}).forEach(([croId, bucket]) => {
+      Object.entries(bucket || {}).forEach(([cpId, r]) => {
+        if (r && r.result) entries.push({ cpId, result: r.result, finding: r.finding, croId });
+      });
+    });
+  } else {
+    Object.entries(a.results || {}).forEach(([cpId, r]) => {
+      if (r && r.result) entries.push({ cpId, result: r.result, finding: r.finding });
+    });
+  }
+  // FAILs first (randomised), then the rest, then take up to 3.
+  const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
+  const fails = shuffle(entries.filter(e => e.result === 'F'));
+  const rest = shuffle(entries.filter(e => e.result !== 'F'));
+  const sample = fails.concat(rest).slice(0, 3);
+
+  const rowsHtml = sample.length ? sample.map(e => {
+    const cp = cpById[e.cpId] || { text: '(checkpoint removed from template)' };
+    const cro = e.croId ? croById[e.croId] : null;
+    return `
+      <div class="result-row">
+        <span class="cp-id">${escapeHtml(e.cpId)}</span>
+        <div class="cp-body">
+          <div>${escapeHtml(cp.text)}</div>
+          ${e.finding ? `<div class="cp-finding">${escapeHtml(e.finding)}${cro ? ` · <em>${escapeHtml(cro.name)}</em>` : ''}</div>` : ''}
+        </div>
+        <span class="verdict-pill ${e.result}">${e.result}</span>
+      </div>`;
+  }).join('') : '<p class="muted" style="padding:6px">No marked checkpoints to spot-check.</p>';
+
+  const when = frequencyOf(a) === 'weekly' ? `Week ${a.week_number}, ${a.year}` : escapeHtml(fmtDate(a.date));
+  openModal(`
+    <h3>Verify audit</h3>
+    <p class="muted">${when} · by ${escapeHtml(a.auditor_name || '—')}</p>
+    <p style="font-size:13px;line-height:1.5;margin:6px 0 10px">Spot-check these recorded verdicts against what you know on the floor. Confirm only if they look honest.</p>
+    <div class="detail-sop">${rowsHtml}</div>
+    <label class="field" style="margin-top:10px">
+      <span>Verification note (optional)</span>
+      <textarea id="verifyNote" maxlength="200" placeholder="e.g. spot-checked CP1 &amp; CP12 on floor — matches"></textarea>
+    </label>
+    <div class="spacer-12"></div>
+    <button class="btn btn-primary" data-action="modal-confirm-verify" data-id="${escapeHtml(a.id)}" style="width:100%">✓ Confirm — I verify this audit</button>
+    <div class="spacer-12"></div>
+    <button class="btn btn-ghost" data-action="modal-cancel" style="width:100%">Cancel</button>
   `);
 }
 
@@ -7749,7 +7850,7 @@ function restoreFromBackup() {
 
 function exportCsv() {
   const state = Store.load();
-  const submitted = state.audits.filter(a => a.status === 'submitted');
+  const submitted = state.audits.filter(a => isFinalized(a));
   if (submitted.length === 0) { toast('No submitted audits yet'); return; }
   const rows = [['date', 'auditor', 'compliance_pct', 'band', 'raw', 'max', 'pass', 'fail', 'na', 'checkpoint_id', 'result', 'finding', 'cro_id', 'backdate_reason', 'audit_notes']];
   submitted.forEach(a => {
@@ -8409,6 +8510,30 @@ document.addEventListener('click', async (e) => {
   }
   if (action === 'print-audit') {
     printAudit(a.dataset.id);
+    return;
+  }
+  if (action === 'audit-verify') {
+    verifyAuditModal(a.dataset.id);
+    return;
+  }
+  if (action === 'modal-confirm-verify') {
+    const state = Store.load();
+    const au = audit(a.dataset.id, state);
+    if (!au) { toast('Audit not found'); return; }
+    const me = AuthSession.current(state);
+    if (!me || (me.role !== 'OWNER' && me.role !== 'GM')) { toast('Only GM or Owner can verify'); return; }
+    if (au.auditor_id && au.auditor_id === me.id) { toast("You can't verify your own audit"); return; }
+    if (au.status === 'verified') { toast('Already verified'); closeModal(); render(); return; }
+    const noteEl = document.getElementById('verifyNote');
+    au.status = 'verified';
+    au.verifier_id = me.id;
+    au.verifier_name = me.name;
+    au.verified_at = new Date().toISOString();
+    au.verify_note = (noteEl ? noteEl.value : '').trim();
+    Store.save(state);
+    closeModal();
+    toast('Audit verified ✓');
+    render();
     return;
   }
   if (action === 'share-audit-wa') {
