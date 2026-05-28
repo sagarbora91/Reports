@@ -900,6 +900,25 @@ function logAudit(action, summary, detail) {
 }
 window.logAudit = logAudit;
 
+// Daily backup reminder toggle (Settings → Backup & restore).
+window.onBackupReminderToggle = async function (on) {
+  if (!window.SaagarShell) return;
+  window.SaagarShell.setBackupReminderEnabled(on);
+  try {
+    if (on) {
+      const ok = await window.SaagarShell.scheduleBackupReminder();
+      toast(ok ? "Daily backup reminder set for 8:30 PM" : "Couldn't schedule — check notification permission");
+      if (!ok) {
+        window.SaagarShell.setBackupReminderEnabled(false);
+        const cb = $("backupReminderToggle"); if (cb) cb.checked = false;
+      }
+    } else {
+      await window.SaagarShell.cancelBackupReminder();
+      toast("Daily backup reminder off");
+    }
+  } catch (e) { console.error(e); }
+};
+
 const LoginGuard = {
   attempts: 0,
   lockedUntil: 0,
@@ -1758,15 +1777,18 @@ function exportAuditLogCSV() {
   const header = ["timestamp", "user", "role", "action", "summary"].map(esc).join(",");
   const rows = log.map(e => [e.at, e.userName, e.role, e.action, e.summary].map(esc).join(","));
   const csv = [header].concat(rows).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const file = new File([blob], `saagar_greetor_audit_${today()}.csv`, { type: "text/csv" });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    navigator.share({ files: [file], title: "Saagar Greetor audit log" }).catch(() => {});
+  const filename = `saagar_greetor_audit_${today()}.csv`;
+  if (window.SaagarShell && window.SaagarShell.exportFile) {
+    window.SaagarShell.exportFile(filename, "text/csv", csv).then(res => {
+      if (res && res.ok) toast("Audit log exported.");
+      else if (res && !res.cancelled) toast("Export failed.");
+    });
     return;
   }
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
 
@@ -1835,11 +1857,18 @@ function renderSettings(state, auth) {
     </div>
 
     <div class="settings-section">
-      <h3>Data</h3>
-      <p>${state.records.length} entry(ies) on this device. Back up to share to Drive / OneDrive / WhatsApp.</p>
-      <button class="btn btn-secondary btn-full" data-action="backup-json">Back up JSON</button>
+      <h3>Backup &amp; restore</h3>
+      <p>${state.records.length} entry(ies) on this device. A full backup is one JSON file — restore it after reinstalling to bring back everything (entries, users, masters, audit log).</p>
+      <button class="btn btn-primary btn-full" data-action="backup-json">Back up now (save to Drive)</button>
       <div class="spacer-8"></div>
-      <button class="btn btn-ghost btn-full" data-action="restore-json">Restore from backup</button>
+      <button class="btn btn-secondary btn-full" data-action="restore-json">Restore from backup file</button>
+      <div class="spacer-12"></div>
+      <label class="row-spread" style="cursor:pointer">
+        <span><strong>Daily backup reminder</strong> <span class="muted">· 8:30 PM</span></span>
+        <input type="checkbox" id="backupReminderToggle"
+               ${(window.SaagarShell && window.SaagarShell.isBackupReminderEnabled && window.SaagarShell.isBackupReminderEnabled()) ? "checked" : ""}
+               onchange="onBackupReminderToggle(this.checked)" style="width:42px;height:24px;cursor:pointer">
+      </label>
       ${canManageUsers(auth) ? `
         <div class="spacer-12"></div>
         <button class="btn btn-ghost btn-full" data-action="erase-all" style="color:var(--red)">Erase all data</button>
@@ -2089,22 +2118,28 @@ function waCustomer(recordId) {
 // Backup / restore (full state)
 // =====================================================================
 
-function backupJson() {
+async function backupJson() {
   const payload = {
     _format: "saagar_greetor_v2",
+    _version: 2,
     _exported_at: new Date().toISOString(),
+    app: "Saagar Greetor",
     state: Store.load(),
     staff: loadStaff(),
   };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const file = new File([blob], `saagar_greetor_${today()}.json`, { type: "application/json" });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    navigator.share({ files: [file], title: "Saagar Greetor backup" }).catch(() => {});
+  const json = JSON.stringify(payload, null, 2);
+  const filename = `saagar_greetor_backup_${today()}.json`;
+  if (window.SaagarShell && window.SaagarShell.exportFile) {
+    const res = await window.SaagarShell.exportFile(filename, "application/json", json);
+    if (res && res.ok) toast(res.via === "share" ? "Backup ready — choose Drive to save." : "Backup downloaded.");
+    else if (res && !res.cancelled) toast("Backup failed.");
     return;
   }
+  // Fallback (older builds without the shell helper)
+  const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
 

@@ -19,29 +19,28 @@
   }
 
   function shareCSV(filename, text) {
+    // Use the reliable native file layer when available (writes a real file
+    // then opens the share sheet — works inside the Capacitor WebView).
+    if (window.SaagarShell && window.SaagarShell.exportFile) {
+      window.SaagarShell.exportFile(filename, 'text/csv', text).then(function (res) {
+        if (res && res.ok) { if (typeof toast === 'function') toast('Exported ' + filename); }
+        else if (res && !res.cancelled) { if (typeof toast === 'function') toast('Export failed'); }
+      });
+      return;
+    }
+    // Fallback for plain browsers.
     try {
       var blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
-      var file = new File([blob], filename, { type: 'text/csv' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        navigator.share({ files: [file], title: filename }).then(function () {
-          if (typeof toast === 'function') toast('Exported ' + filename);
-        }).catch(function (e) {
-          if (e && e.name === 'AbortError') return;
-        });
-      } else {
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        if (typeof toast === 'function') toast('Exported ' + filename);
-      }
-    } catch (e) {
-      // silently ignore
-    }
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      if (typeof toast === 'function') toast('Exported ' + filename);
+    } catch (e) { /* ignore */ }
   }
 
   // ── render ─────────────────────────────────────────────────────────────────

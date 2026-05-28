@@ -88,6 +88,93 @@
   }
 
   // ---------------------------------------------------------------------
+  // File export — the reliable path for the Android WebView.
+  // Browser <a download> and navigator.share({files}) are flaky inside the
+  // Capacitor WebView, so on device we write the file with @capacitor/filesystem
+  // and open the native share sheet with @capacitor/share (Drive / WhatsApp /
+  // Gmail / Files all appear). On a real browser we fall back to a blob download.
+  // Returns a promise resolving to { ok, via } or { ok:false, cancelled|error }.
+  // ---------------------------------------------------------------------
+
+  async function exportFile(filename, mime, content) {
+    if (isNative()) {
+      const FS = plugin('Filesystem');
+      const Sh = plugin('Share');
+      if (FS && Sh) {
+        try {
+          await FS.writeFile({
+            path: filename,
+            data: content,
+            directory: 'CACHE',   // Directory.Cache
+            encoding: 'utf8',     // Encoding.UTF8
+          });
+          const uriRes = await FS.getUri({ path: filename, directory: 'CACHE' });
+          await Sh.share({
+            title: filename,
+            url: uriRes.uri,
+            dialogTitle: 'Save or share ' + filename,
+          });
+          return { ok: true, via: 'share' };
+        } catch (e) {
+          const msg = (e && (e.message || e.errorMessage) || '').toLowerCase();
+          if (msg.indexOf('cancel') !== -1) return { ok: false, cancelled: true };
+          console.warn('native export failed, falling back to download', e);
+          // fall through to blob download
+        }
+      }
+    }
+    try {
+      const blob = new Blob([content], { type: mime || 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      return { ok: true, via: 'download' };
+    } catch (e) {
+      return { ok: false, error: String(e) };
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Daily backup reminder (default 8:30 PM)
+  // ---------------------------------------------------------------------
+
+  const BACKUP_REMINDER_ID = 7001;
+  const BACKUP_PREF = 'saagar_greetor_backup_reminder';
+
+  function isBackupReminderEnabled() {
+    const v = localStorage.getItem(BACKUP_PREF);
+    return v == null ? true : v === '1';   // default ON
+  }
+  function setBackupReminderEnabled(on) {
+    localStorage.setItem(BACKUP_PREF, on ? '1' : '0');
+  }
+  async function scheduleBackupReminder() {
+    const LN = plugin('LocalNotifications');
+    if (!LN || !isBackupReminderEnabled()) return false;
+    if (!(await ensureNotifPermission())) return false;
+    try {
+      try { await LN.cancel({ notifications: [{ id: BACKUP_REMINDER_ID }] }); } catch (_) {}
+      await LN.schedule({
+        notifications: [{
+          id: BACKUP_REMINDER_ID,
+          title: 'Back up Saagar Greetor',
+          body: 'Tap to back up today’s walk-ins to Drive.',
+          schedule: { on: { hour: 20, minute: 30 }, every: 'day', allowWhileIdle: true },
+          extra: { kind: 'backup-reminder' },
+        }],
+      });
+      return true;
+    } catch (e) { console.warn('backup reminder failed', e); return false; }
+  }
+  async function cancelBackupReminder() {
+    const LN = plugin('LocalNotifications');
+    if (!LN) return;
+    try { await LN.cancel({ notifications: [{ id: BACKUP_REMINDER_ID }] }); } catch (_) {}
+  }
+
+  // ---------------------------------------------------------------------
   // Capacitor plugin boot
   // ---------------------------------------------------------------------
 
@@ -113,6 +200,9 @@
       try { await KB.setScroll({ isDisabled: false }); } catch (_) {}
     }
 
+    // Schedule the daily backup reminder (fire-and-forget).
+    scheduleBackupReminder();
+
     const App = plugin('App');
     if (App) {
       App.addListener('backButton', () => {
@@ -136,6 +226,11 @@
     boot: bootNative,
     scheduleFollowupReminder: scheduleFollowupReminder,
     cancelFollowupReminder: cancelFollowupReminder,
+    exportFile: exportFile,
+    isBackupReminderEnabled: isBackupReminderEnabled,
+    setBackupReminderEnabled: setBackupReminderEnabled,
+    scheduleBackupReminder: scheduleBackupReminder,
+    cancelBackupReminder: cancelBackupReminder,
     isNative: isNative,
     plugin: plugin,
   };
