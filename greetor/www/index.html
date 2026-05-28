@@ -686,6 +686,9 @@ body.locked { overflow: hidden; }
   <script src="reports-ui.js"></script>
   <script src="comms.js"></script>
   <script src="comms-ui.js"></script>
+  <script src="charts.js"></script>
+  <script src="targets.js"></script>
+  <script src="photo.js"></script>
   <script>
 "use strict";
 
@@ -1087,6 +1090,7 @@ function emptyData() {
     leadStatus: "Open",
     followDate: "",
     followTime: "09:00",
+    photos: [],
   };
 }
 
@@ -1180,6 +1184,7 @@ function render() {
   if (currentScreen === "capture")       screen.innerHTML = renderCapture(state, auth);
   else if (currentScreen === "reports")  screen.innerHTML = window.ReportsUI ? window.ReportsUI.render(state) : "<p class='muted'>Loading…</p>";
   else if (currentScreen === "auditlog") screen.innerHTML = renderAuditLog(state);
+  else if (currentScreen === "targets")  screen.innerHTML = renderTargets(state);
   else if (currentScreen === "comms") {
     screen.innerHTML = (window.commsView === "log")
       ? (window.CommsUI ? window.CommsUI.renderLog(state) : "")
@@ -1196,7 +1201,7 @@ function render() {
   }
 
   // Bottom nav active (masters / audit log / comms are children of settings)
-  const navScreen = (currentScreen === "masters" || currentScreen === "auditlog" || currentScreen === "comms") ? "settings" : currentScreen;
+  const navScreen = (currentScreen === "masters" || currentScreen === "auditlog" || currentScreen === "comms" || currentScreen === "targets") ? "settings" : currentScreen;
   document.querySelectorAll(".bnav-btn").forEach(b =>
     b.classList.toggle("active", b.dataset.screen === navScreen)
   );
@@ -1226,6 +1231,7 @@ function goBack() {
   }
   if (currentScreen === "auditlog") { switchScreen("settings"); return true; }
   if (currentScreen === "comms") { switchScreen("settings"); return true; }
+  if (currentScreen === "targets") { switchScreen("settings"); return true; }
   if (currentScreen === "leads" && window.leadsView === "customers" && window.leadsCustomerMobile) {
     window.leadsCustomerMobile = ""; render(); return true;
   }
@@ -1611,6 +1617,20 @@ function renderStep4(state) {
     </div>
 
     <div class="field">
+      <label class="field-label">Photos <span class="muted" style="font-weight:400">(product / customer)</span></label>
+      <div class="chip-group" style="margin-bottom:8px">
+        ${(d.photos || []).map((p, i) => `
+          <span style="position:relative;display:inline-block">
+            <img src="${escapeHtml((window.Photo && window.Photo.src(p)) || p.src || p.uri || '')}" alt="photo ${i+1}"
+                 style="width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--gray-200)">
+            <button type="button" data-action="remove-photo" data-i="${i}"
+                    style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:var(--red);color:#fff;font-size:13px;line-height:1">×</button>
+          </span>`).join("")}
+      </div>
+      <button class="btn btn-secondary" type="button" data-action="add-photo">📷 Add photo</button>
+    </div>
+
+    <div class="field">
       <label class="field-label">Follow-up needed?</label>
       ${chipGroup("followUp", ["Yes","No"], d.followUp)}
     </div>
@@ -1758,6 +1778,47 @@ function auditBadge(action) {
   return `<span class="pill ${m[action] || "pill-open"}">${escapeHtml(action)}</span>`;
 }
 
+// =====================================================================
+// TARGETS editor screen (Owner/Manager)
+// =====================================================================
+window.onTargetSet = function (period, metric, value) {
+  if (!window.Targets) return;
+  const s = Store.load();
+  window.Targets.setStoreTarget(s, period, metric, Number(value) || 0);
+  Store.save(s);
+  toast("Target saved");
+};
+
+function renderTargets(state) {
+  const t = (window.Targets ? window.Targets.get(state) : { store: {} }) || { store: {} };
+  const sv = (period, metric) => {
+    const p = (t.store && t.store[period]) || {};
+    return p[metric] != null ? p[metric] : "";
+  };
+  const periods = window.Targets ? window.Targets.PERIODS : ["daily", "weekly", "monthly"];
+  const card = (period) => `
+    <div class="settings-section">
+      <h3>${window.Targets ? window.Targets.periodLabel(period) : period}</h3>
+      <div class="field">
+        <label class="field-label">Walk-ins target</label>
+        <input type="number" inputmode="numeric" min="0" value="${sv(period,'walkins')}"
+               onchange="onTargetSet('${period}','walkins',this.value)" placeholder="0">
+      </div>
+      <div class="field">
+        <label class="field-label">Conversions target</label>
+        <input type="number" inputmode="numeric" min="0" value="${sv(period,'conversions')}"
+               onchange="onTargetSet('${period}','conversions',this.value)" placeholder="0">
+      </div>
+    </div>`;
+  return `
+    <div class="card">
+      <h2>Store targets</h2>
+      <p class="card-muted">Set walk-in and conversion goals. Progress shows on the Reports screen.</p>
+    </div>
+    ${periods.map(card).join("")}
+  `;
+}
+
 function renderAuditLog(state) {
   const log = Array.isArray(state.auditLog) ? state.auditLog : [];
   const rows = log.length
@@ -1858,6 +1919,13 @@ function renderSettings(state, auth) {
       <h3>Audit log</h3>
       <p>Every create, edit, delete and conversion — who did it and when. Deleted entries keep a full snapshot. Append-only.</p>
       <button class="btn btn-secondary btn-full" data-action="open-audit-log">View audit log${(state.auditLog && state.auditLog.length) ? " (" + state.auditLog.length + ")" : ""}</button>
+    </div>` : ""}
+
+    ${canEditMasters(auth) ? `
+    <div class="settings-section">
+      <h3>Targets</h3>
+      <p>Set walk-in &amp; conversion goals (daily / weekly / monthly). Progress + leaderboard show on Reports.</p>
+      <button class="btn btn-secondary btn-full" data-action="open-targets">Set targets</button>
     </div>` : ""}
 
     <div class="settings-section">
@@ -2072,6 +2140,7 @@ function saveRecord() {
     leadStatus: d.leadStatus,
     followDate: d.followUp === "Yes" ? d.followDate : "",
     followTime: d.followUp === "Yes" ? d.followTime : "",
+    photos: Array.isArray(d.photos) ? d.photos : [],
   };
   if (existing) {
     const i = state.records.findIndex(r => r.recordId === existing.recordId);
@@ -2240,6 +2309,11 @@ document.addEventListener("click", async (e) => {
   if (action === "goto-settings") { switchScreen("settings"); return; }
   if (action === "go-back") { goBack(); return; }
   if (action === "go-home") { switchScreen("capture"); return; }
+  if (action === "open-targets") {
+    if (!canEditMasters(AuthSession.current())) { toast("Owner/Manager only."); return; }
+    switchScreen("targets");
+    return;
+  }
   if (action === "open-audit-log") {
     if (!canManageUsers(AuthSession.current())) { toast("Owner only."); return; }
     switchScreen("auditlog");
@@ -2343,6 +2417,28 @@ document.addEventListener("click", async (e) => {
   if (action === "reasons-more") {
     window._reasonsMoreOpen = true;
     render();
+    return;
+  }
+  if (action === "add-photo") {
+    if (!window.Photo) { toast("Camera not available."); return; }
+    toast("Opening camera…");
+    const ref = await window.Photo.capture({ store: Wizard.data.store, greetor: Wizard.data.greetor });
+    if (ref) {
+      if (!Array.isArray(Wizard.data.photos)) Wizard.data.photos = [];
+      Wizard.data.photos.push(ref);
+      render();
+    }
+    return;
+  }
+  if (action === "remove-photo") {
+    const i = parseInt(a.dataset.i, 10);
+    const arr = Wizard.data.photos || [];
+    if (i >= 0 && i < arr.length) {
+      const ref = arr[i];
+      if (window.Photo && window.Photo.remove) { try { window.Photo.remove(ref); } catch (_) {} }
+      arr.splice(i, 1);
+      render();
+    }
     return;
   }
   if (action === "wizard-back") {
@@ -2621,10 +2717,11 @@ async function boot() {
   } catch (e) { console.warn("durable hydrate skipped", e); }
 
   // 2. Seed editable masters/comms once (idempotent); also primes the file.
-  if (window.Masters || window.Comms) {
+  if (window.Masters || window.Comms || window.Targets) {
     const _s = Store.load();
     if (window.Masters) window.Masters.ensureSeeded(_s);
     if (window.Comms) window.Comms.ensureSeeded(_s);
+    if (window.Targets) window.Targets.ensureSeeded(_s);
     Store.save(_s);
   }
 

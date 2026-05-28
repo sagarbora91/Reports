@@ -94,6 +94,75 @@
     html += '</div>';
     html += '</div>';
 
+    // ── Trend chart + targets attainment + leaderboard (T+C+P) ──
+    (function () {
+      var period = range === 'today' ? 'daily' : (range === '7d' ? 'weekly' : 'monthly');
+
+      // Walk-in trend (one zero-filled point per day) + delta vs prior window
+      if (window.Charts && typeof Charts.line === 'function') {
+        var counts = {};
+        recs.forEach(function (r) { if (r.visitDate) counts[r.visitDate] = (counts[r.visitDate] || 0) + 1; });
+        var pts = [], d = new Date(resolved.startDate + 'T00:00:00'), end = new Date(resolved.endDate + 'T00:00:00'), guard = 0;
+        if (!isNaN(d) && !isNaN(end) && end >= d) {
+          while (d <= end && guard < 400) {
+            var key = d.toISOString().slice(0, 10);
+            pts.push({ label: key.slice(5), value: counts[key] || 0 });
+            d.setDate(d.getDate() + 1); guard++;
+          }
+        }
+        var prevCount = 0, s = new Date(resolved.startDate + 'T00:00:00'), e2 = new Date(resolved.endDate + 'T00:00:00');
+        if (!isNaN(s) && !isNaN(e2)) {
+          var span = Math.round((e2 - s) / 86400000) + 1;
+          var pe = new Date(s); pe.setDate(pe.getDate() - 1);
+          var ps = new Date(pe); ps.setDate(ps.getDate() - (span - 1));
+          var psS = ps.toISOString().slice(0, 10), peS = pe.toISOString().slice(0, 10);
+          prevCount = roleRecs.filter(function (r) { return r.visitDate >= psS && r.visitDate <= peS; }).length;
+        }
+        if (pts.length >= 1) {
+          html += '<div class="card" style="margin-bottom:12px;">';
+          html += '<div class="row-spread" style="margin-bottom:8px;"><span style="font-weight:600;">Walk-in trend</span>'
+                + (typeof Charts.deltaBadge === 'function' ? Charts.deltaBadge(recs.length, prevCount) : '') + '</div>';
+          html += Charts.line(pts, { height: 110 });
+          html += '</div>';
+        }
+      }
+
+      // Targets attainment
+      if (window.Targets && typeof Targets.attainment === 'function') {
+        var uid = (auth && auth.role === 'GREETOR') ? auth.id : null;
+        var att = Targets.attainment(state, period, roleRecs, uid);
+        var bar = function (lbl, m) {
+          if (!m || !m.target) return '<div class="tiny muted" style="margin-bottom:6px;">' + lbl + ': ' + (m ? m.actual : 0) + ' (no target set)</div>';
+          var pct = Math.min(100, m.pct || 0);
+          var col = pct >= 100 ? '#168a51' : (pct >= 60 ? '#c99a2e' : '#ba2d2d');
+          return '<div style="margin-bottom:8px;"><div class="row-spread" style="margin-bottom:4px;"><span style="font-size:13px;">' + lbl + '</span><span class="tiny muted">' + m.actual + ' / ' + m.target + ' (' + (m.pct || 0) + '%)</span></div>'
+               + '<div style="background:#eef;border-radius:999px;height:8px;"><div style="height:8px;background:' + col + ';width:' + Math.max(2, pct) + '%;border-radius:999px;"></div></div></div>';
+        };
+        html += '<div class="card" style="margin-bottom:12px;">';
+        html += '<div style="font-weight:600;margin-bottom:10px;">Targets &middot; ' + (typeof Targets.periodLabel === 'function' ? Targets.periodLabel(period) : period) + '</div>';
+        html += bar('Walk-ins', att.walkins);
+        html += bar('Conversions', att.conversions);
+        html += '</div>';
+      }
+
+      // Greetor leaderboard (Manager/Owner only)
+      if (window.Targets && typeof Targets.leaderboard === 'function' && auth && auth.role !== 'GREETOR') {
+        var periodRecs = (typeof Targets.recordsInPeriod === 'function') ? Targets.recordsInPeriod(all, period) : all;
+        var lb = Targets.leaderboard(state, periodRecs, period);
+        if (lb && lb.length) {
+          html += '<div class="card" style="margin-bottom:12px;">';
+          html += '<div style="font-weight:600;margin-bottom:10px;">Greetor leaderboard &middot; ' + (typeof Targets.periodLabel === 'function' ? Targets.periodLabel(period) : period) + '</div>';
+          lb.slice(0, 10).forEach(function (row, i) {
+            html += '<div class="row-spread" style="padding:6px 0;border-top:' + (i ? '1px solid #f0f0f0' : '0') + ';">';
+            html += '<span style="font-size:14px;">' + (i + 1) + '. ' + escapeHtml(row.name || 'Unknown') + '</span>';
+            html += '<span class="tiny muted">' + row.walkins + ' visits &middot; ' + row.conversions + ' conv (' + row.conversionPct + '%) &middot; ' + Reports.formatINR(row.saleValue) + '</span>';
+            html += '</div>';
+          });
+          html += '</div>';
+        }
+      }
+    })();
+
     // ── Export buttons ──
     html += '<div class="row-spread" style="gap:8px;margin-bottom:16px;">';
     html += '<button class="btn btn-secondary" data-action="r-export-visits" style="flex:1;min-height:44px;font-size:13px;">Export Visits CSV</button>';

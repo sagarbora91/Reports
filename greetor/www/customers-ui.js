@@ -105,6 +105,13 @@
       '</div>' +
       '<div><strong>' + safeEscape(v.reason || '') + '</strong>' + saleStr + '</div>' +
       followStr +
+      ((Array.isArray(v.photos) && v.photos.length)
+        ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' +
+          v.photos.map(function (p) {
+            var src = (window.Photo && window.Photo.src) ? window.Photo.src(p) : (p && (p.src || p.uri)) || '';
+            return '<img src="' + safeEscape(src) + '" alt="photo" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb">';
+          }).join('') + '</div>'
+        : '') +
       ((!window.can || window.can('editAny'))
         ? '<div class="entry-actions" style="margin-top:8px">' +
           '<button class="btn btn-secondary entry-action" data-action="edit-entry" data-id="' +
