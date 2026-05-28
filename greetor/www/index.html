@@ -657,6 +657,8 @@ body.locked { overflow: hidden; }
   <div id="toast" class="toast" hidden></div>
 
   <script src="shell.js"></script>
+  <script src="masters.js"></script>
+  <script src="masters-ui.js"></script>
   <script>
 "use strict";
 
@@ -828,6 +830,7 @@ const AuthSession = {
 
 function roleLabel(r) { return { OWNER: "Owner", MANAGER: "Manager", GREETOR: "Greetor" }[r] || r; }
 function canManageUsers(auth) { return auth && auth.role === "OWNER"; }
+function canEditMasters(auth) { return auth && (auth.role === "OWNER" || auth.role === "MANAGER"); }
 
 const LoginGuard = {
   attempts: 0,
@@ -1011,6 +1014,9 @@ function stepIsValid(step, d) {
 
 let currentScreen = "capture";
 let editingRecordId = null;
+// Masters editor sub-navigation (read by masters-ui.js)
+window.mastersView = "home";
+window.mastersStore = "";
 
 // =====================================================================
 // Render — top-level
@@ -1046,10 +1052,18 @@ function render() {
   if (currentScreen === "capture")       screen.innerHTML = renderCapture(state, auth);
   else if (currentScreen === "today")    screen.innerHTML = renderToday(state, auth);
   else if (currentScreen === "settings") screen.innerHTML = renderSettings(state, auth);
+  else if (currentScreen === "masters") {
+    const homeView = (window.mastersView || "home") === "home";
+    const backBar = homeView
+      ? `<button class="btn btn-ghost" style="padding:10px 0;margin-bottom:4px" data-action="goto-settings">← Settings</button>`
+      : "";
+    screen.innerHTML = backBar + (window.MastersUI ? window.MastersUI.render(state) : "<p class='muted'>Masters not loaded.</p>");
+  }
 
-  // Bottom nav active
+  // Bottom nav active (masters is a child of settings)
+  const navScreen = currentScreen === "masters" ? "settings" : currentScreen;
   document.querySelectorAll(".bnav-btn").forEach(b =>
-    b.classList.toggle("active", b.dataset.screen === currentScreen)
+    b.classList.toggle("active", b.dataset.screen === navScreen)
   );
 
   // Bottom nav vs savebar
@@ -1307,7 +1321,7 @@ function renderStep1(state) {
   return `
     <div class="field">
       <label class="field-label required">Store</label>
-      ${chipGroup("store", STORES, d.store)}
+      ${chipGroup("store", Masters.storeNames(state), d.store)}
       ${state.my_store ? `<p class="field-hint">Default is your store — change here for a one-off entry.</p>` : `<p class="field-hint">Pick a store. Set "my store" in Settings to skip this each time.</p>`}
     </div>
 
@@ -1326,7 +1340,7 @@ function renderStep1(state) {
 
     <div class="field">
       <label class="field-label">Walk-in source</label>
-      ${chipGroup("source", SOURCES, d.source)}
+      ${chipGroup("source", Masters.globalList(state, "sources"), d.source)}
     </div>
   `;
 }
@@ -1351,20 +1365,19 @@ function renderStep2(state) {
 
     <div class="field">
       <label class="field-label">Customer type</label>
-      ${chipGroup("customerType", CUSTOMER_TYPES, d.customerType)}
+      ${chipGroup("customerType", Masters.globalList(state, "customerTypes"), d.customerType)}
     </div>
   `;
 }
 
 function renderStep3(state) {
   const d = Wizard.data;
-  const store = MASTER[d.store];
-  if (!store) {
+  const categories = Masters.categories(state, d.store);
+  if (!d.store || !categories.length) {
     return `<div class="field"><p class="muted">Pick a store in step 1 first.</p></div>`;
   }
-  const categories = Object.keys(store.categories);
-  const subCats = d.category ? (store.categories[d.category] || []) : [];
-  const brands = store.brands;
+  const subCats = d.category ? Masters.subCategories(state, d.store, d.category) : [];
+  const brands = Masters.brands(state, d.store);
 
   return `
     <div class="field">
@@ -1380,35 +1393,37 @@ function renderStep3(state) {
 
     <div class="field">
       <label class="field-label required">Brand</label>
-      ${chipGroup("brand", brands, d.brand || store.defaultBrand)}
+      ${chipGroup("brand", brands, d.brand || Masters.defaultBrand(state, d.store))}
     </div>
 
     <div class="field">
       <label class="field-label">For whom</label>
-      ${chipGroup("gender", FOR_WHOMS, d.gender)}
+      ${chipGroup("gender", Masters.globalList(state, "forWhoms"), d.gender)}
     </div>
 
     <div class="field">
       <label class="field-label">Occasion</label>
-      ${chipGroup("occasion", OCCASIONS, d.occasion)}
+      ${chipGroup("occasion", Masters.globalList(state, "occasions"), d.occasion)}
     </div>
 
     <div class="field">
       <label class="field-label">Budget</label>
-      ${chipGroup("budget", BUDGETS, d.budget)}
+      ${chipGroup("budget", Masters.globalList(state, "budgets"), d.budget)}
     </div>
 
     <div class="field">
       <label class="field-label">Buying timeline</label>
-      ${chipGroup("urgency", TIMELINES, d.urgency)}
+      ${chipGroup("urgency", Masters.globalList(state, "timelines"), d.urgency)}
     </div>
   `;
 }
 
 function renderStep4(state) {
   const d = Wizard.data;
-  const moreOpen = !!window._reasonsMoreOpen || REASONS_MORE.includes(d.reason);
-  const visibleReasons = moreOpen ? ALL_REASONS : REASONS_TOP;
+  const reasonsTop = Masters.reasonsTop(state);
+  const reasonsAll = Masters.reasonsAll(state);
+  const moreOpen = !!window._reasonsMoreOpen || (d.reason && reasonsTop.indexOf(d.reason) === -1);
+  const visibleReasons = moreOpen ? reasonsAll : reasonsTop;
   const staff = loadStaff();
   const staffOptions = staff.cros.length
     ? staff.cros.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.counter || "")}</option>`).join("")
@@ -1445,7 +1460,7 @@ function renderStep4(state) {
     ${d.followUp === "Yes" ? `
     <div class="field">
       <label class="field-label">Lead status</label>
-      ${chipGroup("leadStatus", LEAD_STATUSES, d.leadStatus)}
+      ${chipGroup("leadStatus", Masters.globalList(state, "leadStatuses"), d.leadStatus)}
     </div>
 
     <div class="field">
@@ -1558,8 +1573,15 @@ function renderSettings(state, auth) {
     <div class="settings-section">
       <h3>My store</h3>
       <p>Set your default store — Capture wizard pre-fills it.</p>
-      ${chipGroup("my_store", ["(none)"].concat(STORES), state.my_store || "(none)", { action: "set-my-store" })}
+      ${chipGroup("my_store", ["(none)"].concat(Masters.storeNames(state)), state.my_store || "(none)", { action: "set-my-store" })}
     </div>
+
+    ${canEditMasters(auth) ? `
+    <div class="settings-section">
+      <h3>Masters</h3>
+      <p>Edit the lists that drive the Capture form — stores, categories, brands, reasons and more.</p>
+      <button class="btn btn-secondary btn-full" data-action="open-masters">Edit masters</button>
+    </div>` : ""}
 
     ${canManageUsers(auth) ? `
     <div class="settings-section">
@@ -1902,6 +1924,17 @@ document.addEventListener("click", async (e) => {
   if (!a) return;
   const action = a.dataset.action;
 
+  // Masters editor actions — delegate to masters-ui.js
+  if (action.indexOf("m-") === 0) {
+    if (window.MastersUI && window.MastersUI.handleAction(action, a.dataset)) return;
+  }
+  if (action === "open-masters") {
+    window.mastersView = "home";
+    switchScreen("masters");
+    return;
+  }
+  if (action === "goto-settings") { switchScreen("settings"); return; }
+
   // ===== Setup flow =====
   if (action === "setup-name-next") {
     const name = $("ownerName").value.trim();
@@ -2177,6 +2210,14 @@ function sweepReminders() {
 // Boot
 // =====================================================================
 
+// Seed editable masters once (idempotent) and persist so every later
+// Store.load() sees state.masters.
+if (window.Masters) {
+  const _s = Store.load();
+  window.Masters.ensureSeeded(_s);
+  Store.save(_s);
+}
+
 render();
 sweepReminders();
 
@@ -2185,17 +2226,24 @@ if (window.SaagarShell && window.SaagarShell.boot) {
     onBack: () => {
       // 1. Modal open? Close it.
       if ($("modal-root").innerHTML) { closeModal(); return true; }
-      // 2. On a wizard step > 1? Step back.
+      // 2. In the masters editor? Step home, then back to settings.
+      if (currentScreen === "masters") {
+        if ((window.mastersView || "home") !== "home") {
+          window.mastersView = "home"; render(); return true;
+        }
+        switchScreen("settings"); return true;
+      }
+      // 3. On a wizard step > 1? Step back.
       if (currentScreen === "capture" && Wizard.step > 1) {
         Wizard.goto(Wizard.step - 1);
         return true;
       }
-      // 3. On Today / Settings? Go to Capture.
+      // 4. On Today / Settings? Go to Capture.
       if (currentScreen !== "capture") {
         switchScreen("capture");
         return true;
       }
-      // 4. Capture with no entry started? Default exit confirm.
+      // 5. Capture with no entry started? Default exit confirm.
       return false;
     },
   });
