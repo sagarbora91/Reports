@@ -684,6 +684,8 @@ body.locked { overflow: hidden; }
   <script src="pipeline-ui.js"></script>
   <script src="reports.js"></script>
   <script src="reports-ui.js"></script>
+  <script src="comms.js"></script>
+  <script src="comms-ui.js"></script>
   <script>
 "use strict";
 
@@ -1131,6 +1133,8 @@ let editingRecordId = null;
 // Masters editor sub-navigation (read by masters-ui.js)
 window.mastersView = "home";
 window.mastersStore = "";
+// Communication sub-navigation (read by comms-ui.js)
+window.commsView = "templates";       // 'templates' | 'log'
 // Leads tab sub-navigation (read by customers-ui.js / pipeline-ui.js)
 window.leadsView = "pipeline";        // 'pipeline' | 'customers'
 window.leadsCustomerMobile = "";      // set → customer detail
@@ -1171,6 +1175,11 @@ function render() {
   if (currentScreen === "capture")       screen.innerHTML = renderCapture(state, auth);
   else if (currentScreen === "reports")  screen.innerHTML = window.ReportsUI ? window.ReportsUI.render(state) : "<p class='muted'>Loading…</p>";
   else if (currentScreen === "auditlog") screen.innerHTML = renderAuditLog(state);
+  else if (currentScreen === "comms") {
+    screen.innerHTML = (window.commsView === "log")
+      ? (window.CommsUI ? window.CommsUI.renderLog(state) : "")
+      : (window.CommsUI ? window.CommsUI.renderTemplates(state) : "");
+  }
   else if (currentScreen === "leads")    screen.innerHTML = renderLeads(state, auth);
   else if (currentScreen === "settings") screen.innerHTML = renderSettings(state, auth);
   else if (currentScreen === "masters") {
@@ -1181,8 +1190,8 @@ function render() {
     screen.innerHTML = backBar + (window.MastersUI ? window.MastersUI.render(state) : "<p class='muted'>Masters not loaded.</p>");
   }
 
-  // Bottom nav active (masters + audit log are children of settings)
-  const navScreen = (currentScreen === "masters" || currentScreen === "auditlog") ? "settings" : currentScreen;
+  // Bottom nav active (masters / audit log / comms are children of settings)
+  const navScreen = (currentScreen === "masters" || currentScreen === "auditlog" || currentScreen === "comms") ? "settings" : currentScreen;
   document.querySelectorAll(".bnav-btn").forEach(b =>
     b.classList.toggle("active", b.dataset.screen === navScreen)
   );
@@ -1211,6 +1220,7 @@ function goBack() {
     switchScreen("settings"); return true;
   }
   if (currentScreen === "auditlog") { switchScreen("settings"); return true; }
+  if (currentScreen === "comms") { switchScreen("settings"); return true; }
   if (currentScreen === "leads" && window.leadsView === "customers" && window.leadsCustomerMobile) {
     window.leadsCustomerMobile = ""; render(); return true;
   }
@@ -1846,6 +1856,15 @@ function renderSettings(state, auth) {
     </div>` : ""}
 
     <div class="settings-section">
+      <h3>Messaging</h3>
+      <p>WhatsApp / SMS templates for following up with customers, plus a log of what was sent and a one-tap end-of-day summary for your manager.</p>
+      ${canEditMasters(auth) ? `<button class="btn btn-secondary btn-full" data-action="cm-open-templates">Message templates</button><div class="spacer-8"></div>` : ""}
+      <button class="btn btn-secondary btn-full" data-action="cm-open-log">Message log</button>
+      <div class="spacer-8"></div>
+      <button class="btn btn-secondary btn-full" data-action="cm-end-of-day">Send end-of-day summary</button>
+    </div>
+
+    <div class="settings-section">
       <h3>Staff master</h3>
       <p>
         ${staff.cros.length
@@ -2225,6 +2244,15 @@ document.addEventListener("click", async (e) => {
   if (action.indexOf("r-") === 0) {
     if (window.ReportsUI && window.ReportsUI.handleAction(action, a.dataset)) return;
   }
+  // Communication — templates/log screens are host-routed; the rest delegate.
+  if (action === "cm-open-templates") {
+    if (!canEditMasters(AuthSession.current())) { toast("Owner/Manager only."); return; }
+    window.commsView = "templates"; switchScreen("comms"); return;
+  }
+  if (action === "cm-open-log") { window.commsView = "log"; switchScreen("comms"); return; }
+  if (action.indexOf("cm-") === 0) {
+    if (window.CommsUI && window.CommsUI.handleAction(action, a.dataset)) return;
+  }
   if (action === "leads-view") {
     window.leadsView = a.dataset.view;
     window.leadsCustomerMobile = "";
@@ -2379,7 +2407,11 @@ document.addEventListener("click", async (e) => {
     deleteRecord(a.dataset.id);
     return;
   }
-  if (action === "wa-customer") { waCustomer(a.dataset.id); return; }
+  if (action === "wa-customer") {
+    if (window.CommsUI && window.CommsUI.openSendSheet) window.CommsUI.openSendSheet(a.dataset.id);
+    else waCustomer(a.dataset.id);
+    return;
+  }
 
   // ===== Settings =====
   if (action === "set-my-store") {
@@ -2564,9 +2596,10 @@ function sweepReminders() {
 
 // Seed editable masters once (idempotent) and persist so every later
 // Store.load() sees state.masters.
-if (window.Masters) {
+if (window.Masters || window.Comms) {
   const _s = Store.load();
-  window.Masters.ensureSeeded(_s);
+  if (window.Masters) window.Masters.ensureSeeded(_s);
+  if (window.Comms) window.Comms.ensureSeeded(_s);
   Store.save(_s);
 }
 
