@@ -64,7 +64,17 @@ input, select, textarea, button {
   display: flex; align-items: center; justify-content: space-between;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
-.brand { display: flex; align-items: baseline; gap: 8px; }
+.topbar-left { display: flex; align-items: center; gap: 8px; }
+.topbar-back {
+  background: rgba(255,255,255,0.14);
+  border: 0; color: var(--white);
+  width: 36px; height: 36px; border-radius: 9px;
+  font-size: 22px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.topbar-back:active { background: rgba(255,255,255,0.26); }
+.brand { display: flex; align-items: baseline; gap: 8px; cursor: pointer; }
 .brand-serif {
   font-family: 'DM Serif Display', Georgia, serif;
   font-size: 24px;
@@ -117,7 +127,7 @@ main#screen {
 }
 .bnav-icon { font-size: 22px; line-height: 1; }
 .bnav-btn.active { color: var(--navy); }
-body.savebar-open .bottomnav { display: none; }
+/* Bottom nav stays visible during the wizard — the save bar stacks above it. */
 
 /* ===================== Sections / cards ===================== */
 .card {
@@ -134,7 +144,8 @@ body.savebar-open .bottomnav { display: none; }
 
 /* ===================== Wizard ===================== */
 .wizard {
-  padding-bottom: calc(80px + var(--safe-bottom));
+  /* Clear both the stacked save bar (~66px) and the bottom nav below it. */
+  padding-bottom: calc(150px + var(--bnav-height) + var(--safe-bottom));
 }
 .wizard-head {
   background: var(--white);
@@ -243,13 +254,15 @@ body.savebar-open .bottomnav { display: none; }
 
 /* ===================== Save bar ===================== */
 .savebar {
-  position: fixed; left: 0; right: 0; bottom: 0;
-  padding: 10px 14px calc(10px + var(--safe-bottom));
+  position: fixed; left: 0; right: 0;
+  /* Sit directly above the bottom nav so both stay reachable. */
+  bottom: calc(var(--bnav-height) + var(--safe-bottom));
+  padding: 10px 14px;
   background: var(--white);
   border-top: 1px solid var(--gray-200);
   display: grid; gap: 10px;
   grid-template-columns: 1fr 1fr;
-  z-index: 11;
+  z-index: 8;
   box-shadow: 0 -4px 16px rgba(11,31,58,0.10);
 }
 .savebar.single-btn { grid-template-columns: 1fr; }
@@ -626,9 +639,12 @@ body.locked { overflow: hidden; }
 <body class="locked">
 
   <header class="topbar">
-    <div class="brand">
-      <span class="brand-serif">Saagar</span>
-      <span class="brand-sans">GREETOR</span>
+    <div class="topbar-left">
+      <button class="topbar-back" id="topbarBack" data-action="go-back" aria-label="Back" hidden>←</button>
+      <div class="brand" data-action="go-home" role="button" aria-label="Home">
+        <span class="brand-serif">Saagar</span>
+        <span class="brand-sans">GREETOR</span>
+      </div>
     </div>
     <button class="user-pill" id="userPill" data-action="user-pill" aria-label="User menu">
       <span id="userInitials">··</span>
@@ -642,9 +658,9 @@ body.locked { overflow: hidden; }
       <span class="bnav-icon">＋</span>
       <span>CAPTURE</span>
     </button>
-    <button class="bnav-btn" data-screen="today">
-      <span class="bnav-icon">📋</span>
-      <span>TODAY</span>
+    <button class="bnav-btn" data-screen="reports">
+      <span class="bnav-icon">📊</span>
+      <span>REPORTS</span>
     </button>
     <button class="bnav-btn" data-screen="leads">
       <span class="bnav-icon">👥</span>
@@ -666,6 +682,8 @@ body.locked { overflow: hidden; }
   <script src="customers.js"></script>
   <script src="customers-ui.js"></script>
   <script src="pipeline-ui.js"></script>
+  <script src="reports.js"></script>
+  <script src="reports-ui.js"></script>
   <script>
 "use strict";
 
@@ -1062,7 +1080,7 @@ function render() {
 
   const screen = $("screen");
   if (currentScreen === "capture")       screen.innerHTML = renderCapture(state, auth);
-  else if (currentScreen === "today")    screen.innerHTML = renderToday(state, auth);
+  else if (currentScreen === "reports")  screen.innerHTML = window.ReportsUI ? window.ReportsUI.render(state) : "<p class='muted'>Loading…</p>";
   else if (currentScreen === "leads")    screen.innerHTML = renderLeads(state, auth);
   else if (currentScreen === "settings") screen.innerHTML = renderSettings(state, auth);
   else if (currentScreen === "masters") {
@@ -1079,15 +1097,35 @@ function render() {
     b.classList.toggle("active", b.dataset.screen === navScreen)
   );
 
-  // Bottom nav vs savebar
-  document.body.classList.toggle("savebar-open", !!screen.querySelector(".savebar"));
+  // Topbar Back arrow — shown on any drill-down, hidden on the Capture home (step 1).
+  const back = $("topbarBack");
+  if (back) {
+    back.hidden = (currentScreen === "capture" && Wizard.step === 1);
+  }
 }
 
 function switchScreen(name) {
   currentScreen = name;
-  // If switching away from capture mid-wizard with edits, keep them so user
-  // can come back. If saving cleared the wizard, it stays clean.
+  // Switching away from capture mid-wizard keeps the draft (Wizard.data) so the
+  // user can return to it. Saving / reset clears it.
   render();
+}
+
+// Single source of truth for "go back one level". Used by both the topbar
+// Back arrow and the Android hardware back button. Returns true if it handled
+// the navigation (false only at the Capture home, so hardware back can exit).
+function goBack() {
+  if ($("modal-root").innerHTML) { closeModal(); return true; }
+  if (currentScreen === "masters") {
+    if ((window.mastersView || "home") !== "home") { window.mastersView = "home"; render(); return true; }
+    switchScreen("settings"); return true;
+  }
+  if (currentScreen === "leads" && window.leadsView === "customers" && window.leadsCustomerMobile) {
+    window.leadsCustomerMobile = ""; render(); return true;
+  }
+  if (currentScreen === "capture" && Wizard.step > 1) { Wizard.goto(Wizard.step - 1); return true; }
+  if (currentScreen !== "capture") { switchScreen("capture"); return true; }
+  return false;
 }
 
 // =====================================================================
@@ -1861,7 +1899,7 @@ function saveRecord() {
   toast(existing ? "Updated." : "Saved.");
   editingRecordId = null;
   Wizard.reset();
-  switchScreen("today");
+  switchScreen("reports");
 }
 
 function editRecord(recordId) {
@@ -1984,6 +2022,8 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (action === "goto-settings") { switchScreen("settings"); return; }
+  if (action === "go-back") { goBack(); return; }
+  if (action === "go-home") { switchScreen("capture"); return; }
 
   // Leads tab — delegate customer/pipeline actions to their UI modules
   if (action.indexOf("c-") === 0) {
@@ -1991,6 +2031,9 @@ document.addEventListener("click", async (e) => {
   }
   if (action.indexOf("p-") === 0) {
     if (window.PipelineUI && window.PipelineUI.handleAction(action, a.dataset)) return;
+  }
+  if (action.indexOf("r-") === 0) {
+    if (window.ReportsUI && window.ReportsUI.handleAction(action, a.dataset)) return;
   }
   if (action === "leads-view") {
     window.leadsView = a.dataset.view;
@@ -2306,35 +2349,9 @@ sweepReminders();
 
 if (window.SaagarShell && window.SaagarShell.boot) {
   window.SaagarShell.boot({
-    onBack: () => {
-      // 1. Modal open? Close it.
-      if ($("modal-root").innerHTML) { closeModal(); return true; }
-      // 2. In the masters editor? Step home, then back to settings.
-      if (currentScreen === "masters") {
-        if ((window.mastersView || "home") !== "home") {
-          window.mastersView = "home"; render(); return true;
-        }
-        switchScreen("settings"); return true;
-      }
-      // 3. In Leads → customer detail? Back to the list first.
-      if (currentScreen === "leads" && window.leadsView === "customers" && window.leadsCustomerMobile) {
-        window.leadsCustomerMobile = "";
-        render();
-        return true;
-      }
-      // 4. On a wizard step > 1? Step back.
-      if (currentScreen === "capture" && Wizard.step > 1) {
-        Wizard.goto(Wizard.step - 1);
-        return true;
-      }
-      // 5. On Today / Leads / Settings? Go to Capture.
-      if (currentScreen !== "capture") {
-        switchScreen("capture");
-        return true;
-      }
-      // 6. Capture with no entry started? Default exit confirm.
-      return false;
-    },
+    // Hardware back shares the exact logic of the topbar Back arrow.
+    // Returns false only at the Capture home, letting the shell confirm exit.
+    onBack: () => goBack(),
   });
 }
   </script>
