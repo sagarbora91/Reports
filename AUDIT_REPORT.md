@@ -1,17 +1,20 @@
 # Saagar Audit — QA Audit Report
 
 **Date:** 2026-05-28
-**Build under test:** `capacitor` branch, post-Phase-C (templates + per-CRO)
+**Build under test:** `capacitor` branch, post-Bucket-B (verify gate + weekly
+report + T4/T7 escalations + full Marathi wiring)
 **Method:** Automated harness running the *real* app code under Node with a
 browser shim, driving every flow with dummy data and asserting outcomes, plus
 static cross-checks and targeted manual code review.
 
 ---
 
-## Result: ✅ 128 / 128 checks pass
+## Result: ✅ 175 / 175 checks pass
 
 No logic or render errors found in the automated battery. Two stale-wording
-bugs from the equal-weight switch were found by code review and fixed.
+bugs from the equal-weight switch were found by code review and fixed; a
+locale-comparison bug introduced by the Marathi wiring (first-run PIN flow)
+was caught and fixed before it shipped.
 
 ---
 
@@ -25,7 +28,7 @@ the results are exactly right. This exercises the real code, not a copy.
 
 Re-runnable any time: see `qa/README.md`.
 
-## Coverage — 16 areas
+## Coverage — 20 areas
 
 | # | Area | Checks | Result |
 |---|---|---|---|
@@ -45,6 +48,10 @@ Re-runnable any time: see `qa/README.md`.
 | 14 | Role gating (who can run daily/weekly/monthly) | 5 | ✅ |
 | 15 | **Render smoke** — every screen × Owner/GM/SM × EN/MR | 40 | ✅ |
 | 16 | Edge cases (SKIP, CAP aging, replay-safety, weekly-from-dailies, custom monthly, backdating) | 12 | ✅ |
+| 17 | Trend dashboards (12-week, day-of-week, by-section) | 10 | ✅ |
+| 18 | **Verify gate** — GM/Owner signs off; can't verify own; badge + finalized flow | 13 | ✅ |
+| 19 | **Weekly report** (9 sections) + ISO-week range + **T4 inventory** / **T7 decline** escalations | 16 | ✅ |
+| 20 | **i18n wiring** — Marathi reaches UI chrome; EN fallback; no `${tUi` leaks | 8 | ✅ |
 
 Plus two static cross-checks:
 - **Buttons ↔ handlers:** all 68 rendered `data-action` buttons have a matching
@@ -90,9 +97,15 @@ sheet, or actual touch events:
 - [ ] GPS permission prompt + coordinates appear on the stamp
 - [ ] Escalation "Send on WhatsApp" opens WhatsApp with the message pre-typed
 - [ ] Backup → Drive via the Android share sheet; Restore from that file
-- [ ] Print / Save as PDF opens the print dialog
-- [ ] Marathi toggle reads correctly across screens (native-speaker review)
+- [ ] Print / Save as PDF opens the print dialog (daily **and** the new
+      9-section weekly report)
+- [ ] Marathi toggle reads correctly across screens (native-speaker review) —
+      now covers buttons, modals, toasts, the verify gate and CAP tab too
 - [ ] Build a custom template on the phone, run it, confirm it scores
+- [ ] As GM/Owner, **verify** a submitted daily audit (spot-check modal →
+      "✓ verified" badge); confirm an auditor can't verify their own
+- [ ] Submit a weekly audit with an inventory FAIL → **T4** WhatsApp escalation
+      fires to the Owner
 
 ## Verdict
 
