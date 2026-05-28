@@ -1151,6 +1151,7 @@ function render() {
   const screen = $("screen");
   if (currentScreen === "capture")       screen.innerHTML = renderCapture(state, auth);
   else if (currentScreen === "reports")  screen.innerHTML = window.ReportsUI ? window.ReportsUI.render(state) : "<p class='muted'>Loading…</p>";
+  else if (currentScreen === "auditlog") screen.innerHTML = renderAuditLog(state);
   else if (currentScreen === "leads")    screen.innerHTML = renderLeads(state, auth);
   else if (currentScreen === "settings") screen.innerHTML = renderSettings(state, auth);
   else if (currentScreen === "masters") {
@@ -1161,8 +1162,8 @@ function render() {
     screen.innerHTML = backBar + (window.MastersUI ? window.MastersUI.render(state) : "<p class='muted'>Masters not loaded.</p>");
   }
 
-  // Bottom nav active (masters is a child of settings)
-  const navScreen = currentScreen === "masters" ? "settings" : currentScreen;
+  // Bottom nav active (masters + audit log are children of settings)
+  const navScreen = (currentScreen === "masters" || currentScreen === "auditlog") ? "settings" : currentScreen;
   document.querySelectorAll(".bnav-btn").forEach(b =>
     b.classList.toggle("active", b.dataset.screen === navScreen)
   );
@@ -1190,6 +1191,7 @@ function goBack() {
     if ((window.mastersView || "home") !== "home") { window.mastersView = "home"; render(); return true; }
     switchScreen("settings"); return true;
   }
+  if (currentScreen === "auditlog") { switchScreen("settings"); return true; }
   if (currentScreen === "leads" && window.leadsView === "customers" && window.leadsCustomerMobile) {
     window.leadsCustomerMobile = ""; render(); return true;
   }
@@ -2171,6 +2173,12 @@ document.addEventListener("click", async (e) => {
   if (action === "goto-settings") { switchScreen("settings"); return; }
   if (action === "go-back") { goBack(); return; }
   if (action === "go-home") { switchScreen("capture"); return; }
+  if (action === "open-audit-log") {
+    if (!canManageUsers(AuthSession.current())) { toast("Owner only."); return; }
+    switchScreen("auditlog");
+    return;
+  }
+  if (action === "export-audit-log") { exportAuditLogCSV(); return; }
 
   // Leads tab — delegate customer/pipeline actions to their UI modules
   if (action.indexOf("c-") === 0) {
