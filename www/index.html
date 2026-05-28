@@ -6366,7 +6366,7 @@ function renderReviewAudit(a) {
     const verdicts = {};
     Object.keys(a.results || {}).forEach(id => { verdicts[id] = a.results[id].result; });
     s = scoreWeekly(dailyPcts, verdicts, cps);
-    extra = `<p class="muted">Daily contribution ${s.dailyContribution}/68 (avg ${s.avgDaily}% over ${dailyPcts.length} day${dailyPcts.length === 1 ? '' : 's'}) + weekly ${s.weeklyRaw}/${s.weeklyMax}</p>`;
+    extra = `<p class="muted">Daily contribution ${s.dailyContribution}/${dailyTemplateCount()} (avg ${s.avgDaily}% over ${dailyPcts.length} day${dailyPcts.length === 1 ? '' : 's'}) + weekly ${s.weeklyRaw}/${s.weeklyMax}</p>`;
   } else if (auditIsPerCro(a)) {
     const sp = scorePerCro(a, cps);
     s = sp.aggregate;
@@ -6384,7 +6384,7 @@ function renderReviewAudit(a) {
       <p class="tiny">${isWeekly ? `WEEKLY DRAFT · Week ${a.week_number}, ${a.year}` : 'DRAFT'} &middot; review before submit</p>
       <div class="score-pct ${s.band}">${s.pct.toFixed(1)}%</div>
       <div class="score-band ${s.band}">${bandLabel(s.band)}</div>
-      <p class="muted">${s.raw} of ${s.max} weighted points &middot; ${s.p} pass &middot; ${s.f} fail &middot; ${s.na} N/A</p>
+      <p class="muted">${s.raw} of ${s.max} points &middot; ${s.p} pass &middot; ${s.f} fail &middot; ${s.na} N/A</p>
       ${extra}
     </div>
     <div class="card">
@@ -7425,7 +7425,7 @@ function historyDetailModal(a) {
   openModal(`
     <h3>${isWeekly ? `Weekly audit · Week ${a.week_number}, ${a.year}` : escapeHtml(fmtDate(a.date))}</h3>
     <p class="muted">Submitted ${escapeHtml(new Date(a.submitted_at).toLocaleString('en-IN'))} by ${escapeHtml(a.auditor_name || '—')}</p>
-    ${isWeekly && a.daily_pcts_used ? `<p class="muted">Daily contribution: avg ${a.score.avgDaily}% over ${a.daily_pcts_used.length} day(s) → ${a.score.dailyContribution}/68</p>` : ''}
+    ${isWeekly && a.daily_pcts_used ? `<p class="muted">Daily contribution: avg ${a.score.avgDaily}% over ${a.daily_pcts_used.length} day(s) → ${a.score.dailyContribution}/${(a.score.max - (a.score.weeklyMax || 0))}</p>` : ''}
     ${backdatedBadge}
     ${notesCard}
     <div class="score-card" style="padding:12px">
@@ -7497,7 +7497,7 @@ function printAudit(auditId) {
         s.band === 'excellent' || s.band === 'good' ? '#166534'
         : s.band === 'fair' ? '#b45309' : '#b91c1c'
       }">${s.pct.toFixed(1)}% &middot; ${bandLabel(s.band)}</div>
-      <div class="meta">${s.raw} of ${s.max} weighted points &middot; ${s.p} Pass &middot; ${s.f} Fail &middot; ${s.na} N/A</div>
+      <div class="meta">${s.raw} of ${s.max} points &middot; ${s.p} Pass &middot; ${s.f} Fail &middot; ${s.na} N/A</div>
       ${sopSections}
     </div>
   `;

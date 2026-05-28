@@ -36,3 +36,7 @@ Documentation/_p1_spec_summary.md
 .env.*
 *.keystore
 *.jks
+
+# QA harness — generated artifacts (keep shim.js + tests.js)
+qa/app_bundle.js
+qa/run.js
