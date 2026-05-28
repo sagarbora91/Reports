@@ -2172,7 +2172,12 @@ function restoreJson() {
       const parsed = JSON.parse(text);
       if (parsed && parsed._format === "saagar_greetor_v2" && parsed.state) {
         if (!confirm("Replace current data with this backup?")) return;
-        Store.save(parsed.state);
+        const st = parsed.state;
+        // Re-seed masters/comms so an older backup that predates them still
+        // yields a usable wizard immediately (no app restart needed).
+        if (window.Masters) window.Masters.ensureSeeded(st);
+        if (window.Comms) window.Comms.ensureSeeded(st);
+        Store.save(st);
         if (parsed.staff) saveStaff(parsed.staff);
         toast("Backup restored.");
         render();
@@ -2181,7 +2186,10 @@ function restoreJson() {
       // Legacy bare-array
       if (Array.isArray(parsed)) {
         if (!confirm(`Restore ${parsed.length} legacy records?`)) return;
-        const s = Store.load(); s.records = parsed; Store.save(s);
+        const s = Store.load(); s.records = parsed;
+        if (window.Masters) window.Masters.ensureSeeded(s);
+        if (window.Comms) window.Comms.ensureSeeded(s);
+        Store.save(s);
         toast("Legacy records restored.");
         render();
         return;
