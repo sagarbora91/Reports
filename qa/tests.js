@@ -558,6 +558,26 @@
     ok('T7: an improving week does NOT raise trigger 7', !d7b.some(e => e.trigger_number === 7), '');
   })();
 
+  // ---- 20. i18n wiring (the Marathi toggle actually reaches UI chrome) ----
+  reset();
+  const i18nOwner = await Users.create({ name: 'Sagar', role: 'OWNER', pin: '1234' });
+  AuthSession.login(i18nOwner.id);
+  (function () {
+    const prev = I18n.current;
+    I18n.current = 'mr';
+    eq('i18n: tUi submit_audit MR', tUi('btn.submit_audit'), 'ऑडिट सादर करा');
+    eq('i18n: verify.btn MR', tUi('verify.btn'), '✓ हे ऑडिट पडताळा');
+    eq('i18n: roleLabel(SM) MR', roleLabel('SM'), 'स्टोअर मॅनेजर');
+    eq('i18n: freqLabel(daily) MR', freqLabel('daily'), 'दैनिक');
+    const mrHtml = renderSettingsTab(Store.load(), AuthSession.current());
+    ok('i18n: settings renders Marathi', /[ऀ-ॿ]/.test(mrHtml), '');
+    ok('i18n: settings has no raw ">Sign out<"', !/>Sign out</.test(mrHtml), '');
+    ok('i18n: no un-interpolated ${tUi leaked', !mrHtml.includes('${tUi'), '');
+    I18n.current = 'en';
+    eq('i18n: EN falls back to English', tUi('btn.submit_audit'), 'Submit audit');
+    I18n.current = prev;
+  })();
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

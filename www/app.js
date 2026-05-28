@@ -203,9 +203,9 @@ window.onDailyReminderToggle = async function (on) {
     if (on) {
       const ok = await window.SaagarShell.scheduleDailyReminder();
       if (ok) {
-        toast('Daily reminder set for 10:00 AM');
+        toast(tUi('ok.reminder_set'));
       } else {
-        toast('Could not schedule — check notification permission');
+        toast(tUi('err.schedule_failed'));
         // Roll the checkbox back so the UI matches the real state.
         window.SaagarShell.setDailyReminderEnabled(false);
         const cb = document.getElementById('dailyReminderToggle');
@@ -213,11 +213,11 @@ window.onDailyReminderToggle = async function (on) {
       }
     } else {
       await window.SaagarShell.cancelDailyReminder();
-      toast('Daily reminder turned off');
+      toast(tUi('ok.reminder_off'));
     }
   } catch (e) {
     console.error(e);
-    toast('Reminder change failed');
+    toast(tUi('err.reminder_failed'));
   }
 };
 
@@ -791,9 +791,9 @@ function renderEscalationCards(state, auth) {
         </div>
         <div class="alert-actions">
           ${hasPhone
-            ? `<button class="btn btn-whatsapp" data-action="esc-send" data-id="${escapeHtml(e.id)}">📱 Send on WhatsApp</button>`
-            : `<button class="btn btn-ghost" data-action="esc-preview" data-id="${escapeHtml(e.id)}">View message</button>`}
-          <button class="btn btn-ghost" data-action="esc-dismiss" data-id="${escapeHtml(e.id)}">Dismiss</button>
+            ? `<button class="btn btn-whatsapp" data-action="esc-send" data-id="${escapeHtml(e.id)}">${tUi('share.send_whatsapp_emoji')}</button>`
+            : `<button class="btn btn-ghost" data-action="esc-preview" data-id="${escapeHtml(e.id)}">${tUi('btn.view_message')}</button>`}
+          <button class="btn btn-ghost" data-action="esc-dismiss" data-id="${escapeHtml(e.id)}">${tUi('btn.dismiss')}</button>
         </div>
       </div>`;
   }).join('');
@@ -805,15 +805,15 @@ function escalationPreviewModal(escId) {
   if (!e) return;
   const recipient = findRecipient(state, e.recipient_role);
   openModal(`
-    <h3>Escalation message</h3>
+    <h3>${tUi('label.escalation_msg')}</h3>
     <p class="muted">T${e.trigger_number} · ${escapeHtml(e.trigger_label)} · for <strong>${escapeHtml(recipient ? recipient.name : e.recipient_role)}</strong></p>
     <pre style="white-space:pre-wrap;background:var(--gray-100);padding:12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.5">${escapeHtml(e.message)}</pre>
     ${!recipient || !recipient.phone
       ? `<p class="error">No phone number set for ${escapeHtml(recipient ? recipient.name : e.recipient_role)}. Add one in Settings → Users to enable WhatsApp send.</p>`
       : ''}
-    <button class="btn btn-ghost" data-action="esc-copy" data-id="${escapeHtml(escId)}">Copy message</button>
+    <button class="btn btn-ghost" data-action="esc-copy" data-id="${escapeHtml(escId)}">${tUi('btn.copy_message')}</button>
     <div class="spacer-12"></div>
-    <button class="btn btn-ghost" data-action="modal-cancel">Close</button>
+    <button class="btn btn-ghost" data-action="modal-cancel">${tUi('btn.close')}</button>
   `);
 }
 
@@ -915,7 +915,7 @@ const AuthSession = {
 };
 
 function roleLabel(r) {
-  return { OWNER: 'Owner', GM: 'GM', SM: 'Store Manager' }[r] || r;
+  return { OWNER: tUi('role.owner'), GM: tUi('role.gm'), SM: tUi('role.store_manager') }[r] || r;
 }
 
 // Phone helpers. India default: if 10 digits, prepend '91'.
@@ -1315,6 +1315,10 @@ function tAuditStatus(s)       { return I18n.t('audit_statuses', s, s); }
 function tSop(id, fallback)    { return I18n.t('sop_names', id, fallback || id); }
 function tCheckpoint(cpId, fb) { return I18n.t('checkpoints', cpId, fb); }
 function tUi(key, fb)          { return I18n.t('ui_strings', key, fb != null ? fb : key); }
+// Template name in the active locale (falls back to the English name).
+function tplName(t)            { return (I18n.current === 'mr' && t && t.name_mr) ? t.name_mr : (t ? (t.name || '') : ''); }
+function freqLabel(f)          { return tUi('freq.' + f, FREQ_LABELS[f] || f); }
+function croModeLabel(m)       { return tUi('cromode.' + m, CRO_MODE_LABELS[m] || m); }
 
 // Updates tab bar labels in-place. Called on locale change so the topbar
 // nav stays in sync without a full DOM rebuild.
@@ -1764,25 +1768,25 @@ function renderFirstTimeSetup() {
     <div class="auth-wrap">
       <div class="auth-brand">
         <div class="serif">Saagar Audit</div>
-        <div class="sub">FIRST-TIME SETUP</div>
+        <div class="sub">${tUi('label.first_time_setup')}</div>
       </div>
       <div class="auth-card">
         ${stage === 'name' ? `
-          <h2>Welcome, Owner</h2>
-          <p>Let's set up your account. You can add a Store Manager and a GM after this.</p>
+          <h2>${tUi('label.welcome_owner')}</h2>
+          <p>${tUi('hint.set_account')}</p>
           <label class="field">
-            <span>Your name</span>
-            <input type="text" id="ownerName" placeholder="e.g. Sagar Bora" autocomplete="off" autocapitalize="words">
+            <span>${tUi('label.your_name')}</span>
+            <input type="text" id="ownerName" placeholder="${tUi('ph.eg_name_owner')}" autocomplete="off" autocapitalize="words">
           </label>
           <div id="setupErr" class="error" hidden></div>
-          <button class="btn btn-primary" data-action="setup-name-next">Continue</button>
+          <button class="btn btn-primary" data-action="setup-name-next">${tUi('btn.continue')}</button>
         ` : stage === 'pin' ? `
-          <h2>Choose a 4-digit PIN</h2>
+          <h2>${tUi('label.choose_pin')}</h2>
           <p>You'll use this to log in. Pick something you'll remember.</p>
           ${renderPinPad()}
           <div id="setupErr" class="error" hidden></div>
         ` : stage === 'confirm' ? `
-          <h2>Confirm your PIN</h2>
+          <h2>${tUi('label.confirm_your_pin')}</h2>
           <p>Type it again to make sure.</p>
           ${renderPinPad()}
           <div id="setupErr" class="error" hidden></div>
@@ -1806,10 +1810,10 @@ function renderLoginScreen(state) {
         <div class="sub">SIGN IN</div>
       </div>
       <div class="auth-card">
-        <h2>Welcome back</h2>
+        <h2>${tUi('label.welcome_back')}</h2>
         <p>Pick your name and enter your 4-digit PIN.</p>
         <label class="field">
-          <span>Name</span>
+          <span>${tUi('label.name')}</span>
           <select id="loginUser">
             ${active.map(u => `
               <option value="${escapeHtml(u.id)}" ${u.id === selected ? 'selected' : ''}>
@@ -1835,7 +1839,7 @@ function renderPinPad() {
       <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
       <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button>
       <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button>
-      <button class="muted" data-key="forgot">Forgot?</button>
+      <button class="muted" data-key="forgot">${tUi('btn.forgot_pin')}</button>
       <button data-key="0">0</button>
       <button data-key="back">⌫</button>
     </div>
@@ -1874,16 +1878,16 @@ function renderStartAudit(state, auth) {
     ${weeklies.map(t => renderWeeklyEntryCard(state, t)).join('')}
     ${others.length > 1 ? `
       <div class="card">
-        <h2>Start an audit</h2>
+        <h2>${tUi('start.heading')}</h2>
         <div class="template-picker">
           ${others.map(t => `
             <button class="tpl-pick ${t.id === StartState.templateId ? 'active' : ''}" data-action="pick-template" data-id="${escapeHtml(t.id)}">
-              ${escapeHtml(t.name)}
+              ${escapeHtml(tplName(t))}
             </button>`).join('')}
         </div>
       </div>` : ''}
     ${selected ? renderTemplateStartConfig(state, auth, selected)
-      : (weeklies.length === 0 ? '<div class="card"><p class="muted">No audit templates available for your role. Ask the Owner to add one in Settings → Audit templates.</p></div>' : '')}
+      : (weeklies.length === 0 ? `<div class="card"><p class="muted">${tUi('templates.none_role')}</p></div>` : '')}
   `;
 }
 
@@ -1896,36 +1900,36 @@ function renderTemplateStartConfig(state, auth, tpl) {
   const showPinchHitHint = tpl.frequency === 'daily' && auth && auth.role !== 'SM';
   return `
     <div class="card">
-      <h2>${escapeHtml(tpl.name)}</h2>
+      <h2>${escapeHtml(tplName(tpl))}</h2>
       <p class="muted">${escapeHtml(fmtDate(today()))} &middot; auditor: <strong>${escapeHtml(auth.name)}</strong> (${escapeHtml(roleLabel(auth.role))})</p>
       ${showPinchHitHint
-        ? `<p class="tiny" style="color:var(--amber);margin-top:4px">Daily audits are usually run by the Store Manager. You can still proceed.</p>`
+        ? `<p class="tiny" style="color:var(--amber);margin-top:4px">${tUi('hint.sm_proceed')}</p>`
         : ''}
       ${todays
         ? `<div class="card" style="background:var(--green-pale);border-color:var(--green);margin-top:12px">
-            <strong>Submitted today</strong>
+            <strong>${tUi('hint.submitted_today')}</strong>
             <p>${todays.score.pct.toFixed(1)}% &middot; ${bandLabel(todays.score.band)}${todays.auditor_name ? ' &middot; by ' + escapeHtml(todays.auditor_name) : ''}</p>
           </div>`
         : ''}
       <div class="spacer-12"></div>
       <label class="field">
-        <span>Audit date</span>
+        <span>${tUi('label.audit_date')}</span>
         <input type="date" id="auditDate" value="${today()}" max="${today()}" onchange="toggleBackdateField()">
       </label>
       <div class="field" id="backdateField" hidden>
-        <span style="font-size:13px;color:var(--amber);font-weight:600">Backdated audit — please record why</span>
+        <span style="font-size:13px;color:var(--amber);font-weight:600">${tUi('hint.backdate_why')}</span>
         <textarea id="backdateReason" maxlength="200" rows="2"
-                  placeholder="e.g. phone died yesterday; logging late so the day isn't missed"
+                  placeholder="${tUi('ph.eg_backdate')}"
                   style="margin-top:6px"></textarea>
-        <p class="tiny muted" style="margin:4px 0 0">Stored with the audit, shown on the report and exports.</p>
+        <p class="tiny muted" style="margin:4px 0 0">${tUi('hint.stored_with_audit')}</p>
       </div>
       <div class="field">
         <div class="row-spread">
-          <span style="font-size:13px;color:var(--gray-600)">CROs on duty</span>
-          <button class="iconbtn" style="color:var(--navy);font-size:14px" data-action="add-cro">+ Add CRO</button>
+          <span style="font-size:13px;color:var(--gray-600)">${tUi('label.cros_on_duty')}</span>
+          <button class="iconbtn" style="color:var(--navy);font-size:14px" data-action="add-cro">+ ${tUi('btn.add_cro')}</button>
         </div>
         ${cros.length === 0
-          ? '<p class="muted">No CROs yet. Tap "+ Add CRO" above to add your floor staff.</p>'
+          ? `<p class="muted">${tUi('hint.no_cros')}</p>`
           : cros.map(c => `
             <div class="cro-row">
               <label>
@@ -1936,9 +1940,9 @@ function renderTemplateStartConfig(state, auth, tpl) {
             </div>`).join('')}
       </div>
       <div id="startError" class="error" hidden></div>
-      <button class="btn btn-primary" data-action="start-audit" data-tpl="${escapeHtml(tpl.id)}">Start ${escapeHtml(tpl.name)}</button>
+      <button class="btn btn-primary" data-action="start-audit" data-tpl="${escapeHtml(tpl.id)}">${escapeHtml(tUi('start.button_fmt').replace('{name}', tplName(tpl)))}</button>
     </div>
-    <p class="tiny" style="text-align:center;margin-top:16px">${tpl.checkpoints.length} point(s) &middot; target 90%+ &middot; score = % passed</p>
+    <p class="tiny" style="text-align:center;margin-top:16px">${escapeHtml(tUi('start.footer_fmt').replace('{n}', tpl.checkpoints.length))}</p>
   `;
 }
 
@@ -2070,7 +2074,7 @@ function renderInProgressAudit(a) {
       <div class="minicount na"><span class="n">${live.na}</span><span class="lbl">N/A</span></div>
     </div>
     <div class="spacer-24"></div>
-    <button class="btn btn-ghost" data-action="cancel-audit">Cancel audit</button>
+    <button class="btn btn-ghost" data-action="cancel-audit">${tUi('btn.cancel_audit')}</button>
   `;
 }
 
@@ -2135,7 +2139,7 @@ function renderCroHandoff(a, ci) {
     </div>
     <button class="btn btn-primary" data-action="next-cro">Next: ${escapeHtml(nextCro ? nextCro.name : 'CRO')} (${ci + 2} of ${order.length}) →</button>
     <div class="spacer-12"></div>
-    <button class="btn btn-ghost" data-action="cancel-audit">Discard draft</button>
+    <button class="btn btn-ghost" data-action="cancel-audit">${tUi('btn.discard_draft')}</button>
   `;
 }
 
@@ -2173,16 +2177,16 @@ function renderReviewAudit(a) {
       <label class="field" style="margin:0">
         <span>Audit notes <span class="muted" style="font-weight:400">(optional)</span></span>
         <textarea id="auditNotes" maxlength="500" rows="3"
-                  placeholder="Context for this audit — e.g. rain today, low footfall, 3 staff out, festival rush"
+                  placeholder="${tUi('hint.audit_context')}"
                   >${escapeHtml(a.notes || '')}</textarea>
         <p class="tiny muted" style="margin:6px 0 0">
           Shown on the report, in the History detail and the CSV. Use for one-off context that doesn't fit a checkpoint.
         </p>
       </label>
     </div>
-    <button class="btn btn-primary" data-action="submit-audit">Submit audit</button>
+    <button class="btn btn-primary" data-action="submit-audit">${tUi('btn.submit_audit')}</button>
     <div class="spacer-12"></div>
-    <button class="btn btn-ghost" data-action="cancel-audit">Discard draft</button>
+    <button class="btn btn-ghost" data-action="cancel-audit">${tUi('btn.discard_draft')}</button>
   `;
 }
 
@@ -2344,8 +2348,8 @@ function renderHistoryTab(state, auth) {
   // Sub-view toggle (List | Trends)
   const toggle = `
     <div class="template-picker" style="margin-bottom:12px">
-      <button class="tpl-pick ${HistoryView.mode === 'list' ? 'active' : ''}" data-action="history-view" data-mode="list">Audits</button>
-      <button class="tpl-pick ${HistoryView.mode === 'trends' ? 'active' : ''}" data-action="history-view" data-mode="trends">📊 Trends</button>
+      <button class="tpl-pick ${HistoryView.mode === 'list' ? 'active' : ''}" data-action="history-view" data-mode="list">${tUi('nav.audits')}</button>
+      <button class="tpl-pick ${HistoryView.mode === 'trends' ? 'active' : ''}" data-action="history-view" data-mode="trends">${tUi('history.trends')}</button>
     </div>`;
 
   if (HistoryView.mode === 'trends') {
@@ -2354,7 +2358,7 @@ function renderHistoryTab(state, auth) {
   }
 
   if (submitted.length === 0) {
-    return toggle + `<div class="card"><h2>No submitted audits yet</h2><p class="muted">Once you submit a daily audit it'll appear here.</p></div>`;
+    return toggle + `<div class="card"><h2>${tUi('hint.no_audits')}</h2><p class="muted">Once you submit a daily audit it'll appear here.</p></div>`;
   }
 
   // CRO performance summary — count FAILs attributed per CRO in last 30 days
@@ -2375,7 +2379,7 @@ function renderHistoryTab(state, auth) {
 
   const croSummaryHtml = ranked.length > 0 ? `
     <div class="cro-summary">
-      <h3>CROs with most fails (last 30 days)</h3>
+      <h3>${tUi('label.cro_fails_30d')}</h3>
       ${ranked.map(([id, n]) => `
         <div class="cro-rank">
           <span>${escapeHtml(croById[id].name)} <span class="muted" style="font-size:12px">· ${escapeHtml(croById[id].counter)}</span></span>
@@ -2393,7 +2397,7 @@ function renderHistoryTab(state, auth) {
       ? `Weekly · Week ${a.week_number}, ${a.year}`
       : escapeHtml(fmtDate(a.date));
     const verifiedChip = a.status === 'verified'
-      ? ` &middot; <span style="color:var(--green,#166534);font-weight:600">✓ verified</span>`
+      ? ` &middot; <span style="color:var(--green,#166534);font-weight:600">${tUi('verify.chip')}</span>`
       : '';
     return `
       <div class="hist-row" data-action="open-history" data-id="${a.id}">
@@ -2405,7 +2409,7 @@ function renderHistoryTab(state, auth) {
       </div>`;
   }).join('') + `
     <div class="spacer-12"></div>
-    <button class="btn btn-ghost" data-action="export-csv">Export all to CSV</button>
+    <button class="btn btn-ghost" data-action="export-csv">${tUi('btn.export_csv')}</button>
   `;
 }
 
@@ -2418,7 +2422,7 @@ function renderCapsTab(state, auth) {
   if (all.length === 0) {
     return `
       <div class="card">
-        <h2>No CAPs yet</h2>
+        <h2>${tUi('hint.no_caps')}</h2>
         <p class="muted">CAPs (Corrective Action Plans) are created automatically when an audit has FAILs. You'll see them here.</p>
       </div>`;
   }
@@ -2454,8 +2458,8 @@ function renderCapsTab(state, auth) {
   const filterChips = ['open', 'aged', 'done', 'verified', 'closed', 'all'].map(f => {
     const n = counts[f] || 0;
     const active = (filter === f) ? 'active' : '';
-    const label = f === 'all' ? 'All' : CAP_STATUS_LABEL[f];
-    return `<button class="filter-chip ${active}" data-action="cap-filter" data-filter="${f}">${label}${n > 0 ? ` · ${n}` : ''}</button>`;
+    const label = f === 'all' ? tUi('cap.filter_all') : tCapStatus(f);
+    return `<button class="filter-chip ${active}" data-action="cap-filter" data-filter="${f}">${escapeHtml(label)}${n > 0 ? ` · ${n}` : ''}</button>`;
   }).join('');
 
   const rows = filtered.map(c => {
@@ -2469,25 +2473,25 @@ function renderCapsTab(state, auth) {
     const deadlineLabel = c.status === 'closed' || c.status === 'verified'
       ? ''
       : daysToDeadline === null ? ''
-        : daysToDeadline < 0 ? `<span class="cap-deadline overdue">${Math.abs(daysToDeadline)}d overdue</span>`
-        : daysToDeadline === 0 ? `<span class="cap-deadline today">due today</span>`
-        : `<span class="cap-deadline">due in ${daysToDeadline}d</span>`;
+        : daysToDeadline < 0 ? `<span class="cap-deadline overdue">${escapeHtml(tUi('cap.overdue_fmt').replace('{n}', Math.abs(daysToDeadline)))}</span>`
+        : daysToDeadline === 0 ? `<span class="cap-deadline today">${tUi('cap.due_today')}</span>`
+        : `<span class="cap-deadline">${escapeHtml(tUi('cap.due_in_fmt').replace('{n}', daysToDeadline))}</span>`;
     return `
       <div class="cap-row ${c.status}" data-action="open-cap" data-id="${escapeHtml(c.id)}">
         <div class="cap-row-top">
           <span class="cap-id">${escapeHtml(c.id)}</span>
-          <span class="cap-pill ${c.status}">${escapeHtml(CAP_STATUS_LABEL[c.status])}</span>
+          <span class="cap-pill ${c.status}">${escapeHtml(tCapStatus(c.status))}</span>
         </div>
         <div class="cap-row-mid">
-          <span class="cap-cp ${sop && sop.critical ? 'critical' : ''}">${escapeHtml(sop ? sop.name : c.sop_id)} · ${escapeHtml(c.checkpoint_id)}</span>
+          <span class="cap-cp ${sop && sop.critical ? 'critical' : ''}">${escapeHtml(sop ? tSop(sop.id, sop.name) : c.sop_id)} · ${escapeHtml(c.checkpoint_id)}</span>
         </div>
-        <div class="cap-row-text">${escapeHtml(cp ? cp.text : '')}</div>
+        <div class="cap-row-text">${escapeHtml(cp ? tCheckpoint(cp.id, cp.text) : '')}</div>
         ${c.finding ? `<div class="cap-row-finding">${escapeHtml(c.finding)}</div>` : ''}
         <div class="cap-row-bottom">
-          ${cro ? `<span class="cap-meta">CRO: ${escapeHtml(cro.name)}</span>` : ''}
+          ${cro ? `<span class="cap-meta">${tUi('cap.cro_word')} ${escapeHtml(cro.name)}</span>` : ''}
           ${responsible
-            ? `<span class="cap-meta">Owner: ${escapeHtml(responsible.name)}${responsible.is_active === false ? ' (inactive)' : ''}</span>`
-            : (c.responsible_user_id ? `<span class="cap-meta" style="color:var(--red)">Owner: (deleted)</span>` : '')}
+            ? `<span class="cap-meta">${tUi('cap.owner')} ${escapeHtml(responsible.name)}${responsible.is_active === false ? ' (inactive)' : ''}</span>`
+            : (c.responsible_user_id ? `<span class="cap-meta" style="color:var(--red)">${tUi('cap.owner')} (deleted)</span>` : '')}
           ${deadlineLabel}
         </div>
       </div>`;
@@ -2550,15 +2554,15 @@ function capDetailModal(capId) {
   } else if (c.status === 'done') {
     if (isVerifier) {
       actionButtons = `
-        <button class="btn btn-primary" data-action="cap-verify" data-id="${escapeHtml(c.id)}">Verify</button>
-        <button class="btn btn-ghost" data-action="cap-reject" data-id="${escapeHtml(c.id)}" style="color:var(--red);border-color:var(--red)">Reject (re-open)</button>
+        <button class="btn btn-primary" data-action="cap-verify" data-id="${escapeHtml(c.id)}">${tUi('btn.verify')}</button>
+        <button class="btn btn-ghost" data-action="cap-reject" data-id="${escapeHtml(c.id)}" style="color:var(--red);border-color:var(--red)">${tUi('btn.reject')}</button>
       `;
     } else {
       actionButtons = `<p class="muted" style="text-align:center">Waiting for GM or Owner to verify.</p>`;
     }
   } else if (c.status === 'verified') {
     if (isVerifier) {
-      actionButtons = `<button class="btn btn-primary" data-action="cap-close" data-id="${escapeHtml(c.id)}">Close CAP</button>`;
+      actionButtons = `<button class="btn btn-primary" data-action="cap-close" data-id="${escapeHtml(c.id)}">${tUi('btn.close_cap')}</button>`;
     } else {
       actionButtons = `<p class="muted" style="text-align:center">Waiting for GM or Owner to close.</p>`;
     }
@@ -2568,7 +2572,7 @@ function capDetailModal(capId) {
 
   openModal(`
     <h3>${escapeHtml(c.id)}</h3>
-    <p class="muted">${escapeHtml(sop ? sop.name : c.sop_id)} · checkpoint ${escapeHtml(c.checkpoint_id)} · <span class="cap-pill ${c.status}">${escapeHtml(CAP_STATUS_LABEL[c.status])}</span></p>
+    <p class="muted">${escapeHtml(sop ? tSop(sop.id, sop.name) : c.sop_id)} · ${tUi('label.checkpoint_word')} ${escapeHtml(c.checkpoint_id)} · <span class="cap-pill ${c.status}">${escapeHtml(tCapStatus(c.status))}</span></p>
 
     <div style="background:var(--red-pale);border-left:3px solid var(--red);padding:10px 12px;border-radius:6px;margin-top:12px">
       <div style="font-weight:600;font-size:13px;color:var(--red);margin-bottom:4px">Finding</div>
@@ -2582,12 +2586,12 @@ function capDetailModal(capId) {
     ${[1, 2, 3, 4, 5].map(n => `
       <label class="field" style="margin-bottom:8px">
         <span style="font-size:12px">Why ${n}?</span>
-        <input type="text" class="cap-why" data-n="${n}" value="${escapeHtml(c['why' + n] || '')}" ${isReadOnly ? 'disabled' : ''} placeholder="Because…">
+        <input type="text" class="cap-why" data-n="${n}" value="${escapeHtml(c['why' + n] || '')}" ${isReadOnly ? 'disabled' : ''} placeholder="${tUi('ph.because')}">
       </label>`).join('')}
 
     <label class="field" style="margin-top:6px">
-      <span>Root cause</span>
-      <textarea class="cap-rootcause" maxlength="300" ${isReadOnly ? 'disabled' : ''} placeholder="One sentence summary of the underlying cause">${escapeHtml(c.root_cause || '')}</textarea>
+      <span>${tUi('label.root_cause')}</span>
+      <textarea class="cap-rootcause" maxlength="300" ${isReadOnly ? 'disabled' : ''} placeholder="${tUi('hint.problem_summary')}">${escapeHtml(c.root_cause || '')}</textarea>
     </label>
 
     <h4 style="margin-top:18px;margin-bottom:4px">Action steps</h4>
@@ -2595,31 +2599,31 @@ function capDetailModal(capId) {
     <div id="capStepsList">${actionStepsHtml}</div>
     ${!isReadOnly ? `
       <div style="display:flex;gap:8px;margin-top:8px">
-        <input type="text" id="capNewStep" placeholder="Add an action step" style="flex:1">
-        <button class="btn btn-secondary" data-action="add-step" data-cap="${escapeHtml(c.id)}" style="width:auto;padding:10px 16px">Add</button>
+        <input type="text" id="capNewStep" placeholder="${tUi('hint.add_action_step')}" style="flex:1">
+        <button class="btn btn-secondary" data-action="add-step" data-cap="${escapeHtml(c.id)}" style="width:auto;padding:10px 16px">${tUi('btn.add')}</button>
       </div>` : ''}
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
       <label class="field" style="margin:0">
-        <span>Responsible</span>
+        <span>${tUi('label.responsible')}</span>
         <select class="cap-responsible" ${isReadOnly ? 'disabled' : ''}>
           <option value="">— unassigned —</option>
           ${userOptions}
         </select>
       </label>
       <label class="field" style="margin:0">
-        <span>Deadline</span>
+        <span>${tUi('label.deadline')}</span>
         <input type="date" class="cap-deadline-input" value="${escapeHtml(c.deadline || '')}" ${isReadOnly ? 'disabled' : ''}>
       </label>
     </div>
 
     ${verifyNotesHtml}
 
-    ${!isReadOnly ? `<button class="btn btn-ghost" data-action="cap-save-edits" data-id="${escapeHtml(c.id)}" style="margin-top:14px">Save changes</button>` : ''}
+    ${!isReadOnly ? `<button class="btn btn-ghost" data-action="cap-save-edits" data-id="${escapeHtml(c.id)}" style="margin-top:14px">${tUi('btn.save_changes')}</button>` : ''}
 
     <div style="margin-top:14px;display:grid;gap:10px">
       ${actionButtons}
-      <button class="btn btn-ghost" data-action="modal-cancel">Close</button>
+      <button class="btn btn-ghost" data-action="modal-cancel">${tUi('btn.close')}</button>
     </div>
   `);
 }
@@ -2788,21 +2792,21 @@ function renderTemplatesCard(state) {
   const tpls = Templates.all(state);
   return `
     <div class="card">
-      <h2>Audit templates</h2>
-      <p class="muted">Create and edit the checklists your staff run. Add daily, weekly, monthly or custom audits — no code needed.</p>
+      <h2>${tUi('templates.heading')}</h2>
+      <p class="muted">${tUi('templates.desc')}</p>
       ${tpls.map(t => `
         <div class="user-row">
           <div class="info">
-            <div class="name">${escapeHtml(t.name)}
-              <span class="role-pill ${t.frequency === 'weekly' ? 'GM' : (t.frequency === 'monthly' ? 'OWNER' : 'SM')}">${escapeHtml(FREQ_LABELS[t.frequency] || t.frequency)}</span>
+            <div class="name">${escapeHtml(tplName(t))}
+              <span class="role-pill ${t.frequency === 'weekly' ? 'GM' : (t.frequency === 'monthly' ? 'OWNER' : 'SM')}">${escapeHtml(freqLabel(t.frequency))}</span>
               ${t.active ? '' : '<span class="role-pill inactive">OFF</span>'}
             </div>
-            <div class="meta">${t.checkpoints.length} point(s) · ${(t.sections || []).length} section(s) · ${escapeHtml(CRO_MODE_LABELS[t.cro_mode] || t.cro_mode)}${t.built_in ? ' · built-in' : ''}</div>
+            <div class="meta">${t.checkpoints.length} point(s) · ${(t.sections || []).length} section(s) · ${escapeHtml(croModeLabel(t.cro_mode))}${t.built_in ? ' · built-in' : ''}</div>
           </div>
-          <button class="iconbtn" style="color:var(--navy)" data-action="builder-open" data-id="${escapeHtml(t.id)}">Edit ›</button>
+          <button class="iconbtn" style="color:var(--navy)" data-action="builder-open" data-id="${escapeHtml(t.id)}">${tUi('templates.edit')}</button>
         </div>`).join('')}
       <div class="spacer-12"></div>
-      <button class="btn btn-secondary" data-action="builder-new">+ New audit template</button>
+      <button class="btn btn-secondary" data-action="builder-new">+ ${tUi('templates.new')}</button>
     </div>
   `;
 }
@@ -2854,13 +2858,13 @@ function renderTemplateEditor(tpl) {
       <label class="field">
         <span>How often?</span>
         <select id="builderFreq" data-tpl="${escapeHtml(tpl.id)}">
-          ${Object.keys(FREQ_LABELS).map(f => `<option value="${f}" ${tpl.frequency === f ? 'selected' : ''}>${FREQ_LABELS[f]}</option>`).join('')}
+          ${Object.keys(FREQ_LABELS).map(f => `<option value="${f}" ${tpl.frequency === f ? 'selected' : ''}>${escapeHtml(freqLabel(f))}</option>`).join('')}
         </select>
       </label>
       <label class="field" style="margin-bottom:0">
         <span>Who is scored?</span>
         <select id="builderCroMode" data-tpl="${escapeHtml(tpl.id)}">
-          ${Object.keys(CRO_MODE_LABELS).map(m => `<option value="${m}" ${tpl.cro_mode === m ? 'selected' : ''}>${CRO_MODE_LABELS[m]}</option>`).join('')}
+          ${Object.keys(CRO_MODE_LABELS).map(m => `<option value="${m}" ${tpl.cro_mode === m ? 'selected' : ''}>${escapeHtml(croModeLabel(m))}</option>`).join('')}
         </select>
       </label>
       <p class="tiny muted" style="margin-top:6px">"Once for the store" = one score (cash, inventory, display). "Score each CRO separately" = run the same checklist for every CRO on duty and score each person (grooming).</p>
@@ -2883,15 +2887,15 @@ function renderTemplateEditor(tpl) {
 
 function builderNewModal() {
   openModal(`
-    <h3>New audit template</h3>
-    <label class="field"><span>Name</span>
+    <h3>${tUi('templates.new')}</h3>
+    <label class="field"><span>${tUi('label.name')}</span>
       <input type="text" id="newTplName" placeholder="e.g. Monthly Owner Audit" autocapitalize="words"></label>
     <label class="field" style="margin-bottom:0"><span>How often?</span>
       <select id="newTplFreq">
-        ${Object.keys(FREQ_LABELS).map(f => `<option value="${f}">${FREQ_LABELS[f]}</option>`).join('')}
+        ${Object.keys(FREQ_LABELS).map(f => `<option value="${f}">${escapeHtml(freqLabel(f))}</option>`).join('')}
       </select></label>
     <div class="row">
-      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-ghost" data-action="modal-cancel">${tUi('btn.cancel')}</button>
       <button class="btn btn-primary" data-action="modal-create-tpl">Create</button>
     </div>
   `);
@@ -2914,7 +2918,7 @@ function builderCpModal(tplId, sectionId, cpId) {
     <label class="cro-row" style="cursor:pointer"><input type="checkbox" id="cpNa" ${cp && cp.allows_na ? 'checked' : ''} style="width:18px;height:18px;margin-right:8px"> Allow "N/A" on this point</label>
     <label class="cro-row" style="cursor:pointer"><input type="checkbox" id="cpPhoto" ${cp && cp.photo_required_on_fail ? 'checked' : ''} style="width:18px;height:18px;margin-right:8px"> Photo required if this fails</label>
     <div class="row">
-      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-ghost" data-action="modal-cancel">${tUi('btn.cancel')}</button>
       <button class="btn btn-primary" data-action="modal-save-cp" data-tpl="${escapeHtml(tplId)}" data-cp="${escapeHtml(cpId || '')}">${cp ? 'Save' : 'Add'}</button>
     </div>
   `);
@@ -2930,24 +2934,24 @@ function renderSettingsTab(state, auth) {
   }
   return `
     <div class="card">
-      <h2>My account</h2>
-      <p class="muted">Signed in as <strong>${escapeHtml(auth.name)}</strong> &middot; ${escapeHtml(roleLabel(auth.role))}${auth.phone ? ' &middot; ' + escapeHtml(displayPhone(auth.phone)) : ''}</p>
+      <h2>${tUi('label.my_account')}</h2>
+      <p class="muted">${tUi('label.signed_in_as')} <strong>${escapeHtml(auth.name)}</strong> &middot; ${escapeHtml(roleLabel(auth.role))}${auth.phone ? ' &middot; ' + escapeHtml(displayPhone(auth.phone)) : ''}</p>
       <div class="lang-row" role="group" aria-label="Language">
-        <span class="lang-row-label">Language</span>
+        <span class="lang-row-label">${tUi('label.language')}</span>
         <button class="lang-pill ${I18n.current === 'en' ? 'active' : ''}" data-action="set-locale" data-locale="en">English</button>
         <button class="lang-pill ${I18n.current === 'mr' ? 'active' : ''}" data-action="set-locale" data-locale="mr">मराठी</button>
       </div>
       <div class="spacer-12"></div>
-      <button class="btn btn-ghost" data-action="set-my-phone">${auth.phone ? 'Change my phone' : 'Add my phone for WhatsApp escalations'}</button>
+      <button class="btn btn-ghost" data-action="set-my-phone">${auth.phone ? tUi('btn.change_my_phone') : tUi('btn.add_my_phone')}</button>
       <div class="spacer-12"></div>
-      <button class="btn btn-ghost" data-action="change-my-pin">Change my PIN</button>
+      <button class="btn btn-ghost" data-action="change-my-pin">${tUi('btn.change_my_pin')}</button>
       <div class="spacer-12"></div>
-      <button class="btn btn-ghost" data-action="logout">Sign out</button>
+      <button class="btn btn-ghost" data-action="logout">${tUi('btn.sign_out')}</button>
     </div>
 
     ${isOwner ? `
     <div class="card">
-      <h2>Users</h2>
+      <h2>${tUi('label.users')}</h2>
       <p class="muted">Owner can add a Store Manager and a GM. Each gets their own PIN and an optional phone for WhatsApp escalations.</p>
       ${Users.listAll(state).map(u => `
         <div class="user-row">
@@ -2968,24 +2972,24 @@ function renderSettingsTab(state, auth) {
     ${isOwner ? renderTemplatesCard(state) : ''}
 
     <div class="card">
-      <h2>CROs</h2>
-      <p class="muted">Floor staff at Titan World &amp; Helios counters. They appear in the "CROs on duty" picker and the FAIL detail dropdown.</p>
+      <h2>${tUi('label.cros')}</h2>
+      <p class="muted">${tUi('settings.cro_desc')}</p>
       ${state.cros.length === 0
         ? '<p class="muted">No CROs yet.</p>'
         : state.cros.map(c => `
           <div class="cro-row">
             <span>${escapeHtml(c.name)}<span class="pill">${escapeHtml(c.counter)}</span></span>
-            <button class="iconbtn" style="color:var(--red)" data-action="remove-cro" data-id="${c.id}">Remove</button>
+            <button class="iconbtn" style="color:var(--red)" data-action="remove-cro" data-id="${c.id}">${tUi('btn.remove')}</button>
           </div>`).join('')}
       <div class="spacer-12"></div>
-      <button class="btn btn-secondary" data-action="add-cro">+ Add CRO</button>
+      <button class="btn btn-secondary" data-action="add-cro">+ ${tUi('btn.add_cro')}</button>
     </div>
 
     <div class="card">
-      <h2>Notifications</h2>
-      <p class="muted">A daily reminder at 10:00 AM nudges you (or your Store Manager) to run the day's audit. Tap to open straight into the start screen.</p>
+      <h2>${tUi('label.notifications')}</h2>
+      <p class="muted">${tUi('hint.reminder_desc')}</p>
       <label class="row-spread" style="margin-top:4px;cursor:pointer">
-        <span><strong>Daily audit reminder</strong> <span class="muted" style="font-weight:400">· 10:00 AM</span></span>
+        <span><strong>${tUi('label.daily_reminder')}</strong> <span class="muted" style="font-weight:400">· 10:00 AM</span></span>
         <input type="checkbox" id="dailyReminderToggle"
                ${(window.SaagarShell && window.SaagarShell.isDailyReminderEnabled()) ? 'checked' : ''}
                onchange="onDailyReminderToggle(this.checked)"
@@ -2994,19 +2998,19 @@ function renderSettingsTab(state, auth) {
     </div>
 
     <div class="card">
-      <h2>Backup &amp; restore</h2>
-      <p class="muted">${state.audits.length} audit(s), ${state.cros.length} CRO(s), ${state.users.length} user(s) and ${(state.caps || []).length} CAP(s) stored on this device. One backup file bundles everything — share to Drive, OneDrive, WhatsApp or any other app.</p>
-      <button class="btn btn-primary" data-action="backup-drive">Back up to Google Drive</button>
+      <h2>${tUi('label.backup_restore')}</h2>
+      <p class="muted">${escapeHtml(tUi('settings.storage_fmt').replace('{a}', state.audits.length).replace('{c}', state.cros.length).replace('{u}', state.users.length).replace('{p}', (state.caps || []).length))}</p>
+      <button class="btn btn-primary" data-action="backup-drive">${tUi('btn.backup_drive')}</button>
       <div class="spacer-12"></div>
-      <button class="btn btn-ghost" data-action="restore-backup">Restore from backup file</button>
+      <button class="btn btn-ghost" data-action="restore-backup">${tUi('btn.restore_backup')}</button>
       <div class="spacer-12"></div>
-      <button class="btn btn-ghost" data-action="export-csv">Export all audits to CSV</button>
+      <button class="btn btn-ghost" data-action="export-csv">${tUi('btn.export_audits_csv')}</button>
     </div>
 
     ${isOwner ? `
     <div class="card">
-      <h2>Danger zone</h2>
-      <button class="btn btn-ghost" data-action="clear-data" style="color:var(--red);border-color:var(--red)">Erase all data on this device</button>
+      <h2>${tUi('label.danger_zone')}</h2>
+      <button class="btn btn-ghost" data-action="clear-data" style="color:var(--red);border-color:var(--red)">${tUi('btn.erase_all')}</button>
     </div>` : ''}
 
     <p class="tiny" style="text-align:center">Saagar Audit &middot; v0.2.0</p>
@@ -3047,10 +3051,10 @@ function failModal(checkpoint, cros) {
     <p class="muted">${escapeHtml(checkpoint.text)}</p>
     <label class="field">
       <span>What did you find? <span style="color:var(--red)">*</span></span>
-      <textarea id="failFinding" maxlength="200" placeholder="e.g. CRO Suresh had no name badge at opening"></textarea>
+      <textarea id="failFinding" maxlength="200" placeholder="${tUi('ph.eg_finding')}"></textarea>
     </label>
     <label class="field">
-      <span>CRO involved (optional)</span>
+      <span>${tUi('label.cro_involved')}</span>
       <select id="failCro">${croOptions}</select>
     </label>
     <div class="field">
@@ -3063,7 +3067,7 @@ function failModal(checkpoint, cros) {
       </button>
     </div>
     <div class="row">
-      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-ghost" data-action="modal-cancel">${tUi('btn.cancel')}</button>
       <button class="btn btn-primary" data-action="modal-save-fail">Save &amp; next</button>
     </div>
   `);
@@ -3090,67 +3094,67 @@ function naModal(checkpoint) {
     <h3>N/A — CP ${escapeHtml(checkpoint.id)}</h3>
     <p class="muted">${escapeHtml(checkpoint.text)}</p>
     <label class="field">
-      <span>Why is this not applicable today?</span>
-      <textarea id="naReason" maxlength="200" placeholder="e.g. counter closed today, no high-value sales"></textarea>
+      <span>${tUi('hint.why_na')}</span>
+      <textarea id="naReason" maxlength="200" placeholder="${tUi('ph.eg_na_reason')}"></textarea>
     </label>
     <div class="row">
-      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
-      <button class="btn btn-primary" data-action="modal-save-na">Mark N/A</button>
+      <button class="btn btn-ghost" data-action="modal-cancel">${tUi('btn.cancel')}</button>
+      <button class="btn btn-primary" data-action="modal-save-na">${tUi('btn.mark_na')}</button>
     </div>
   `);
 }
 
 function addCroModal() {
   openModal(`
-    <h3>Add CRO</h3>
+    <h3>${tUi('btn.add_cro')}</h3>
     <label class="field">
-      <span>Name</span>
-      <input type="text" id="croName" placeholder="e.g. Suresh">
+      <span>${tUi('label.name')}</span>
+      <input type="text" id="croName" placeholder="${tUi('ph.eg_name_cro')}">
     </label>
     <label class="field">
-      <span>Counter</span>
+      <span>${tUi('label.counter')}</span>
       <select id="croCounter">
         <option value="Titan">Titan World</option>
         <option value="Helios">Helios</option>
       </select>
     </label>
     <div class="row">
-      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
-      <button class="btn btn-primary" data-action="modal-save-cro">Add</button>
+      <button class="btn btn-ghost" data-action="modal-cancel">${tUi('btn.cancel')}</button>
+      <button class="btn btn-primary" data-action="modal-save-cro">${tUi('btn.add')}</button>
     </div>
   `);
 }
 
 function addUserModal() {
   openModal(`
-    <h3>Add user</h3>
+    <h3>${tUi('btn.add_user')}</h3>
     <p class="muted">Owner adds Store Manager and GM accounts. Each user gets their own 4-digit PIN and (optionally) a phone number for WhatsApp escalations.</p>
     <label class="field">
-      <span>Name</span>
-      <input type="text" id="newUserName" placeholder="e.g. Priya Joshi" autocapitalize="words">
+      <span>${tUi('label.name')}</span>
+      <input type="text" id="newUserName" placeholder="${tUi('ph.eg_name_full')}" autocapitalize="words">
     </label>
     <label class="field">
-      <span>Role</span>
+      <span>${tUi('label.role')}</span>
       <select id="newUserRole">
         <option value="SM">Store Manager (runs daily audits)</option>
         <option value="GM">GM (verifies audits, manages CAPs)</option>
       </select>
     </label>
     <label class="field">
-      <span>Phone (10 digits, optional)</span>
-      <input type="tel" id="newUserPhone" inputmode="tel" placeholder="e.g. 9876543210">
+      <span>${tUi('label.phone')}</span>
+      <input type="tel" id="newUserPhone" inputmode="tel" placeholder="${tUi('ph.eg_phone')}">
     </label>
     <label class="field">
       <span>4-digit PIN</span>
       <input type="tel" id="newUserPin" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••">
     </label>
     <label class="field">
-      <span>Confirm PIN</span>
+      <span>${tUi('label.confirm_pin')}</span>
       <input type="tel" id="newUserPinConfirm" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••">
     </label>
     <div class="row">
-      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
-      <button class="btn btn-primary" data-action="modal-save-user">Add user</button>
+      <button class="btn btn-ghost" data-action="modal-cancel">${tUi('btn.cancel')}</button>
+      <button class="btn btn-primary" data-action="modal-save-user">${tUi('btn.add_user')}</button>
     </div>
   `);
 }
@@ -3163,12 +3167,12 @@ function setPhoneModal(userId) {
     <h3>${userId ? 'Phone for ' + escapeHtml(u.name) : 'My phone number'}</h3>
     <p class="muted">Used to open a WhatsApp message when an escalation fires. Leave blank to clear.</p>
     <label class="field">
-      <span>Phone (10 digits or country-coded)</span>
-      <input type="tel" id="phoneInput" inputmode="tel" value="${escapeHtml(u.phone || '')}" placeholder="e.g. 9876543210">
+      <span>${tUi('label.phone_required')}</span>
+      <input type="tel" id="phoneInput" inputmode="tel" value="${escapeHtml(u.phone || '')}" placeholder="${tUi('ph.eg_phone')}">
     </label>
     <div class="row">
-      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
-      <button class="btn btn-primary" data-action="modal-save-phone" data-id="${escapeHtml(u.id)}">Save</button>
+      <button class="btn btn-ghost" data-action="modal-cancel">${tUi('btn.cancel')}</button>
+      <button class="btn btn-primary" data-action="modal-save-phone" data-id="${escapeHtml(u.id)}">${tUi('btn.save')}</button>
     </div>
   `);
 }
@@ -3177,20 +3181,20 @@ function changePinModal() {
   openModal(`
     <h3>Change your PIN</h3>
     <label class="field">
-      <span>Current PIN</span>
+      <span>${tUi('label.current_pin')}</span>
       <input type="tel" id="pinCurrent" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••">
     </label>
     <label class="field">
-      <span>New PIN</span>
+      <span>${tUi('label.new_pin')}</span>
       <input type="tel" id="pinNew" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••">
     </label>
     <label class="field">
-      <span>Confirm new PIN</span>
+      <span>${tUi('label.confirm_new_pin')}</span>
       <input type="tel" id="pinNewConfirm" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••">
     </label>
     <div class="row">
-      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
-      <button class="btn btn-primary" data-action="modal-save-my-pin">Save</button>
+      <button class="btn btn-ghost" data-action="modal-cancel">${tUi('btn.cancel')}</button>
+      <button class="btn btn-primary" data-action="modal-save-my-pin">${tUi('btn.save')}</button>
     </div>
   `);
 }
@@ -3203,16 +3207,16 @@ function resetPinModal(userId) {
     <h3>Reset PIN for ${escapeHtml(u.name)}</h3>
     <p class="muted">Set a new 4-digit PIN. They'll use this to sign in next time.</p>
     <label class="field">
-      <span>New PIN</span>
+      <span>${tUi('label.new_pin')}</span>
       <input type="tel" id="resetPinNew" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••">
     </label>
     <label class="field">
-      <span>Confirm</span>
+      <span>${tUi('btn.confirm')}</span>
       <input type="tel" id="resetPinConfirm" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••">
     </label>
     <div class="row">
-      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
-      <button class="btn btn-primary" data-action="modal-save-reset-pin" data-id="${escapeHtml(u.id)}">Save new PIN</button>
+      <button class="btn btn-ghost" data-action="modal-cancel">${tUi('btn.cancel')}</button>
+      <button class="btn btn-primary" data-action="modal-save-reset-pin" data-id="${escapeHtml(u.id)}">${tUi('btn.save_new_pin')}</button>
     </div>
   `);
 }
@@ -3226,11 +3230,11 @@ function userMenuModal(userId) {
     <p class="muted">${escapeHtml(roleLabel(u.role))} &middot; ${u.is_active ? 'active' : 'inactive'}${u.phone ? ' &middot; ' + escapeHtml(displayPhone(u.phone)) : ''}</p>
     <div style="display:grid;gap:10px;margin-top:14px">
       <button class="btn btn-secondary" data-action="user-set-phone" data-id="${escapeHtml(u.id)}">${u.phone ? 'Change phone' : 'Add phone number'}</button>
-      <button class="btn btn-secondary" data-action="user-reset-pin" data-id="${escapeHtml(u.id)}">Reset PIN</button>
+      <button class="btn btn-secondary" data-action="user-reset-pin" data-id="${escapeHtml(u.id)}">${tUi('btn.reset_pin')}</button>
       ${u.is_active
-        ? `<button class="btn btn-ghost" data-action="user-deactivate" data-id="${escapeHtml(u.id)}" style="color:var(--red);border-color:var(--red)">Deactivate user</button>`
-        : `<button class="btn btn-ghost" data-action="user-reactivate" data-id="${escapeHtml(u.id)}">Reactivate user</button>`}
-      <button class="btn btn-ghost" data-action="modal-cancel">Cancel</button>
+        ? `<button class="btn btn-ghost" data-action="user-deactivate" data-id="${escapeHtml(u.id)}" style="color:var(--red);border-color:var(--red)">${tUi('btn.deactivate_user')}</button>`
+        : `<button class="btn btn-ghost" data-action="user-reactivate" data-id="${escapeHtml(u.id)}">${tUi('btn.reactivate_user')}</button>`}
+      <button class="btn btn-ghost" data-action="modal-cancel">${tUi('btn.cancel')}</button>
     </div>
   `);
 }
@@ -3275,8 +3279,8 @@ function perCroHistoryDetailModal(a, tpl, croById) {
     </div>
     ${verifyControlsHtml(a)}
     <div class="row">
-      <button class="btn btn-secondary" data-action="print-audit" data-id="${escapeHtml(a.id)}">📄 Print / Save as PDF</button>
-      <button class="btn btn-ghost" data-action="modal-cancel">Close</button>
+      <button class="btn btn-secondary" data-action="print-audit" data-id="${escapeHtml(a.id)}">${tUi('share.print_pdf_emoji')}</button>
+      <button class="btn btn-ghost" data-action="modal-cancel">${tUi('btn.close')}</button>
     </div>
     ${croCards}
   `);
@@ -3379,11 +3383,11 @@ function historyDetailModal(a) {
     </div>
     ${verifyControlsHtml(a)}
     <div class="row">
-      <button class="btn btn-secondary" data-action="share-audit-wa" data-id="${escapeHtml(a.id)}">📱 Send to WhatsApp</button>
-      <button class="btn btn-secondary" data-action="print-audit" data-id="${escapeHtml(a.id)}">📄 Print / Save as PDF</button>
+      <button class="btn btn-secondary" data-action="share-audit-wa" data-id="${escapeHtml(a.id)}">${tUi('share.send_to_whatsapp_emoji')}</button>
+      <button class="btn btn-secondary" data-action="print-audit" data-id="${escapeHtml(a.id)}">${tUi('share.print_pdf_emoji')}</button>
     </div>
     <div class="spacer-12"></div>
-    <button class="btn btn-ghost" data-action="modal-cancel" style="width:100%">Close</button>
+    <button class="btn btn-ghost" data-action="modal-cancel" style="width:100%">${tUi('btn.close')}</button>
     ${groupsHtml}
   `);
 }
@@ -3402,14 +3406,14 @@ function verifyControlsHtml(a, me) {
   if (a.status === 'verified') {
     const when = a.verified_at ? new Date(a.verified_at).toLocaleString('en-IN') : '';
     return `<div style="margin-top:8px;padding:10px 12px;border-radius:8px;background:#e7f6ec;border:1px solid #9bd3ad;color:#166534;font-size:13px;line-height:1.5">
-      <strong>✓ Verified by ${escapeHtml(a.verifier_name || '—')}</strong>${when ? ` · ${escapeHtml(when)}` : ''}${a.verify_note ? `<div style="margin-top:4px;font-style:italic;color:#15532c">&ldquo;${escapeHtml(a.verify_note)}&rdquo;</div>` : ''}
+      <strong>✓ ${tUi('verify.by')} ${escapeHtml(a.verifier_name || '—')}</strong>${when ? ` · ${escapeHtml(when)}` : ''}${a.verify_note ? `<div style="margin-top:4px;font-style:italic;color:#15532c">&ldquo;${escapeHtml(a.verify_note)}&rdquo;</div>` : ''}
     </div>`;
   }
   const canVerify = me && (me.role === 'OWNER' || me.role === 'GM') && !(a.auditor_id && a.auditor_id === me.id);
   if (canVerify) {
-    return `<button class="btn btn-primary" data-action="audit-verify" data-id="${escapeHtml(a.id)}" style="width:100%;margin-top:8px">✓ Verify this audit</button>`;
+    return `<button class="btn btn-primary" data-action="audit-verify" data-id="${escapeHtml(a.id)}" style="width:100%;margin-top:8px">${tUi('verify.btn')}</button>`;
   }
-  return `<div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#fff8e1;border:1px solid #f4c674;color:#6a4a00;font-size:13px">⏳ Awaiting verification</div>`;
+  return `<div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#fff8e1;border:1px solid #f4c674;color:#6a4a00;font-size:13px">${tUi('verify.awaiting')}</div>`;
 }
 
 // Spot-check modal: shows up to 3 of the auditor's recorded verdicts (FAILs
@@ -3417,11 +3421,11 @@ function verifyControlsHtml(a, me) {
 function verifyAuditModal(auditId) {
   const state = Store.load();
   const a = audit(auditId, state);
-  if (!a) { toast('Audit not found'); return; }
+  if (!a) { toast(tUi('err.audit_not_found')); return; }
   const me = AuthSession.current(state);
-  if (!me || (me.role !== 'OWNER' && me.role !== 'GM')) { toast('Only GM or Owner can verify'); return; }
-  if (a.auditor_id && a.auditor_id === me.id) { toast("You can't verify your own audit"); return; }
-  if (a.status === 'verified') { toast('Already verified'); return; }
+  if (!me || (me.role !== 'OWNER' && me.role !== 'GM')) { toast(tUi('err.only_gm_owner_verify')); return; }
+  if (a.auditor_id && a.auditor_id === me.id) { toast(tUi('err.cant_verify_own')); return; }
+  if (a.status === 'verified') { toast(tUi('info.already_verified')); return; }
 
   const cpById = {};
   checkpointsFor(a).forEach(cp => { cpById[cp.id] = cp; });
@@ -3458,22 +3462,22 @@ function verifyAuditModal(auditId) {
         </div>
         <span class="verdict-pill ${e.result}">${e.result}</span>
       </div>`;
-  }).join('') : '<p class="muted" style="padding:6px">No marked checkpoints to spot-check.</p>';
+  }).join('') : `<p class="muted" style="padding:6px">${tUi('verify.no_marks')}</p>`;
 
   const when = frequencyOf(a) === 'weekly' ? `Week ${a.week_number}, ${a.year}` : escapeHtml(fmtDate(a.date));
   openModal(`
-    <h3>Verify audit</h3>
+    <h3>${tUi('verify.title')}</h3>
     <p class="muted">${when} · by ${escapeHtml(a.auditor_name || '—')}</p>
-    <p style="font-size:13px;line-height:1.5;margin:6px 0 10px">Spot-check these recorded verdicts against what you know on the floor. Confirm only if they look honest.</p>
+    <p style="font-size:13px;line-height:1.5;margin:6px 0 10px">${tUi('verify.instructions')}</p>
     <div class="detail-sop">${rowsHtml}</div>
     <label class="field" style="margin-top:10px">
-      <span>Verification note (optional)</span>
-      <textarea id="verifyNote" maxlength="200" placeholder="e.g. spot-checked CP1 &amp; CP12 on floor — matches"></textarea>
+      <span>${tUi('verify.note_label')}</span>
+      <textarea id="verifyNote" maxlength="200" placeholder="${tUi('verify.note_ph')}"></textarea>
     </label>
     <div class="spacer-12"></div>
-    <button class="btn btn-primary" data-action="modal-confirm-verify" data-id="${escapeHtml(a.id)}" style="width:100%">✓ Confirm — I verify this audit</button>
+    <button class="btn btn-primary" data-action="modal-confirm-verify" data-id="${escapeHtml(a.id)}" style="width:100%">${tUi('verify.confirm_btn')}</button>
     <div class="spacer-12"></div>
-    <button class="btn btn-ghost" data-action="modal-cancel" style="width:100%">Cancel</button>
+    <button class="btn btn-ghost" data-action="modal-cancel" style="width:100%">${tUi('btn.cancel')}</button>
   `);
 }
 
@@ -3814,7 +3818,7 @@ function printAudit(auditId) {
 // localStorage state into a JSON file and uses the Android share sheet so
 // the user can hand it off to Drive / OneDrive / WhatsApp.
 async function backupToDrive() {
-  if (!window.SaagarShell) { toast('Shell not loaded'); return; }
+  if (!window.SaagarShell) { toast(tUi('err.shell_not_loaded')); return; }
   try {
     const res = await window.SaagarShell.backup();
     if (res && res.cancelled) return;
@@ -3823,12 +3827,12 @@ async function backupToDrive() {
     }
   } catch (e) {
     console.error(e);
-    toast('Backup failed');
+    toast(tUi('err.backup_failed'));
   }
 }
 
 function restoreFromBackup() {
-  if (!window.SaagarShell) { toast('Shell not loaded'); return; }
+  if (!window.SaagarShell) { toast(tUi('err.shell_not_loaded')); return; }
   window.SaagarShell.restore((res) => {
     if (!res.ok) {
       toast(res.error && res.error.length < 80 ? res.error : 'Could not read backup file');
@@ -3860,7 +3864,7 @@ function restoreFromBackup() {
 function exportCsv() {
   const state = Store.load();
   const submitted = state.audits.filter(a => isFinalized(a));
-  if (submitted.length === 0) { toast('No submitted audits yet'); return; }
+  if (submitted.length === 0) { toast(tUi('hint.no_audits')); return; }
   const rows = [['date', 'auditor', 'compliance_pct', 'band', 'raw', 'max', 'pass', 'fail', 'na', 'checkpoint_id', 'result', 'finding', 'cro_id', 'backdate_reason', 'audit_notes']];
   submitted.forEach(a => {
     Object.entries(a.results).forEach(([cpId, r]) => {
@@ -3919,7 +3923,7 @@ document.addEventListener('click', async (e) => {
 
   // Auth actions
   if (action === 'logout') {
-    if (!confirm('Sign out?')) return;
+    if (!confirm(tUi('confirm.sign_out'))) return;
     AuthSession.logout();
     PinBuf.reset();
     window._loginUserId = null;
@@ -3950,15 +3954,15 @@ document.addEventListener('click', async (e) => {
     const cur = document.getElementById('pinCurrent').value;
     const np  = document.getElementById('pinNew').value;
     const npc = document.getElementById('pinNewConfirm').value;
-    if (!/^\d{4}$/.test(cur)) { toast('Enter your current 4-digit PIN'); return; }
-    if (!/^\d{4}$/.test(np))  { toast('New PIN must be 4 digits'); return; }
-    if (np !== npc)           { toast('New PIN and confirmation do not match'); return; }
+    if (!/^\d{4}$/.test(cur)) { toast(tUi('err.enter_current_pin')); return; }
+    if (!/^\d{4}$/.test(np))  { toast(tUi('err.new_pin_4digits')); return; }
+    if (np !== npc)           { toast(tUi('err.new_pin_mismatch')); return; }
     const me = AuthSession.current();
     const ok = await verifyPin(cur, me.pin_salt, me.pin_hash);
-    if (!ok) { toast('Current PIN is wrong'); return; }
+    if (!ok) { toast(tUi('err.current_pin_wrong')); return; }
     await Users.changePin(me.id, np);
     closeModal();
-    toast('PIN updated');
+    toast(tUi('ok.pin_updated'));
     render();
     return;
   }
@@ -3970,9 +3974,9 @@ document.addEventListener('click', async (e) => {
     const phone = document.getElementById('newUserPhone').value.trim();
     const pin  = document.getElementById('newUserPin').value;
     const pinc = document.getElementById('newUserPinConfirm').value;
-    if (name.length < 2)        { toast('Enter a name (2+ characters)'); return; }
-    if (!/^\d{4}$/.test(pin))   { toast('PIN must be 4 digits'); return; }
-    if (pin !== pinc)           { toast('PIN and confirmation do not match'); return; }
+    if (name.length < 2)        { toast(tUi('err.name_2chars')); return; }
+    if (!/^\d{4}$/.test(pin))   { toast(tUi('err.pin_4digits')); return; }
+    if (pin !== pinc)           { toast(tUi('err.pin_mismatch')); return; }
     await Users.create({ name, role, pin, phone });
     closeModal();
     toast(`${name} added as ${roleLabel(role)}`);
@@ -3999,7 +4003,7 @@ document.addEventListener('click', async (e) => {
   if (action === 'modal-create-tpl') {
     const name = document.getElementById('newTplName').value.trim();
     const frequency = document.getElementById('newTplFreq').value;
-    if (name.length < 2) { toast('Give it a name'); return; }
+    if (name.length < 2) { toast(tUi('err.give_name')); return; }
     const tpl = Templates.create({ name, frequency });
     closeModal();
     Builder.open(tpl.id);
@@ -4031,7 +4035,7 @@ document.addEventListener('click', async (e) => {
     const tpl = Templates.byId(null, a.dataset.tpl);
     if (!tpl) return;
     const text = document.getElementById('cpText').value.trim();
-    if (text.length < 3) { toast('Checkpoint text too short'); return; }
+    if (text.length < 3) { toast(tUi('err.cp_text_short')); return; }
     const sectionId = document.getElementById('cpSection').value;
     const allowsNa = document.getElementById('cpNa').checked;
     const photoReq = document.getElementById('cpPhoto').checked;
@@ -4053,7 +4057,7 @@ document.addEventListener('click', async (e) => {
     return;
   }
   if (action === 'builder-del-cp') {
-    if (!confirm('Delete this point?')) return;
+    if (!confirm(tUi('confirm.delete_point'))) return;
     const tpl = Templates.byId(null, a.dataset.tpl);
     if (!tpl) return;
     tpl.checkpoints = tpl.checkpoints.filter(c => c.id !== a.dataset.cp);
@@ -4078,17 +4082,17 @@ document.addEventListener('click', async (e) => {
     return;
   }
   if (action === 'builder-reset') {
-    if (!confirm('Reset this built-in checklist to its original points? Your edits to it will be lost (past audits keep their frozen copies).')) return;
+    if (!confirm(tUi('confirm.reset_builtin'))) return;
     Templates.resetToDefault(a.dataset.tpl);
     render();
-    toast('Reset to original');
+    toast(tUi('ok.reset_original'));
     return;
   }
   if (action === 'builder-delete') {
-    if (!confirm('Delete this template? Past audits that used it keep their frozen copies.')) return;
+    if (!confirm(tUi('confirm.delete_template'))) return;
     Templates.remove(a.dataset.tpl);
     Builder.close();
-    toast('Template deleted');
+    toast(tUi('ok.template_deleted'));
     return;
   }
   if (action === 'builder-toggle-active') {
@@ -4106,7 +4110,7 @@ document.addEventListener('click', async (e) => {
     const newPhone = document.getElementById('phoneInput').value.trim();
     Users.setPhone(a.dataset.id, newPhone);
     closeModal();
-    toast('Phone updated');
+    toast(tUi('ok.phone_updated'));
     render();
     return;
   }
@@ -4116,18 +4120,18 @@ document.addEventListener('click', async (e) => {
   if (action === 'modal-save-reset-pin') {
     const np  = document.getElementById('resetPinNew').value;
     const npc = document.getElementById('resetPinConfirm').value;
-    if (!/^\d{4}$/.test(np)) { toast('PIN must be 4 digits'); return; }
-    if (np !== npc)          { toast('PINs do not match'); return; }
+    if (!/^\d{4}$/.test(np)) { toast(tUi('err.pin_4digits')); return; }
+    if (np !== npc)          { toast(tUi('err.pins_mismatch')); return; }
     await Users.changePin(a.dataset.id, np);
     closeModal();
-    toast('PIN reset');
+    toast(tUi('ok.pin_reset'));
     render();
     return;
   }
   if (action === 'user-deactivate') {
     const me = AuthSession.current();
-    if (a.dataset.id === me.id) { toast("Can't deactivate yourself"); return; }
-    if (!confirm('Deactivate this user? They won\'t be able to sign in.')) return;
+    if (a.dataset.id === me.id) { toast(tUi('hint.cant_deactivate_self')); return; }
+    if (!confirm(tUi('confirm.deactivate_user'))) return;
     Users.setActive(a.dataset.id, false);
     closeModal();
     render();
@@ -4144,7 +4148,7 @@ document.addEventListener('click', async (e) => {
   if (action === 'modal-save-cro') {
     const name = document.getElementById('croName').value.trim();
     const counter = document.getElementById('croCounter').value;
-    if (name.length < 2) { toast('Name too short'); return; }
+    if (name.length < 2) { toast(tUi('err.name_short')); return; }
     const state = Store.load();
     state.cros.push({ id: uuid(), name, counter });
     Store.save(state);
@@ -4153,7 +4157,7 @@ document.addEventListener('click', async (e) => {
     return;
   }
   if (action === 'remove-cro') {
-    if (!confirm('Remove this CRO?')) return;
+    if (!confirm(tUi('confirm.remove_cro'))) return;
     const id = a.dataset.id;
     const state = Store.load();
     state.cros = state.cros.filter(c => c.id !== id);
@@ -4164,7 +4168,7 @@ document.addEventListener('click', async (e) => {
 
   if (action === 'start-audit') {
     const me = AuthSession.current();
-    if (!me) { toast('Sign in first'); return; }
+    if (!me) { toast(tUi('err.sign_in_first')); return; }
     const date = document.getElementById('auditDate').value;
     const croIds = Array.from(document.querySelectorAll('.cro-check:checked')).map(el => el.value);
     const err = document.getElementById('startError');
@@ -4196,9 +4200,9 @@ document.addEventListener('click', async (e) => {
 
   if (action === 'start-weekly-audit') {
     const me = AuthSession.current();
-    if (!me) { toast('Sign in first'); return; }
+    if (!me) { toast(tUi('err.sign_in_first')); return; }
     if (me.role !== 'GM' && me.role !== 'OWNER') {
-      toast('Weekly audits are run by the GM or Owner.');
+      toast(tUi('info.weekly_gm_owner'));
       return;
     }
     const week = parseInt(a.dataset.week, 10);
@@ -4231,7 +4235,7 @@ document.addEventListener('click', async (e) => {
       // first pass and routes back to it after all other CPs are decided.
       // Photos / findings on the row are preserved.
       markCheckpoint(cp.id, 'SKIP');
-      toast('Skipped — we’ll come back to this checkpoint at the end.');
+      toast(tUi('hint.skip_revisit'));
       render();
       return;
     }
@@ -4251,7 +4255,7 @@ document.addEventListener('click', async (e) => {
       toast(`Photo stamped & added (${dataUrlSizeKb(dataUrl)} KB)`);
     } catch (err) {
       console.error(err);
-      toast('Could not capture photo');
+      toast(tUi('err.no_photo_capture'));
     }
     return;
   }
@@ -4272,12 +4276,12 @@ document.addEventListener('click', async (e) => {
       render();
     } catch (err) {
       console.error(err);
-      toast('Could not capture photo');
+      toast(tUi('err.no_photo_capture'));
     }
     return;
   }
   if (action === 'remove-cp-photo') {
-    if (!confirm('Remove this photo?')) return;
+    if (!confirm(tUi('confirm.remove_photo'))) return;
     removePhotoFromCheckpoint(a.dataset.cp, parseInt(a.dataset.i, 10));
     render();
     return;
@@ -4285,14 +4289,14 @@ document.addEventListener('click', async (e) => {
 
   if (action === 'modal-save-fail') {
     const finding = document.getElementById('failFinding').value.trim();
-    if (finding.length < 5) { toast('Describe what you found (5+ characters)'); return; }
+    if (finding.length < 5) { toast(tUi('hint.describe_finding')); return; }
     const croId = document.getElementById('failCro').value || null;
     const state = Store.load();
     const audit = currentAudit(state);
     const idx = nextUnmarkedIndex(audit);
     const cp = checkpointsFor(audit)[idx];
     if (cp.photo_required_on_fail && FailDraft.photos.length === 0) {
-      toast('Photo evidence is required for Cash & Inventory fails.');
+      toast(tUi('hint.photo_evidence_required'));
       return;
     }
     markCheckpoint(cp.id, 'F', { finding, croId, photos: FailDraft.photos.slice() });
@@ -4303,7 +4307,7 @@ document.addEventListener('click', async (e) => {
   }
   if (action === 'modal-save-na') {
     const reason = document.getElementById('naReason').value.trim();
-    if (reason.length < 3) { toast('Add a short reason'); return; }
+    if (reason.length < 3) { toast(tUi('err.add_short_reason')); return; }
     const state = Store.load();
     const audit = currentAudit(state);
     const idx = nextUnmarkedIndex(audit);
@@ -4327,7 +4331,7 @@ document.addEventListener('click', async (e) => {
     return;
   }
   if (action === 'cancel-audit') {
-    if (!confirm('Discard this draft? Your marks will be lost.')) return;
+    if (!confirm(tUi('confirm.discard_draft'))) return;
     const state = Store.load();
     state.audits = state.audits.filter(x => x.id !== state.current_audit_id);
     state.current_audit_id = null;
@@ -4364,11 +4368,11 @@ document.addEventListener('click', async (e) => {
     if (!e) return;
     const recipient = findRecipient(state, e.recipient_role);
     if (!recipient || !recipient.phone) {
-      toast('Recipient has no phone. Add one in Users.');
+      toast(tUi('err.recipient_no_phone'));
       return;
     }
     const link = whatsappLink(recipient.phone, e.message);
-    if (!link) { toast('Cannot build WhatsApp link'); return; }
+    if (!link) { toast(tUi('err.cant_build_wa')); return; }
     const me = AuthSession.current(state);
     Escalations.markSent(a.dataset.id, me ? me.id : null, 'whatsapp');
     // Open WhatsApp via system intent. _blank works in both browser preview
@@ -4378,7 +4382,7 @@ document.addEventListener('click', async (e) => {
     return;
   }
   if (action === 'esc-dismiss') {
-    if (!confirm('Dismiss this alert? It will move to history.')) return;
+    if (!confirm(tUi('confirm.dismiss_alert'))) return;
     const me = AuthSession.current();
     Escalations.dismiss(a.dataset.id, me ? me.id : null);
     render();
@@ -4394,11 +4398,11 @@ document.addEventListener('click', async (e) => {
     if (!e) return;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(e.message).then(
-        () => toast('Message copied'),
-        () => toast('Copy failed — long-press the message to select')
+        () => toast(tUi('ok.message_copied')),
+        () => toast(tUi('err.copy_failed'))
       );
     } else {
-      toast('Long-press the message to select');
+      toast(tUi('hint.long_press'));
     }
     return;
   }
@@ -4416,7 +4420,7 @@ document.addEventListener('click', async (e) => {
   if (action === 'add-step') {
     const inp = document.getElementById('capNewStep');
     const text = (inp && inp.value || '').trim();
-    if (text.length < 3) { toast('Action step text too short'); return; }
+    if (text.length < 3) { toast(tUi('err.action_step_short')); return; }
     const state = Store.load();
     const c = Caps.byId(state, a.dataset.cap);
     if (!c) return;
@@ -4463,7 +4467,7 @@ document.addEventListener('click', async (e) => {
     if (dl) c.deadline = dl.value || null;
     Caps.save(c);
     closeModal();
-    toast('CAP updated');
+    toast(tUi('ok.cap_updated'));
     render();
     return;
   }
@@ -4472,48 +4476,48 @@ document.addEventListener('click', async (e) => {
     const c = Caps.byId(state, a.dataset.id);
     if (!c) return;
     if (c.action_steps.length === 0 || !c.action_steps.every(s => s.done)) {
-      toast('Tick all action steps before marking done.');
+      toast(tUi('hint.tick_all_actions'));
       return;
     }
     Caps.markDone(a.dataset.id);
     closeModal();
-    toast('CAP marked done — waiting for verification');
+    toast(tUi('ok.cap_done'));
     render();
     return;
   }
   if (action === 'cap-verify') {
     const me = AuthSession.current();
     if (!me || (me.role !== 'OWNER' && me.role !== 'GM')) {
-      toast('Only GM or Owner can verify'); return;
+      toast(tUi('err.only_gm_owner_verify')); return;
     }
-    const notes = (prompt('Verification notes (optional):') || '').trim();
+    const notes = (prompt(tUi('label.verification_notes')) || '').trim();
     Caps.verify(a.dataset.id, me.id, notes);
     closeModal();
-    toast('CAP verified');
+    toast(tUi('ok.cap_verified'));
     render();
     return;
   }
   if (action === 'cap-reject') {
     const me = AuthSession.current();
     if (!me || (me.role !== 'OWNER' && me.role !== 'GM')) {
-      toast('Only GM or Owner can reject'); return;
+      toast(tUi('err.only_gm_owner_reject')); return;
     }
-    const notes = (prompt('Reason for rejection (required):') || '').trim();
-    if (notes.length < 3) { toast('Rejection needs a reason'); return; }
+    const notes = (prompt(tUi('label.reject_reason')) || '').trim();
+    if (notes.length < 3) { toast(tUi('err.reject_needs_reason')); return; }
     Caps.reject(a.dataset.id, me.id, notes);
     closeModal();
-    toast('CAP rejected — back to open');
+    toast(tUi('ok.cap_rejected'));
     render();
     return;
   }
   if (action === 'cap-close') {
     const me = AuthSession.current();
     if (!me || (me.role !== 'OWNER' && me.role !== 'GM')) {
-      toast('Only GM or Owner can close'); return;
+      toast(tUi('err.only_gm_owner_close')); return;
     }
     Caps.close(a.dataset.id, me.id);
     closeModal();
-    toast('CAP closed');
+    toast(tUi('ok.cap_closed'));
     render();
     return;
   }
@@ -4528,11 +4532,11 @@ document.addEventListener('click', async (e) => {
   if (action === 'modal-confirm-verify') {
     const state = Store.load();
     const au = audit(a.dataset.id, state);
-    if (!au) { toast('Audit not found'); return; }
+    if (!au) { toast(tUi('err.audit_not_found')); return; }
     const me = AuthSession.current(state);
-    if (!me || (me.role !== 'OWNER' && me.role !== 'GM')) { toast('Only GM or Owner can verify'); return; }
-    if (au.auditor_id && au.auditor_id === me.id) { toast("You can't verify your own audit"); return; }
-    if (au.status === 'verified') { toast('Already verified'); closeModal(); render(); return; }
+    if (!me || (me.role !== 'OWNER' && me.role !== 'GM')) { toast(tUi('err.only_gm_owner_verify')); return; }
+    if (au.auditor_id && au.auditor_id === me.id) { toast(tUi('err.cant_verify_own')); return; }
+    if (au.status === 'verified') { toast(tUi('info.already_verified')); closeModal(); render(); return; }
     const noteEl = document.getElementById('verifyNote');
     au.status = 'verified';
     au.verifier_id = me.id;
@@ -4541,7 +4545,7 @@ document.addEventListener('click', async (e) => {
     au.verify_note = (noteEl ? noteEl.value : '').trim();
     Store.save(state);
     closeModal();
-    toast('Audit verified ✓');
+    toast(tUi('ok.audit_verified'));
     render();
     return;
   }
@@ -4553,11 +4557,11 @@ document.addEventListener('click', async (e) => {
   if (action === 'backup-drive')   { backupToDrive(); return; }
   if (action === 'restore-backup') { restoreFromBackup(); return; }
   if (action === 'clear-data') {
-    if (!confirm('Erase ALL data on this device — audits, CROs, users and CAPs? This cannot be undone.')) return;
+    if (!confirm(tUi('confirm.erase_all'))) return;
     localStorage.removeItem(STORE_KEY);
     render();
     switchTab('audit');
-    toast('All data erased');
+    toast(tUi('ok.all_erased'));
     return;
   }
 });
@@ -4605,8 +4609,9 @@ async function handlePinKey(k) {
 async function onPinComplete() {
   const stage = window._setupStage;
   const pin = PinBuf.value;
-  // First-time setup flow
-  if (document.querySelector('#auth-screen .auth-brand .sub')?.textContent === 'FIRST-TIME SETUP') {
+  // First-time setup flow — detected by "no users yet", not by UI text
+  // (the heading is localized, so a string compare would break in Marathi).
+  if (Store.load().users.length === 0) {
     if (stage === 'pin') {
       window._setupPin = pin;
       window._setupStage = 'confirm';
@@ -4629,7 +4634,7 @@ async function onPinComplete() {
       window._setupPin = null;
       window._setupStage = null;
       PinBuf.reset();
-      toast('Welcome, ' + u.name);
+      toast(tUi('label.welcome') + ' ' + u.name);
       render();
       return;
     }
@@ -4746,7 +4751,7 @@ if (window.SaagarShell) {
       const onAudit = document.querySelector('#tab-audit.active') !== null;
       const state = Store.load();
       if (onAudit && currentAudit(state)) {
-        if (!confirm('Audit in progress. Exit without submitting?')) return true;
+        if (!confirm(tUi('confirm.exit_audit'))) return true;
       }
       return false; // let default handler run (history.back / exit)
     },
