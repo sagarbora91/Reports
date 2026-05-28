@@ -99,7 +99,7 @@ main#screen {
   background: var(--white);
   border-top: 1px solid var(--gray-200);
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   z-index: 9;
   box-shadow: 0 -2px 10px rgba(11,31,58,0.06);
 }
@@ -646,6 +646,10 @@ body.locked { overflow: hidden; }
       <span class="bnav-icon">📋</span>
       <span>TODAY</span>
     </button>
+    <button class="bnav-btn" data-screen="leads">
+      <span class="bnav-icon">👥</span>
+      <span>LEADS</span>
+    </button>
     <button class="bnav-btn" data-screen="settings">
       <span class="bnav-icon">⚙</span>
       <span>SETTINGS</span>
@@ -659,6 +663,9 @@ body.locked { overflow: hidden; }
   <script src="shell.js"></script>
   <script src="masters.js"></script>
   <script src="masters-ui.js"></script>
+  <script src="customers.js"></script>
+  <script src="customers-ui.js"></script>
+  <script src="pipeline-ui.js"></script>
   <script>
 "use strict";
 
@@ -1017,6 +1024,11 @@ let editingRecordId = null;
 // Masters editor sub-navigation (read by masters-ui.js)
 window.mastersView = "home";
 window.mastersStore = "";
+// Leads tab sub-navigation (read by customers-ui.js / pipeline-ui.js)
+window.leadsView = "pipeline";        // 'pipeline' | 'customers'
+window.leadsCustomerMobile = "";      // set → customer detail
+window._custSearch = "";
+window._custSort = "recent";
 
 // =====================================================================
 // Render — top-level
@@ -1051,6 +1063,7 @@ function render() {
   const screen = $("screen");
   if (currentScreen === "capture")       screen.innerHTML = renderCapture(state, auth);
   else if (currentScreen === "today")    screen.innerHTML = renderToday(state, auth);
+  else if (currentScreen === "leads")    screen.innerHTML = renderLeads(state, auth);
   else if (currentScreen === "settings") screen.innerHTML = renderSettings(state, auth);
   else if (currentScreen === "masters") {
     const homeView = (window.mastersView || "home") === "home";
@@ -1554,6 +1567,43 @@ function renderEntryCard(r, auth) {
 // SETTINGS screen
 // =====================================================================
 
+// =====================================================================
+// LEADS screen — Pipeline | Customers toggle, dispatches to UI modules
+// =====================================================================
+
+function renderLeads(state, auth) {
+  const view = window.leadsView || "pipeline";
+  const inCustomerDetail = view === "customers" && window.leadsCustomerMobile;
+  const toggle = inCustomerDetail ? "" : `
+    <div class="chip-group" style="margin-bottom:12px">
+      <button class="chip ${view === "pipeline" ? "selected" : ""}" data-action="leads-view" data-view="pipeline">Pipeline</button>
+      <button class="chip ${view === "customers" ? "selected" : ""}" data-action="leads-view" data-view="customers">Customers</button>
+    </div>`;
+  let body;
+  if (view === "customers") body = window.CustomersUI ? window.CustomersUI.render(state) : "<p class='muted'>Loading…</p>";
+  else body = window.PipelineUI ? window.PipelineUI.render(state) : "<p class='muted'>Loading…</p>";
+  return toggle + body;
+}
+
+function openConvertModal(recordId) {
+  const state = Store.load();
+  const r = state.records.find(x => x.recordId === recordId);
+  if (!r) return;
+  openModal(`
+    <h2>Convert to sale</h2>
+    <p class="muted">${escapeHtml(r.customerName || "Unnamed")} · ${escapeHtml(r.store || "")}</p>
+    <div class="field">
+      <label class="field-label">Sale value (₹)</label>
+      <input id="convertValue" type="number" inputmode="numeric" placeholder="e.g. 18500" value="${r.saleValue || ""}">
+      <p class="field-hint">Marks this lead as Converted and records the sale amount for conversion stats.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="save-convert" data-id="${escapeHtml(recordId)}">Mark converted</button>
+    </div>
+  `);
+}
+
 function renderSettings(state, auth) {
   const staff = loadStaff();
   return `
@@ -1935,6 +1985,39 @@ document.addEventListener("click", async (e) => {
   }
   if (action === "goto-settings") { switchScreen("settings"); return; }
 
+  // Leads tab — delegate customer/pipeline actions to their UI modules
+  if (action.indexOf("c-") === 0) {
+    if (window.CustomersUI && window.CustomersUI.handleAction(action, a.dataset)) return;
+  }
+  if (action.indexOf("p-") === 0) {
+    if (window.PipelineUI && window.PipelineUI.handleAction(action, a.dataset)) return;
+  }
+  if (action === "leads-view") {
+    window.leadsView = a.dataset.view;
+    window.leadsCustomerMobile = "";
+    render();
+    return;
+  }
+  if (action === "call-customer") {
+    const m = (a.dataset.mobile || "").replace(/\D/g, "");
+    if (m) window.location.href = "tel:+91" + m;
+    return;
+  }
+  if (action === "open-convert") { openConvertModal(a.dataset.id); return; }
+  if (action === "save-convert") {
+    const val = $("convertValue") ? $("convertValue").value : "";
+    const s = Store.load();
+    Customers.convertToSale(s, a.dataset.id, val);
+    Store.save(s);
+    closeModal();
+    toast("Marked as converted" + (Number(val) ? " · " + Customers.formatINR(val) : ""));
+    if (window.SaagarShell && window.SaagarShell.cancelFollowupReminder) {
+      window.SaagarShell.cancelFollowupReminder(a.dataset.id);
+    }
+    render();
+    return;
+  }
+
   // ===== Setup flow =====
   if (action === "setup-name-next") {
     const name = $("ownerName").value.trim();
@@ -2233,17 +2316,23 @@ if (window.SaagarShell && window.SaagarShell.boot) {
         }
         switchScreen("settings"); return true;
       }
-      // 3. On a wizard step > 1? Step back.
+      // 3. In Leads → customer detail? Back to the list first.
+      if (currentScreen === "leads" && window.leadsView === "customers" && window.leadsCustomerMobile) {
+        window.leadsCustomerMobile = "";
+        render();
+        return true;
+      }
+      // 4. On a wizard step > 1? Step back.
       if (currentScreen === "capture" && Wizard.step > 1) {
         Wizard.goto(Wizard.step - 1);
         return true;
       }
-      // 4. On Today / Settings? Go to Capture.
+      // 5. On Today / Leads / Settings? Go to Capture.
       if (currentScreen !== "capture") {
         switchScreen("capture");
         return true;
       }
-      // 5. Capture with no entry started? Default exit confirm.
+      // 6. Capture with no entry started? Default exit confirm.
       return false;
     },
   });

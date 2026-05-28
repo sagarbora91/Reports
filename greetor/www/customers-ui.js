@@ -1,0 +1,220 @@
+/* customers-ui.js — window.CustomersUI (Customers list + detail screens)
+   Standalone IIFE; does NOT edit index.html, customers.js, or pipeline-ui.js. */
+(function () {
+  'use strict';
+
+  /* ── helpers ─────────────────────────────────────────────────────────── */
+
+  function fmt91(mobile) {
+    var m = String(mobile || '').replace(/\D/g, '').slice(-10);
+    if (m.length === 10) return '+91 ' + m.slice(0, 5) + ' ' + m.slice(5);
+    return mobile || '';
+  }
+
+  function statusPill(status) {
+    var map = {
+      Hot: 'pill-hot', Warm: 'pill-warm', Cold: 'pill-cold',
+      Open: 'pill-open', Converted: 'pill-converted', Closed: 'pill-closed'
+    };
+    var cls = map[status] || 'pill-open';
+    return '<span class="pill ' + cls + '">' + escapeHtml(status || 'Open') + '</span>';
+  }
+
+  function guardCustomers() {
+    return typeof window.Customers !== 'undefined';
+  }
+
+  function currentState() {
+    return typeof Store !== 'undefined' ? Store.load() : {};
+  }
+
+  function safeEscape(s) {
+    return typeof escapeHtml === 'function' ? escapeHtml(s) : String(s || '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* ── list helpers ─────────────────────────────────────────────────────── */
+
+  function buildRows(customers) {
+    if (!customers || customers.length === 0) {
+      return '<div class="empty-state"><div class="icon">👥</div>' +
+        '<h3>No customers yet</h3><p class="muted">Walk-ins will appear here.</p></div>';
+    }
+    return customers.map(function (c) {
+      var name = safeEscape(c.name || 'Unnamed');
+      var storeList = safeEscape((c.stores || []).join(', '));
+      var ago = c.lastVisitAgoDays != null ? c.lastVisitAgoDays + 'd ago' : '—';
+      var convertedBadge = c.converted
+        ? '<span class="pill pill-converted" style="margin-left:6px">' +
+          safeEscape(Customers.formatINR(c.totalSaleValue || 0)) + '</span>'
+        : '';
+      return '<div class="entry-card" data-action="c-open" data-mobile="' +
+        safeEscape(c.mobile) + '" style="cursor:pointer">' +
+        '<div class="entry-row">' +
+        '<span class="entry-name">' + name + '</span>' +
+        statusPill(c.status) + convertedBadge +
+        '</div>' +
+        '<div class="entry-mobile">' + safeEscape(fmt91(c.mobile)) + '</div>' +
+        '<div class="entry-meta">' +
+        safeEscape(String(c.visitCount || 0)) + ' visit(s) · last ' +
+        safeEscape(ago) + ' · ' + storeList +
+        '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function renderList(state) {
+    if (!guardCustomers()) {
+      return '<div class="empty-state"><div class="icon">⏳</div><h3>Loading…</h3></div>';
+    }
+    var search = window._custSearch || '';
+    var sort = window._custSort || 'recent';
+    var customers = Customers.list(state, { search: search, sort: sort });
+
+    var sortChips = ['recent', 'visits', 'value', 'name'].map(function (s) {
+      var label = { recent: 'Recent', visits: 'Visits', value: 'Value', name: 'Name' }[s];
+      var sel = sort === s ? ' selected' : '';
+      return '<span class="chip' + sel + '" data-action="c-sort" data-sort="' + s + '">' + label + '</span>';
+    }).join('');
+
+    return '<div class="field" style="margin-bottom:8px">' +
+      '<input type="search" id="custSearch" placeholder="Search name or mobile"' +
+      ' oninput="window.CustomersUI.onSearch(this.value)"' +
+      ' value="' + safeEscape(search) + '">' +
+      '</div>' +
+      '<div class="chip-group" style="margin-bottom:12px">' + sortChips + '</div>' +
+      '<div id="custList">' + buildRows(customers) + '</div>';
+  }
+
+  /* ── detail helpers ───────────────────────────────────────────────────── */
+
+  function renderVisitCard(v) {
+    var saleStr = v.saleValue ? ' · ' + safeEscape(Customers.formatINR(v.saleValue)) : '';
+    var followStr = v.followDate
+      ? '<div class="tiny muted">Follow-up: ' + safeEscape(v.followDate) + '</div>'
+      : '';
+    return '<div class="entry-card">' +
+      '<div class="entry-row">' +
+      '<span class="tiny muted">' + safeEscape(v.visitDate || '') + ' ' + safeEscape(v.visitTime || '') + '</span>' +
+      statusPill(v.leadStatus) +
+      '</div>' +
+      '<div class="entry-meta">' +
+      safeEscape(v.store || '') + ' · ' + safeEscape(v.category || '') +
+      (v.brand ? ' · ' + safeEscape(v.brand) : '') +
+      '</div>' +
+      '<div><strong>' + safeEscape(v.reason || '') + '</strong>' + saleStr + '</div>' +
+      followStr +
+      '<div class="entry-actions" style="margin-top:8px">' +
+      '<button class="btn btn-secondary entry-action" data-action="edit-entry" data-id="' +
+      safeEscape(v.recordId) + '">Edit</button>' +
+      '</div>' +
+      '</div>';
+  }
+
+  function renderDetail(state, mobile) {
+    if (!guardCustomers()) {
+      return '<div class="empty-state"><div class="icon">⏳</div><h3>Loading…</h3></div>';
+    }
+    var c = Customers.byMobile(state, mobile);
+    if (!c) {
+      return '<button class="btn btn-ghost" data-action="c-back">← Back</button>' +
+        '<div class="empty-state"><div class="icon">🔍</div>' +
+        '<h3>Customer not found</h3></div>';
+    }
+    var visits = c.visits || [];
+    var latestId = visits.length ? safeEscape(visits[0].recordId) : '';
+    var name = safeEscape(c.name || 'Unnamed');
+
+    var convertBtn = (!c.converted && latestId)
+      ? '<button class="btn btn-primary btn-full" style="margin-top:12px"' +
+        ' data-action="open-convert" data-id="' + latestId + '">Convert latest to sale</button>'
+      : '';
+
+    var visitCards = visits.map(renderVisitCard).join('');
+
+    return '<button class="btn btn-ghost" data-action="c-back" style="margin-bottom:12px">← Back</button>' +
+
+      '<div class="card" style="margin-bottom:12px">' +
+      '<div style="font-size:1.25rem;font-weight:700;margin-bottom:4px">' + name + '</div>' +
+      '<div class="entry-mobile" style="margin-bottom:10px">' + safeEscape(fmt91(c.mobile)) + '</div>' +
+      '<div class="entry-actions">' +
+      (latestId
+        ? '<button class="btn btn-secondary entry-action wa" data-action="wa-customer"' +
+          ' data-id="' + latestId + '">WhatsApp</button>'
+        : '') +
+      '<button class="btn btn-secondary entry-action" data-action="call-customer"' +
+      ' data-mobile="' + safeEscape(c.mobile) + '">Call</button>' +
+      '</div>' +
+      '</div>' +
+
+      '<div class="card row-spread" style="margin-bottom:12px;gap:8px;flex-wrap:wrap">' +
+      '<div style="text-align:center">' +
+      '<div class="today-count">' + safeEscape(String(c.visitCount || 0)) + '</div>' +
+      '<div class="today-label">Visits</div></div>' +
+      '<div style="text-align:center">' +
+      '<div class="today-count tiny">' + safeEscape(c.firstVisitDate || '—') + '</div>' +
+      '<div class="today-label">First visit</div></div>' +
+      '<div style="text-align:center">' +
+      '<div class="today-count">' + safeEscape(c.lastVisitAgoDays != null ? c.lastVisitAgoDays + 'd' : '—') + '</div>' +
+      '<div class="today-label">Last visit</div></div>' +
+      '<div style="text-align:center">' +
+      '<div class="today-count tiny">' + safeEscape(Customers.formatINR(c.totalSaleValue || 0)) + '</div>' +
+      '<div class="today-label">Total sale</div></div>' +
+      '</div>' +
+
+      convertBtn +
+
+      '<div style="font-weight:600;margin:16px 0 8px">Visit history (' + visits.length + ')</div>' +
+      (visitCards || '<div class="muted">No visits recorded.</div>');
+  }
+
+  /* ── public API ───────────────────────────────────────────────────────── */
+
+  window.CustomersUI = {
+
+    render: function (state) {
+      var mobile = window.leadsCustomerMobile || '';
+      if (mobile) {
+        return renderDetail(state, mobile);
+      }
+      return renderList(state);
+    },
+
+    onSearch: function (val) {
+      window._custSearch = val;
+      var el = typeof $ === 'function' ? $('custList') : document.getElementById('custList');
+      if (!el) {
+        if (typeof render === 'function') render();
+        return;
+      }
+      if (!guardCustomers()) { el.innerHTML = '<div class="muted">Loading…</div>'; return; }
+      var state = currentState();
+      var sort = window._custSort || 'recent';
+      var customers = Customers.list(state, { search: val, sort: sort });
+      el.innerHTML = buildRows(customers);
+    },
+
+    handleAction: function (action, dataset) {
+      if (!action || !action.startsWith('c-')) return false;
+      var state = currentState();
+      if (action === 'c-open') {
+        window.leadsCustomerMobile = dataset.mobile || '';
+        if (typeof render === 'function') render();
+        return true;
+      }
+      if (action === 'c-back') {
+        window.leadsCustomerMobile = '';
+        if (typeof render === 'function') render();
+        return true;
+      }
+      if (action === 'c-sort') {
+        window._custSort = dataset.sort || 'recent';
+        if (typeof render === 'function') render();
+        return true;
+      }
+      return false;
+    }
+  };
+
+}());
