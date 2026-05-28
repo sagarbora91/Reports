@@ -1168,6 +1168,18 @@ body.locked #auth-screen { display: block; }
   border-radius: 8px;
   background: var(--white);
 }
+
+/* --- Per-CRO audit banner --- */
+.cro-banner {
+  background: var(--navy);
+  color: var(--white);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+.cro-banner strong { color: var(--gold-light); }
   </style>
 </head>
 <body>
@@ -4598,11 +4610,27 @@ function autoCreateCapsForAudit(audit) {
 
   const deadline = addDays(audit.date, 7);
   const newCaps = [];
-  Object.entries(audit.results).forEach(([cpId, r]) => {
-    if (r.result !== 'F') return;
-    // Look in both daily and weekly checkpoint sets so weekly fails also
-    // spawn CAPs (Spec §4.3).
-    const cp = CHECKPOINTS.find(c => c.id === cpId)
+  const cps = checkpointsFor(audit);
+  const cpById = {};
+  cps.forEach(c => { cpById[c.id] = c; });
+
+  // Collect FAILs from whichever results shape this audit uses.
+  const fails = []; // { cpId, r }
+  if (auditIsPerCro(audit)) {
+    Object.keys(audit.cro_results || {}).forEach(croId => {
+      Object.entries(audit.cro_results[croId]).forEach(([cpId, r]) => {
+        if (r.result === 'F') fails.push({ cpId, r: Object.assign({}, r, { cro_id: croId }) });
+      });
+    });
+  } else {
+    Object.entries(audit.results || {}).forEach(([cpId, r]) => {
+      if (r.result === 'F') fails.push({ cpId, r });
+    });
+  }
+
+  fails.forEach(({ cpId, r }) => {
+    const cp = cpById[cpId]
+      || CHECKPOINTS.find(c => c.id === cpId)
       || WEEKLY_CHECKPOINTS.find(c => c.id === cpId);
     if (!cp) return;
     newCaps.push({
@@ -4610,7 +4638,7 @@ function autoCreateCapsForAudit(audit) {
       audit_id: audit.id,
       audit_date: audit.date,
       checkpoint_id: cpId,
-      sop_id: cp.sop_id || cp.group || null,
+      sop_id: cp.section_id || cp.sop_id || cp.group || null,
       finding: r.finding || '',
       cro_id: r.cro_id || null,
       photos: r.photos || [],
@@ -5558,6 +5586,8 @@ function startNewAudit({ date, auditorName, auditorId, croIds, backdateReason, t
   state.audits = state.audits.filter(
     a => !(a.date === date && a.status === 'draft' && (a.template_id || 'tpl_daily') === tplId)
   );
+  const tpl = Templates.byId(state, tplId);
+  const perCro = !!(tpl && tpl.cro_mode && tpl.cro_mode !== 'store');
   const newAudit = {
     id: uuid(),
     template_id: tplId,
@@ -5572,6 +5602,12 @@ function startNewAudit({ date, auditorName, auditorId, croIds, backdateReason, t
     submitted_at: null,
     backdate_reason: (backdateReason || '').trim(),
   };
+  if (perCro) {
+    newAudit.cro_mode = 'per_cro';
+    newAudit.cro_order = croIds.slice();     // score these CROs, in order
+    newAudit.current_cro_index = 0;
+    newAudit.cro_results = {};
+  }
   state.audits.push(newAudit);
   state.current_audit_id = newAudit.id;
   state.auditor_name = auditorName;
@@ -5647,13 +5683,14 @@ function markCheckpoint(checkpointId, result, opts = {}) {
   const state = Store.load();
   const a = currentAudit(state);
   if (!a) return;
-  const existing = a.results[checkpointId] || {};
-  a.results[checkpointId] = {
+  const bucket = writableBucket(a);
+  const existing = bucket[checkpointId] || {};
+  bucket[checkpointId] = {
     result,
     finding: opts.finding != null ? opts.finding : (existing.finding || ''),
-    cro_id: opts.croId != null ? opts.croId : (existing.cro_id || null),
-    // If caller passes photos explicitly, that wins. Otherwise carry whatever
-    // photos the user attached pre-verdict (or from a previous mark).
+    // In per-CRO mode the result is implicitly the current CRO; in store mode
+    // the caller may attribute a specific CRO.
+    cro_id: auditIsPerCro(a) ? currentCroId(a) : (opts.croId != null ? opts.croId : (existing.cro_id || null)),
     photos: opts.photos != null ? opts.photos : (existing.photos || []),
     at: new Date().toISOString(),
   };
@@ -5666,11 +5703,12 @@ function addPhotoToCheckpoint(checkpointId, dataUrl) {
   const state = Store.load();
   const a = currentAudit(state);
   if (!a) return;
-  const existing = a.results[checkpointId] || {
-    result: null, finding: '', cro_id: null, photos: [], at: null,
+  const bucket = writableBucket(a);
+  const existing = bucket[checkpointId] || {
+    result: null, finding: '', cro_id: auditIsPerCro(a) ? currentCroId(a) : null, photos: [], at: null,
   };
   existing.photos = (existing.photos || []).concat([dataUrl]);
-  a.results[checkpointId] = existing;
+  bucket[checkpointId] = existing;
   Store.save(state);
 }
 
@@ -5678,7 +5716,7 @@ function removePhotoFromCheckpoint(checkpointId, photoIdx) {
   const state = Store.load();
   const a = currentAudit(state);
   if (!a) return;
-  const r = a.results[checkpointId];
+  const r = resultsBucket(a)[checkpointId];
   if (!r || !r.photos) return;
   r.photos.splice(photoIdx, 1);
   Store.save(state);
@@ -5723,19 +5761,58 @@ function frequencyOf(audit) {
   return audit && audit.audit_type === 'weekly' ? 'weekly' : 'daily';
 }
 
+// --- Per-CRO mode helpers -------------------------------------------------
+// A per-CRO audit runs the same checklist once per CRO, sequentially.
+// Results live in audit.cro_results[croId][cpId]; store-mode uses
+// audit.results[cpId]. resultsBucket() returns the active object so the rest
+// of the run flow can stay shape-agnostic.
+
+function auditIsPerCro(audit) {
+  return !!(audit && audit.cro_mode && audit.cro_mode !== 'store');
+}
+
+function currentCroId(audit) {
+  if (!auditIsPerCro(audit)) return null;
+  const order = audit.cro_order || [];
+  return order[audit.current_cro_index || 0] || null;
+}
+
+// Read-only view of the active results object.
+function resultsBucket(audit) {
+  if (auditIsPerCro(audit)) {
+    const cid = currentCroId(audit);
+    return (audit.cro_results && audit.cro_results[cid]) || {};
+  }
+  return audit.results || {};
+}
+
+// Writable results object — creates the nested structure as needed. Caller
+// must Store.save() after mutating.
+function writableBucket(audit) {
+  if (auditIsPerCro(audit)) {
+    const cid = currentCroId(audit);
+    audit.cro_results = audit.cro_results || {};
+    audit.cro_results[cid] = audit.cro_results[cid] || {};
+    return audit.cro_results[cid];
+  }
+  audit.results = audit.results || {};
+  return audit.results;
+}
+
 function nextUnmarkedIndex(audit) {
   const cps = checkpointsFor(audit);
+  const bucket = resultsBucket(audit);
   // Pass 1: any checkpoint truly untouched (no row, or photo-only row with
   // no verdict). The audit walks through these in spec order first.
   for (let i = 0; i < cps.length; i++) {
-    const r = audit.results[cps[i].id];
+    const r = bucket[cps[i].id];
     if (!r || !r.result) return i;
   }
   // Pass 2: any checkpoint the user explicitly SKIPped. Those re-enter the
   // flow at the end so the user is forced to give a final verdict before
   // they can review + submit.
   for (let i = 0; i < cps.length; i++) {
-    const r = audit.results[cps[i].id];
+    const r = bucket[cps[i].id];
     if (r && r.result === 'SKIP') return i;
   }
   return cps.length; // all done
@@ -5745,8 +5822,9 @@ function nextUnmarkedIndex(audit) {
 // "X to revisit" both during the linear walk and on the review screen.
 function skippedCount(audit) {
   let n = 0;
+  const bucket = resultsBucket(audit);
   checkpointsFor(audit).forEach(cp => {
-    const r = audit.results[cp.id];
+    const r = bucket[cp.id];
     if (r && r.result === 'SKIP') n++;
   });
   return n;
@@ -5807,7 +5885,21 @@ function submitAudit() {
     return { audit: a, capsCreated: newCaps.length, escalationsRaised: 0 };
   }
 
-  // Daily / monthly / custom — simple weighted score over the template's set.
+  // Per-CRO: pooled aggregate score + per-CRO breakdown.
+  if (auditIsPerCro(a)) {
+    const sp = scorePerCro(a, cps);
+    a.score = sp.aggregate;
+    a.score_by_cro = sp.byCro;
+    a.status = 'submitted';
+    a.submitted_at = new Date().toISOString();
+    state.current_audit_id = null;
+    Store.save(state);
+    const newCaps = autoCreateCapsForAudit(a);
+    const newEscalations = freq === 'daily' ? processEscalationsForAudit(a) : 0;
+    return { audit: a, capsCreated: newCaps.length, escalationsRaised: newEscalations };
+  }
+
+  // Daily / monthly / custom — simple % score over the template's set.
   const s = scoreAudit(a.results, cps);
   a.status = 'submitted';
   a.submitted_at = new Date().toISOString();
@@ -6071,8 +6163,9 @@ function renderTemplateStartConfig(state, auth, tpl) {
 // Live P/F/NA counts over whichever checkpoint set this audit uses.
 function liveCounts(audit) {
   let p = 0, f = 0, na = 0;
+  const bucket = resultsBucket(audit);
   checkpointsFor(audit).forEach(cp => {
-    const r = (audit.results[cp.id] || {}).result;
+    const r = (bucket[cp.id] || {}).result;
     if (r === 'P') p++; else if (r === 'F') f++; else if (r === 'NA') na++;
   });
   return { p, f, na };
@@ -6120,23 +6213,41 @@ function renderInProgressAudit(a) {
   const cps = checkpointsFor(a);
   const freq = frequencyOf(a);
   const idx = nextUnmarkedIndex(a);
-  if (idx >= cps.length) return renderReviewAudit(a);
+  if (idx >= cps.length) {
+    // Per-CRO: finished this CRO. Move to the next, or review if last.
+    if (auditIsPerCro(a)) {
+      const order = a.cro_order || [];
+      const ci = a.current_cro_index || 0;
+      if (ci < order.length - 1) return renderCroHandoff(a, ci);
+    }
+    return renderReviewAudit(a);
+  }
 
   const cp = cps[idx];
   const disp = cpDisplay(a, cp);
   const live = liveCounts(a);
   const pct = Math.round(((idx) / cps.length) * 100);
   const allowsNa = cp.allows_na;
-  const isFreshSession = !sessionStorage.getItem('audit_session_' + a.id);
-  if (idx > 0 && isFreshSession) sessionStorage.setItem('audit_session_' + a.id, '1');
+  const isFreshSession = !sessionStorage.getItem('audit_session_' + a.id + '_' + (a.current_cro_index || 0));
+  if (idx > 0 && isFreshSession) sessionStorage.setItem('audit_session_' + a.id + '_' + (a.current_cro_index || 0), '1');
+
+  // Per-CRO banner: which CRO are we scoring right now.
+  let croBanner = '';
+  if (auditIsPerCro(a)) {
+    const st = Store.load();
+    const cro = (st.cros || []).find(c => c.id === currentCroId(a));
+    const order = a.cro_order || [];
+    croBanner = `<div class="cro-banner">Scoring <strong>${escapeHtml(cro ? cro.name : 'CRO')}</strong> · ${(a.current_cro_index || 0) + 1} of ${order.length}</div>`;
+  }
 
   // Are we revisiting something the user already SKIPped? That happens once
   // every truly-unmarked checkpoint has a verdict.
-  const currentResult = a.results[cp.id];
+  const currentResult = resultsBucket(a)[cp.id];
   const isRevisitingSkip = currentResult && currentResult.result === 'SKIP';
   const skipped = skippedCount(a);
 
   return `
+    ${croBanner}
     ${idx > 0 && isFreshSession ? `
       <div class="resume-banner">
         <h3>Resuming ${freq === 'weekly' ? 'weekly ' : ''}audit</h3>
@@ -6185,7 +6296,7 @@ function renderInProgressAudit(a) {
 // button. Photos attach to the current checkpoint's result row even if no
 // verdict has been chosen yet; markCheckpoint() preserves them.
 function renderCheckpointPhotoStrip(audit, cpId) {
-  const r = audit.results[cpId] || {};
+  const r = resultsBucket(audit)[cpId] || {};
   const photos = r.photos || [];
   const tiles = photos.map((url, i) => `
     <div class="cp-photo-tile">
@@ -6205,6 +6316,47 @@ function renderCheckpointPhotoStrip(audit, cpId) {
   `;
 }
 
+// Per-CRO scoring: each CRO scored on the same checklist; aggregate is the
+// pooled pass-rate across all CROs.
+function scorePerCro(audit, cps) {
+  const order = audit.cro_order || [];
+  const byCro = {};
+  let totP = 0, totF = 0, totNa = 0, totMax = 0;
+  order.forEach(cid => {
+    const res = (audit.cro_results && audit.cro_results[cid]) || {};
+    const sc = scoreAudit(res, cps);
+    byCro[cid] = sc;
+    totP += sc.p; totF += sc.f; totNa += sc.na; totMax += (sc.p + sc.f);
+  });
+  const pct = totMax > 0 ? Math.round((totP / totMax) * 1000) / 10 : 100;
+  return {
+    byCro,
+    aggregate: { raw: totP, max: totMax, pct, band: bandFor(pct), p: totP, f: totF, na: totNa, total: cps.length * order.length },
+  };
+}
+
+// Shown between CROs in a per-CRO audit: the just-finished CRO's score + a
+// button to start the next one.
+function renderCroHandoff(a, ci) {
+  const st = Store.load();
+  const order = a.cro_order || [];
+  const cps = checkpointsFor(a);
+  const doneCro = (st.cros || []).find(c => c.id === order[ci]);
+  const nextCro = (st.cros || []).find(c => c.id === order[ci + 1]);
+  const sc = scoreAudit((a.cro_results && a.cro_results[order[ci]]) || {}, cps);
+  return `
+    <div class="card score-card">
+      <p class="tiny">CRO ${ci + 1} of ${order.length} done</p>
+      <div class="score-pct ${sc.band}">${sc.pct.toFixed(1)}%</div>
+      <div class="score-band ${sc.band}">${escapeHtml(doneCro ? doneCro.name : 'CRO')}</div>
+      <p class="muted">${sc.p} pass &middot; ${sc.f} fail &middot; ${sc.na} N/A</p>
+    </div>
+    <button class="btn btn-primary" data-action="next-cro">Next: ${escapeHtml(nextCro ? nextCro.name : 'CRO')} (${ci + 2} of ${order.length}) →</button>
+    <div class="spacer-12"></div>
+    <button class="btn btn-ghost" data-action="cancel-audit">Discard draft</button>
+  `;
+}
+
 function renderReviewAudit(a) {
   const cps = checkpointsFor(a);
   const isWeekly = frequencyOf(a) === 'weekly';
@@ -6215,6 +6367,15 @@ function renderReviewAudit(a) {
     Object.keys(a.results || {}).forEach(id => { verdicts[id] = a.results[id].result; });
     s = scoreWeekly(dailyPcts, verdicts, cps);
     extra = `<p class="muted">Daily contribution ${s.dailyContribution}/68 (avg ${s.avgDaily}% over ${dailyPcts.length} day${dailyPcts.length === 1 ? '' : 's'}) + weekly ${s.weeklyRaw}/${s.weeklyMax}</p>`;
+  } else if (auditIsPerCro(a)) {
+    const sp = scorePerCro(a, cps);
+    s = sp.aggregate;
+    const st = Store.load();
+    extra = `<div style="margin-top:10px;text-align:left">${(a.cro_order || []).map(cid => {
+      const cro = (st.cros || []).find(c => c.id === cid);
+      const cs = sp.byCro[cid];
+      return `<div class="cro-rank"><span>${escapeHtml(cro ? cro.name : 'CRO')}</span><span class="pct ${cs.band}">${cs.pct.toFixed(1)}%</span></div>`;
+    }).join('')}</div>`;
   } else {
     s = scoreAudit(a.results, cps);
   }
@@ -6677,8 +6838,7 @@ const Builder = {
 const FREQ_LABELS = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', custom: 'Custom' };
 const CRO_MODE_LABELS = {
   store: 'Once for the store',
-  per_cro: 'One run per CRO',
-  matrix: 'Score each CRO (matrix)',
+  per_cro: 'Score each CRO separately',
 };
 
 function renderTemplatesCard(state) {
@@ -6760,7 +6920,7 @@ function renderTemplateEditor(tpl) {
           ${Object.keys(CRO_MODE_LABELS).map(m => `<option value="${m}" ${tpl.cro_mode === m ? 'selected' : ''}>${CRO_MODE_LABELS[m]}</option>`).join('')}
         </select>
       </label>
-      <p class="tiny muted" style="margin-top:6px">"One run per CRO" and "matrix" repeat the checklist across staff — set up in the next update; "Once for the store" works now.</p>
+      <p class="tiny muted" style="margin-top:6px">"Once for the store" = one score (cash, inventory, display). "Score each CRO separately" = run the same checklist for every CRO on duty and score each person (grooming).</p>
     </div>
 
     <h2 style="font-family:'DM Serif Display',serif;color:var(--navy);font-size:18px;margin:16px 0 8px">Sections &amp; points</h2>
@@ -6930,7 +7090,8 @@ function failModal(checkpoint, cros) {
   FailDraft.reset();
   const _s = Store.load();
   const _a = currentAudit(_s);
-  const _existing = _a && _a.results[checkpoint.id] && _a.results[checkpoint.id].photos;
+  const _row = _a && resultsBucket(_a)[checkpoint.id];
+  const _existing = _row && _row.photos;
   if (Array.isArray(_existing) && _existing.length > 0) {
     _existing.forEach(p => FailDraft.add(p));
   }
@@ -7131,12 +7292,63 @@ function userMenuModal(userId) {
   `);
 }
 
+function perCroHistoryDetailModal(a, tpl, croById) {
+  const s = a.score;
+  const cps = checkpointsFor(a);
+  const cpById = {};
+  cps.forEach(c => { cpById[c.id] = c; });
+  const order = a.cro_order || Object.keys(a.cro_results || {});
+
+  const croCards = order.map(cid => {
+    const cro = croById[cid];
+    const cs = (a.score_by_cro && a.score_by_cro[cid]) || scoreAudit((a.cro_results && a.cro_results[cid]) || {}, cps);
+    const res = (a.cro_results && a.cro_results[cid]) || {};
+    const fails = Object.entries(res).filter(([, r]) => r.result === 'F').map(([cpId, r]) => {
+      const cp = cpById[cpId];
+      const photoHtml = (r.photos || []).length
+        ? `<div class="detail-photos">${r.photos.map(p => `<img src="${p}" alt="">`).join('')}</div>` : '';
+      return `<div class="result-row"><span class="cp-id">${escapeHtml(cpId)}</span>
+        <div class="cp-body"><div>${escapeHtml(cp ? cp.text : '')}</div>
+        ${r.finding ? `<div class="cp-finding">${escapeHtml(r.finding)}</div>` : ''}${photoHtml}</div>
+        <span class="verdict-pill F">F</span></div>`;
+    }).join('');
+    return `
+      <div class="detail-sop">
+        <div class="detail-sop-header">
+          ${escapeHtml(cro ? cro.name : 'CRO')}
+          <span class="count"><span class="pct ${cs.band}">${cs.pct.toFixed(1)}%</span> · ${cs.f} fail(s)</span>
+        </div>
+        ${fails || '<p class="muted" style="font-size:13px;padding:6px">No failures — clean.</p>'}
+      </div>`;
+  }).join('');
+
+  openModal(`
+    <h3>${escapeHtml(tpl ? tpl.name : 'Audit')} · ${escapeHtml(fmtDate(a.date))}</h3>
+    <p class="muted">Per-CRO · submitted ${escapeHtml(new Date(a.submitted_at).toLocaleString('en-IN'))} by ${escapeHtml(a.auditor_name || '—')}</p>
+    <div class="score-card" style="padding:12px">
+      <div class="score-pct ${s.band}" style="font-size:48px">${s.pct.toFixed(1)}%</div>
+      <div class="score-band ${s.band}">${bandLabel(s.band)} · pooled across ${order.length} CRO(s)</div>
+      <p class="muted">${s.p} pass · ${s.f} fail · ${s.na} N/A</p>
+    </div>
+    <div class="row">
+      <button class="btn btn-secondary" data-action="print-audit" data-id="${escapeHtml(a.id)}">📄 Print / Save as PDF</button>
+      <button class="btn btn-ghost" data-action="modal-cancel">Close</button>
+    </div>
+    ${croCards}
+  `);
+}
+
 function historyDetailModal(a) {
   const s = a.score;
   const state = Store.load();
   const croById = Object.fromEntries(state.cros.map(c => [c.id, c]));
   const isWeekly = frequencyOf(a) === 'weekly';
   const tpl = templateFor(a);
+
+  // Per-CRO audits get a dedicated detail view: per-CRO scores + their fails.
+  if (auditIsPerCro(a)) {
+    return perCroHistoryDetailModal(a, tpl, croById);
+  }
 
   // Group results by the template's sections (preferred), else by the legacy
   // SOP (daily) or weekly group.
@@ -7824,6 +8036,15 @@ document.addEventListener('click', async (e) => {
     const state = Store.load();
     state.audits = state.audits.filter(x => x.id !== state.current_audit_id);
     state.current_audit_id = null;
+    Store.save(state);
+    render();
+    return;
+  }
+  if (action === 'next-cro') {
+    const state = Store.load();
+    const aud = currentAudit(state);
+    if (!aud) return;
+    aud.current_cro_index = (aud.current_cro_index || 0) + 1;
     Store.save(state);
     render();
     return;
