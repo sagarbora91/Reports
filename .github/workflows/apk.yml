@@ -128,23 +128,23 @@ jobs:
           if ! grep -q "saagarRelease" android/app/build.gradle; then
             cat >> android/app/build.gradle <<'GRADLE'
 
-android {
-    signingConfigs {
-        saagarRelease {
-            storeFile file("keystore/release.jks")
-            storePassword System.getenv("SIGNING_KEYSTORE_PASSWORD")
-            keyAlias System.getenv("SIGNING_KEY_ALIAS")
-            keyPassword System.getenv("SIGNING_KEY_PASSWORD")
-        }
-    }
-    buildTypes {
-        release {
-            signingConfig signingConfigs.saagarRelease
-            minifyEnabled false
-        }
-    }
-}
-GRADLE
+          android {
+              signingConfigs {
+                  saagarRelease {
+                      storeFile file("keystore/release.jks")
+                      storePassword System.getenv("SIGNING_KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("SIGNING_KEY_ALIAS")
+                      keyPassword System.getenv("SIGNING_KEY_PASSWORD")
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.saagarRelease
+                      minifyEnabled false
+                  }
+              }
+          }
+          GRADLE
           fi
           echo "Signing config injected (keystore size ${SIZE} bytes)."
 
