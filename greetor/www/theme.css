@@ -1,0 +1,157 @@
+/* ============================================================
+   Saagar Greetor — Theme overrides
+   Applied via body.dark / body.large-text / body.high-contrast
+   Composes: all three classes may be active simultaneously.
+   ============================================================ */
+
+/* ── Dark mode ─────────────────────────────────────────────── */
+body.dark {
+  /* Page & card surfaces */
+  --white:    #0e1a2b;   /* card bg — navy-ish, not pure black */
+  --gray-50:  #0a1626;   /* page bg, darkest */
+  --gray-100: #142235;   /* subtle surfaces */
+  --gray-200: #1f3047;   /* borders */
+  --gray-300: #2a3d56;   /* dividers / chip bg */
+
+  /* Text — AA-compliant on above backgrounds */
+  --gray-500: #94a3b8;   /* muted / placeholder */
+  --gray-700: #cbd5e1;   /* body text */
+  --gray-800: #e5e7eb;   /* primary text */
+
+  /* Brand colours stay: --navy, --navy-mid, --navy-light,
+     --gold, --gold-light — all untouched intentionally      */
+
+  /* Elevated shadows — deeper on dark surfaces */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.45);
+  --shadow:    0 4px 8px rgba(0,0,0,.60), 0 2px 4px rgba(0,0,0,.50);
+  --shadow-lg: 0 10px 20px rgba(0,0,0,.70), 0 4px 8px rgba(0,0,0,.60);
+
+  /* Status pale tints → desaturated dark translucents */
+  --amber-pale: rgba(199,121,18,.12);
+  --red-pale:   rgba(186,45,45,.12);
+  --green-pale: rgba(22,138,81,.12);
+}
+
+/* Inputs, selects, textareas — dark surface, light text */
+body.dark input,
+body.dark select,
+body.dark textarea {
+  background-color: #0a1626;
+  color: var(--gray-800);
+  border: 1px solid var(--gray-200);
+  min-height: 44px;
+}
+
+body.dark input::placeholder,
+body.dark textarea::placeholder {
+  color: var(--gray-500);
+}
+
+/* Pills / chips */
+body.dark .chip,
+body.dark [class*="chip"],
+body.dark [class*="pill"],
+body.dark [class*="tag"] {
+  background-color: #1f3047;
+  color: var(--gray-700);
+  border-color: var(--gray-200);
+}
+
+body.dark .chip.selected,
+body.dark [class*="chip"].selected,
+body.dark .chip[aria-selected="true"],
+body.dark [class*="chip"][aria-selected="true"] {
+  background-color: var(--navy);
+  color: var(--gold-light);
+  border-color: var(--gold);
+}
+
+/* Thin neutral scrollbars */
+body.dark * {
+  scrollbar-width: thin;
+  scrollbar-color: #2a3d56 #0a1626;
+}
+body.dark *::-webkit-scrollbar { width: 6px; height: 6px; }
+body.dark *::-webkit-scrollbar-track { background: #0a1626; }
+body.dark *::-webkit-scrollbar-thumb { background-color: #2a3d56; border-radius: 3px; }
+
+
+/* ── Large-text mode ────────────────────────────────────────── */
+body.large-text {
+  font-size: 17px;   /* up from 15px */
+}
+
+body.large-text input,
+body.large-text select,
+body.large-text textarea {
+  font-size: 17px;   /* ≥16px prevents iOS zoom */
+  min-height: 44px;
+}
+
+body.large-text label,
+body.large-text .label,
+body.large-text .form-label {
+  font-size: 0.95rem;
+}
+
+body.large-text button,
+body.large-text [role="button"],
+body.large-text .btn {
+  min-height: 52px;
+  font-size: 1rem;
+}
+
+body.large-text .chip,
+body.large-text [class*="chip"],
+body.large-text [class*="pill"],
+body.large-text [class*="tag"] {
+  min-height: 48px;
+  font-size: 0.95rem;
+  padding: 0 14px;
+}
+
+
+/* ── High-contrast mode ─────────────────────────────────────── */
+body.high-contrast {
+  /* Promote muted text to body-text weight */
+  --gray-500: var(--gray-700);
+
+  /* Remove low-contrast pale status tints */
+  --amber-pale: transparent;
+  --red-pale:   transparent;
+  --green-pale: transparent;
+}
+
+/* Borders: fully opaque, darker */
+body.high-contrast input,
+body.high-contrast select,
+body.high-contrast textarea,
+body.high-contrast .card,
+body.high-contrast [class*="card"],
+body.high-contrast .chip,
+body.high-contrast [class*="chip"] {
+  border-width: 2px;
+  border-color: var(--gray-700);
+}
+
+/* Links underlined */
+body.high-contrast a {
+  text-decoration: underline;
+}
+
+/* Thicker focus rings — 3px gold outline */
+body.high-contrast :focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+
+/* ── Reduced-motion global override ─────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
 <style>
 :root {
   --navy: #0b1f3a;
@@ -656,19 +658,19 @@ body.locked { overflow: hidden; }
   <nav class="bottomnav" id="bottomnav">
     <button class="bnav-btn active" data-screen="capture">
       <span class="bnav-icon">＋</span>
-      <span>CAPTURE</span>
+      <span data-i18n="nav.capture">CAPTURE</span>
     </button>
     <button class="bnav-btn" data-screen="reports">
       <span class="bnav-icon">📊</span>
-      <span>REPORTS</span>
+      <span data-i18n="nav.reports">REPORTS</span>
     </button>
     <button class="bnav-btn" data-screen="leads">
       <span class="bnav-icon">👥</span>
-      <span>LEADS</span>
+      <span data-i18n="nav.leads">LEADS</span>
     </button>
     <button class="bnav-btn" data-screen="settings">
       <span class="bnav-icon">⚙</span>
-      <span>SETTINGS</span>
+      <span data-i18n="nav.settings">SETTINGS</span>
     </button>
   </nav>
 
@@ -689,6 +691,8 @@ body.locked { overflow: hidden; }
   <script src="charts.js"></script>
   <script src="targets.js"></script>
   <script src="photo.js"></script>
+  <script src="dpdp.js"></script>
+  <script src="i18n.js"></script>
   <script>
 "use strict";
 
@@ -911,6 +915,35 @@ function logAudit(action, summary, detail) {
 window.logAudit = logAudit;
 
 // Daily backup reminder toggle (Settings → Backup & restore).
+// Theme / locale / retention toggles bound from Settings.
+window.onThemeSet = function (key, val) {
+  if (!window.Theme) return;
+  const patch = {}; patch[key] = val;
+  window.Theme.set(patch);
+  toast("Theme updated");
+};
+function applyI18n() {
+  if (!window.I18n) return;
+  document.querySelectorAll("[data-i18n]").forEach(function (el) {
+    const k = el.getAttribute("data-i18n");
+    if (k) el.textContent = window.I18n.t(k);
+  });
+}
+window.applyI18n = applyI18n;
+
+window.onLocaleSet = function (loc) {
+  if (!window.I18n) return;
+  window.I18n.setLocale(loc);
+  applyI18n();
+  toast("Language: " + (loc === "mr" ? "मराठी" : "English"));
+  render();
+};
+window.onRetentionSet = function (val) {
+  if (!window.DPDP) return;
+  window.DPDP.setRetentionMonths(Number(val) || 0);
+  toast("Retention saved");
+};
+
 window.onBackupReminderToggle = async function (on) {
   if (!window.SaagarShell) return;
   window.SaagarShell.setBackupReminderEnabled(on);
@@ -1074,6 +1107,7 @@ function emptyData() {
     mobile: "",
     customerName: "",
     customerType: "New Customer",
+    consent: "",
     category: "",
     subCategory: "",
     brand: "",
@@ -1531,6 +1565,17 @@ function renderStep2(state) {
       <label class="field-label">Customer type</label>
       ${chipGroup("customerType", Masters.globalList(state, "customerTypes"), d.customerType)}
     </div>
+
+    <div class="field" style="background:var(--amber-pale);border:1px solid #f4c674">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+        <input type="checkbox" ${d.consent === "yes" ? "checked" : ""}
+               onchange="Wizard.set('consent', this.checked ? 'yes' : ''); render()"
+               style="width:22px;height:22px;margin-top:2px;flex-shrink:0">
+        <span style="font-size:13px;color:#6a4a00;line-height:1.45">
+          <strong>Customer consent</strong> — by ticking, the customer agrees their mobile and details may be stored for follow-up. Required if you've set Follow-up to Yes (DPDP).
+        </span>
+      </label>
+    </div>
   `;
 }
 
@@ -1968,6 +2013,54 @@ function renderSettings(state, auth) {
     </div>
 
     <div class="settings-section">
+      <h3>Appearance</h3>
+      <p>Theme, text size, and contrast.</p>
+      <div class="settings-row">
+        <span><strong>Theme</strong></span>
+        <select onchange="onThemeSet('mode', this.value)" style="min-width:100px;padding:6px 8px;border-radius:8px;border:1px solid var(--gray-300)">
+          ${(() => { const m = (window.Theme && window.Theme.get && window.Theme.get().mode) || "auto"; return ["auto","light","dark"].map(o => `<option value="${o}" ${o===m?"selected":""}>${o}</option>`).join(""); })()}
+        </select>
+      </div>
+      <div class="settings-row">
+        <span><strong>Large text</strong></span>
+        <input type="checkbox" ${(window.Theme && window.Theme.get && window.Theme.get().text === "large") ? "checked" : ""}
+               onchange="onThemeSet('text', this.checked ? 'large' : 'normal')" style="width:42px;height:24px">
+      </div>
+      <div class="settings-row">
+        <span><strong>High contrast</strong></span>
+        <input type="checkbox" ${(window.Theme && window.Theme.get && window.Theme.get().contrast === "high") ? "checked" : ""}
+               onchange="onThemeSet('contrast', this.checked ? 'high' : 'normal')" style="width:42px;height:24px">
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Language</h3>
+      <p>Switch between English and Marathi. Marathi translations are best-effort and pending a native-speaker review.</p>
+      <div class="chip-group">
+        ${["en","mr"].map(loc => {
+          const cur = (window.I18n && window.I18n.getLocale && window.I18n.getLocale()) || "en";
+          const label = loc === "en" ? "English" : "मराठी";
+          return `<button class="chip ${loc===cur?"selected":""}" onclick="onLocaleSet('${loc}')">${label}</button>`;
+        }).join("")}
+      </div>
+    </div>
+
+    ${canManageUsers(auth) ? `
+    <div class="settings-section">
+      <h3>Data &amp; Privacy</h3>
+      <p>Auto-purge old records (DPDP). Records older than the chosen window are removed and logged to the audit log on every app launch.</p>
+      <div class="settings-row">
+        <span><strong>Auto-purge after</strong></span>
+        <select onchange="onRetentionSet(this.value)" style="min-width:120px;padding:6px 8px;border-radius:8px;border:1px solid var(--gray-300)">
+          ${(() => { const cur = (window.DPDP && window.DPDP.getRetentionMonths && window.DPDP.getRetentionMonths()) || 0; const opts = [{v:0,t:"Off"},{v:3,t:"3 months"},{v:6,t:"6 months"},{v:12,t:"12 months"},{v:24,t:"24 months"}]; return opts.map(o => `<option value="${o.v}" ${o.v==cur?"selected":""}>${o.t}</option>`).join(""); })()}
+        </select>
+      </div>
+      <p class="tiny muted" style="margin:8px 0 0">Last purge: ${(window.DPDP && window.DPDP.getPrefs && window.DPDP.getPrefs().lastPurgeAt) ? new Date(window.DPDP.getPrefs().lastPurgeAt).toLocaleString("en-IN") : "—"}</p>
+      <div class="spacer-8"></div>
+      <button class="btn btn-secondary btn-full" data-action="dpdp-purge-now">Purge now</button>
+    </div>` : ""}
+
+    <div class="settings-section">
       <h3>About</h3>
       <p>Saagar Greetor · v0.2.0 · phone-first non-purchase walk-in capture.</p>
     </div>
@@ -2141,6 +2234,10 @@ function saveRecord() {
     followDate: d.followUp === "Yes" ? d.followDate : "",
     followTime: d.followUp === "Yes" ? d.followTime : "",
     photos: Array.isArray(d.photos) ? d.photos : [],
+    // DPDP: stamp consent timestamp when the user ticked the consent box.
+    consent_at: (d.consent === "yes")
+      ? ((existing && existing.consent_at) || new Date().toISOString())
+      : "",
   };
   if (existing) {
     const i = state.records.findIndex(r => r.recordId === existing.recordId);
@@ -2170,6 +2267,8 @@ function editRecord(recordId) {
   if (!r) return;
   editingRecordId = recordId;
   Wizard.reset(r);
+  // Map persisted consent_at → wizard's consent checkbox state.
+  Wizard.data.consent = r.consent_at ? "yes" : "";
   switchScreen("capture");
 }
 
@@ -2312,6 +2411,18 @@ document.addEventListener("click", async (e) => {
   if (action === "open-targets") {
     if (!canEditMasters(AuthSession.current())) { toast("Owner/Manager only."); return; }
     switchScreen("targets");
+    return;
+  }
+  if (action === "dpdp-purge-now") {
+    if (!window.DPDP || !canManageUsers(AuthSession.current())) return;
+    const months = window.DPDP.getRetentionMonths();
+    if (!months) { toast("Set a retention window first."); return; }
+    if (!confirm("Purge records older than " + months + " months? This cannot be undone (logged to audit).")) return;
+    const s = Store.load();
+    const res = window.DPDP.runBootPurge(s);
+    if (res && res.purged > 0) Store.save(s);
+    toast("Purged " + (res ? res.purged : 0) + " record(s).");
+    render();
     return;
   }
   if (action === "open-audit-log") {
@@ -2482,6 +2593,12 @@ document.addEventListener("click", async (e) => {
         showRequiredPopup(miss);
         return;
       }
+    }
+    // DPDP: block save if mobile + follow-up but no explicit consent.
+    if (Wizard.data.mobile && Wizard.data.followUp === "Yes" && Wizard.data.consent !== "yes") {
+      if (Wizard.step !== 2) Wizard.goto(2);
+      showRequiredPopup(["Customer consent (DPDP) — tick the consent box in step 2"]);
+      return;
     }
     saveRecord();
     window._dedupSeen = null;
@@ -2725,7 +2842,20 @@ async function boot() {
     Store.save(_s);
   }
 
+  // DPDP retention: prune records past the configured cutoff (no-op if 0).
+  if (window.DPDP && window.DPDP.runBootPurge) {
+    try {
+      const _s = Store.load();
+      const res = window.DPDP.runBootPurge(_s);
+      if (res && res.purged > 0) {
+        Store.save(_s);
+        console.log("DPDP: purged " + res.purged + " record(s) older than " + res.cutoff);
+      }
+    } catch (e) { console.warn("retention purge skipped", e); }
+  }
+
   render();
+  applyI18n();
   sweepReminders();
 
   if (window.SaagarShell && window.SaagarShell.boot) {
