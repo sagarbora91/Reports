@@ -38,7 +38,7 @@
     return Object.assign({
       _format: BACKUP_FORMAT,
       _exported_at: new Date().toISOString(),
-      _app_version: '0.3.0',
+      _app_version: '0.2.0',
     }, audit);
   }
 

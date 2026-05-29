@@ -7,9 +7,19 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Lets the publish-release step create/update the "latest" GitHub Release.
+permissions:
+  contents: write
+
+# If two pushes land back-to-back, only the newest one races to update the
+# "latest" Release — earlier runs are cancelled mid-flight.
+concurrency:
+  group: release-latest
+  cancel-in-progress: true
+
 jobs:
   build:
-    name: Build debug APK
+    name: Build APK
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -59,17 +69,84 @@ jobs:
         run: npx capacitor-assets generate --android
         continue-on-error: true
 
-      - name: Stamp version code and name from CI run number
+      # Decide release vs debug based on whether the keystore secret exists.
+      # First push after Bucket C lands → secrets not set yet → debug path
+      # runs (no breakage). After the user follows SIGNING_SETUP.md, secrets
+      # appear and the next build automatically switches to signed release.
+      - name: Detect signing secrets
+        id: signing
+        env:
+          KS: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KS" ]; then
+            echo "mode=release" >> "$GITHUB_OUTPUT"
+            echo "Signing secrets present → building SIGNED RELEASE APK."
+          else
+            echo "mode=debug" >> "$GITHUB_OUTPUT"
+            echo "::warning::Signing secrets not configured — building unsigned debug APK. See SIGNING_SETUP.md to enable signed releases + permanent download URL."
+          fi
+
+      - name: Stamp version code, name, and user-visible label
         run: |
           BUILD_NUM="${{ github.run_number }}"
+          SHORT_SHA="$(git rev-parse --short HEAD)"
           VERSION_NAME="0.2.${BUILD_NUM}"
-          echo "Stamping versionCode=${BUILD_NUM}, versionName=${VERSION_NAME}"
-          sed -i "s/versionCode 1/versionCode ${BUILD_NUM}/" android/app/build.gradle
+          DISPLAY="v${VERSION_NAME} (${SHORT_SHA})"
+          echo "Stamping versionCode=${BUILD_NUM}, versionName=${VERSION_NAME}, display=${DISPLAY}"
+          # Android metadata (Capacitor's defaults are versionCode 1 / versionName "1.0")
+          sed -i "s/versionCode 1\b/versionCode ${BUILD_NUM}/" android/app/build.gradle
           sed -i "s/versionName \"1.0\"/versionName \"${VERSION_NAME}\"/" android/app/build.gradle
+          # User-visible label in i18n (both English and Marathi rows)
+          sed -i "s|Saagar Audit · v[0-9][^\"]*|Saagar Audit · ${DISPLAY}|g" www/i18n_data.js
+          # Keep package.json in sync (informational)
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"${VERSION_NAME}\"/" package.json
+          # Re-inline i18n_data.js change into www/index.html so the bundled app shows the new label
+          python3 scripts/inline.py
           grep -E 'versionCode|versionName' android/app/build.gradle
+          echo "VERSION_NAME=${VERSION_NAME}" >> "$GITHUB_ENV"
+          echo "SHORT_SHA=${SHORT_SHA}" >> "$GITHUB_ENV"
 
       - name: Sync Capacitor after asset + version updates
         run: npx cap sync android
+
+      - name: Decode keystore and inject signing config
+        if: steps.signing.outputs.mode == 'release'
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p android/app/keystore
+          echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > android/app/keystore/release.jks
+          # Sanity check: a real .jks is ~2KB+. base64-of-garbage decodes tiny.
+          SIZE=$(stat -c%s android/app/keystore/release.jks)
+          if [ "$SIZE" -lt 1024 ]; then
+            echo "::error::Decoded keystore is only ${SIZE} bytes — the SIGNING_KEYSTORE_BASE64 secret is malformed. Re-run the base64 step from SIGNING_SETUP.md and paste again."
+            exit 1
+          fi
+          # Append signing config to android/app/build.gradle. Idempotent: only
+          # if the block isn't already there (the android/ dir is regenerated
+          # on every run, so we re-append each time).
+          if ! grep -q "saagarRelease" android/app/build.gradle; then
+            cat >> android/app/build.gradle <<'GRADLE'
+
+android {
+    signingConfigs {
+        saagarRelease {
+            storeFile file("keystore/release.jks")
+            storePassword System.getenv("SIGNING_KEYSTORE_PASSWORD")
+            keyAlias System.getenv("SIGNING_KEY_ALIAS")
+            keyPassword System.getenv("SIGNING_KEY_PASSWORD")
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.saagarRelease
+            minifyEnabled false
+        }
+    }
+}
+GRADLE
+          fi
+          echo "Signing config injected (keystore size ${SIZE} bytes)."
 
       - name: Patch AndroidManifest with CAMERA permission
         run: |
@@ -99,24 +176,79 @@ jobs:
           echo "--- Final AndroidManifest.xml (top 30 lines) ---"
           head -n 30 "$MANIFEST"
 
+      - name: Build signed release APK
+        if: steps.signing.outputs.mode == 'release'
+        working-directory: android
+        env:
+          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
       - name: Build debug APK
+        if: steps.signing.outputs.mode == 'debug'
         working-directory: android
         run: |
           chmod +x ./gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Upload APK artifact
+      - name: Upload release APK artifact (30-day backup)
+        if: steps.signing.outputs.mode == 'release'
         uses: actions/upload-artifact@v4
         with:
-          name: saagar-audit-${{ github.sha }}
+          name: saagar-audit-release-${{ env.VERSION_NAME }}-${{ env.SHORT_SHA }}
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+
+      - name: Upload debug APK artifact (30-day backup)
+        if: steps.signing.outputs.mode == 'debug'
+        uses: actions/upload-artifact@v4
+        with:
+          name: saagar-audit-debug-${{ github.sha }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
 
+      # Publish the signed release APK to a single rolling "latest" Release so
+      # the download URL never changes. Bookmark-safe; share via WhatsApp.
+      # Only fires on capacitor branch (not on PRs / main).
+      - name: Publish APK to "latest" GitHub Release
+        if: steps.signing.outputs.mode == 'release' && github.ref == 'refs/heads/capacitor' && success()
+        uses: softprops/action-gh-release@3bb1273dc8b9bbeac84d4f1eaa37ee07bd0f4d8f  # v2.6.2 — pinned to SHA for supply-chain safety
+        with:
+          tag_name: latest
+          name: Latest build (capacitor)
+          body: |
+            Auto-built from commit ${{ github.sha }} on branch `${{ github.ref_name }}`.
+            Version: **${{ env.VERSION_NAME }}** (${{ env.SHORT_SHA }})
+
+            **Install:** download `app-release.apk` below on your Android phone and tap to install. The first time you install from this Release, your phone will ask to allow "Install unknown apps" for your browser — say yes once and you're set.
+
+            Updates from this signed APK overwrite the previous version in place; your audit history is preserved.
+          make_latest: "true"
+          prerelease: false
+          files: android/app/build/outputs/apk/release/app-release.apk
+
       - name: Summary
         run: |
-          echo "### Saagar Audit APK ready" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Version: **0.2.${{ github.run_number }}** (versionCode ${{ github.run_number }})" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Download artifact: **saagar-audit-${{ github.sha }}** from the Artifacts panel above." >> $GITHUB_STEP_SUMMARY
-          echo "Transfer to your Android phone → enable 'Install from unknown sources' in your file manager → tap to install." >> $GITHUB_STEP_SUMMARY
+          MODE="${{ steps.signing.outputs.mode }}"
+          {
+            echo "### Saagar Audit APK ready"
+            echo ""
+            echo "Mode: **${MODE}** · Version: **0.2.${{ github.run_number }}** (versionCode ${{ github.run_number }})"
+            echo ""
+            if [ "$MODE" = "release" ]; then
+              echo "Permanent download URL (bookmark this, share via WhatsApp):"
+              echo ""
+              echo "**https://github.com/${{ github.repository }}/releases/latest/download/app-release.apk**"
+              echo ""
+              echo "The Release was also attached to this run's artifacts as a 30-day backup."
+            else
+              echo "Signing secrets not configured yet — built an UNSIGNED debug APK as a fallback."
+              echo ""
+              echo "To enable signed releases + the permanent download URL, follow [SIGNING_SETUP.md](../../blob/${{ github.sha }}/SIGNING_SETUP.md)."
+              echo ""
+              echo "Download the debug artifact from the Artifacts panel above. Transfer to your Android phone → enable 'Install from unknown sources' in your file manager → tap to install."
+            fi
+          } >> $GITHUB_STEP_SUMMARY
