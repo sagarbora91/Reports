@@ -578,6 +578,64 @@
     I18n.current = prev;
   })();
 
+  // ---- 20. CSV export — per-CRO mode (Stage A #9) ----
+  // Bug before this fix: exportCsv iterated a.results only, so per-CRO audits
+  // (which write into a.cro_results[croId][cpId]) emitted zero data rows.
+  reset();
+  {
+    // Build a custom per-CRO template with 2 checkpoints + 2 CROs on duty.
+    const tpl0 = Templates.create({ name: 'csv-grooming', frequency: 'daily', cro_mode: 'per_cro' });
+    const sId = tpl0.sections[0].id;
+    tpl0.checkpoints = [
+      { id: 'CP.A', section_id: sId, text: 'cp one', weight: 1 },
+      { id: 'CP.B', section_id: sId, text: 'cp two', weight: 1 },
+    ];
+    Templates.save(tpl0);
+    (function () {
+      const s = Store.load();
+      s.cros = [{ id: 'cA', name: 'Asha', counter: 'Titan' }, { id: 'cB', name: 'Babu', counter: 'Helios' }];
+      Store.save(s);
+    })();
+    startNewAudit({ date: today(), auditorName: 'Owner', auditorId: null, croIds: ['cA', 'cB'], templateId: tpl0.id });
+    // CRO A's verdicts.
+    markCheckpoint('CP.A', 'P');
+    markCheckpoint('CP.B', 'F', { finding: 'A failed cp two' });
+    // Manually advance to CRO B (handler is wired to a button click; we test
+    // the data path).
+    (function () {
+      const s = Store.load();
+      const au = currentAudit(s);
+      au.current_cro_index = 1;
+      Store.save(s);
+    })();
+    markCheckpoint('CP.A', 'P');
+    markCheckpoint('CP.B', 'P');
+    const res = submitAudit();
+    ok('csv: per-cro audit submitted', !!res && res.audit.status === 'submitted', '');
+    const submitted = Store.load().audits.filter(a => isFinalized(a));
+    const csv = auditsToCsv(submitted);
+    const lines = csv.split('\n');
+    // Header + one row per (CRO, checkpoint) = 1 + 4 = 5 lines.
+    eq('csv: per-cro yields 4 data rows (was 0)', lines.length - 1, 4);
+    ok('csv: header has cro_id col', lines[0].split(',').includes('cro_id'), '');
+    ok('csv: at least one row tagged cA', lines.some(l => l.split(',').includes('cA')), '');
+    ok('csv: at least one row tagged cB', lines.some(l => l.split(',').includes('cB')), '');
+    ok('csv: per-cro finding text present', csv.includes('A failed cp two'), '');
+  }
+
+  // 20b. Store-mode audits still export correctly (regression check).
+  reset();
+  {
+    const sm = await Users.create({ name: 'CsvSM', role: 'SM', pin: '7777' });
+    AuthSession.login(sm.id);
+    startNewAudit({ date: today(), auditorName: 'CsvSM', auditorId: sm.id, croIds: [], templateId: 'tpl_daily' });
+    CHECKPOINTS.forEach((cp, i) => markCheckpoint(cp.id, i < 2 ? 'F' : 'P', i < 2 ? { finding: 'store fail ' + i } : {}));
+    submitAudit();
+    const csv = auditsToCsv(Store.load().audits.filter(a => isFinalized(a)));
+    const lines = csv.split('\n');
+    eq('csv: store-mode yields 68 data rows', lines.length - 1, 68);
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

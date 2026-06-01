@@ -8336,36 +8336,52 @@ function restoreFromBackup() {
 // CSV export
 // ---------------------------------------------------------------------------
 
+// Build a CSV string from a list of submitted audits. Pure — no DOM, no I/O —
+// so it's unit-testable. exportCsv() handles the download.
+//
+// Per-CRO audits store verdicts under a.cro_results[croId][cpId]; store-mode
+// audits use a.results. Iterating only a.results silently produced zero rows
+// for per-CRO audits; this emits one row per (CRO, checkpoint) when the audit
+// ran in per-CRO mode.
+function auditsToCsv(audits) {
+  const rows = [['date', 'auditor', 'compliance_pct', 'band', 'raw', 'max', 'pass', 'fail', 'na', 'checkpoint_id', 'result', 'finding', 'cro_id', 'backdate_reason', 'audit_notes']];
+  const pushRow = (a, cpId, r, croIdOverride) => rows.push([
+    a.date,
+    a.auditor_name || '',
+    a.score.pct.toFixed(1),
+    a.score.band,
+    a.score.raw,
+    a.score.max,
+    a.score.p,
+    a.score.f,
+    a.score.na,
+    cpId,
+    r.result,
+    r.finding || '',
+    croIdOverride != null ? croIdOverride : (r.cro_id || ''),
+    a.backdate_reason || '',
+    a.notes || '',
+  ]);
+  audits.forEach(a => {
+    if (auditIsPerCro(a)) {
+      Object.entries(a.cro_results || {}).forEach(([croId, bucket]) => {
+        Object.entries(bucket || {}).forEach(([cpId, r]) => pushRow(a, cpId, r, croId));
+      });
+    } else {
+      Object.entries(a.results || {}).forEach(([cpId, r]) => pushRow(a, cpId, r));
+    }
+  });
+  return rows.map(r => r.map(v => {
+    const s = String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }).join(',')).join('\n');
+}
+
 function exportCsv() {
   const state = Store.load();
   const submitted = state.audits.filter(a => isFinalized(a));
   if (submitted.length === 0) { toast(tUi('hint.no_audits')); return; }
-  const rows = [['date', 'auditor', 'compliance_pct', 'band', 'raw', 'max', 'pass', 'fail', 'na', 'checkpoint_id', 'result', 'finding', 'cro_id', 'backdate_reason', 'audit_notes']];
-  submitted.forEach(a => {
-    Object.entries(a.results).forEach(([cpId, r]) => {
-      rows.push([
-        a.date,
-        a.auditor_name || '',
-        a.score.pct.toFixed(1),
-        a.score.band,
-        a.score.raw,
-        a.score.max,
-        a.score.p,
-        a.score.f,
-        a.score.na,
-        cpId,
-        r.result,
-        r.finding || '',
-        r.cro_id || '',
-        a.backdate_reason || '',
-        a.notes || '',
-      ]);
-    });
-  });
-  const csv = rows.map(r => r.map(v => {
-    const s = String(v);
-    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  }).join(',')).join('\n');
+  const csv = auditsToCsv(submitted);
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
