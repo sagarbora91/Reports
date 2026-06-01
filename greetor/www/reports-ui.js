@@ -287,17 +287,22 @@
     }
 
     if (action === 'r-export-visits' || action === 'r-export-summary') {
-      // Recompute recs (role + range) to match what's shown
+      // Recompute recs (role + range) to match what's shown.
+      // BUGFIX: the data lives in Store.load().records — Store._records and
+      // window._lastState never existed, so exports were always empty.
       var auth = (typeof AuthSession !== 'undefined') ? AuthSession.current() : null;
-      var storeObj = (typeof Store !== 'undefined') ? Store : null;
-      var all = (storeObj && storeObj._records) ? storeObj._records
-              : (window._lastState && window._lastState.records) ? window._lastState.records
-              : [];
+      var st = (typeof Store !== 'undefined' && Store.load) ? Store.load() : null;
+      var all = (st && Array.isArray(st.records)) ? st.records : [];
       var roleRecs = (auth && auth.role === 'GREETOR')
         ? all.filter(function (r) { return r.createdByUserId === auth.id; })
         : all;
       var range = window.reportRange || 'today';
       var recs = Reports.filterByRange(roleRecs, range, window.reportCustomStart, window.reportCustomEnd);
+
+      if (!recs.length) {
+        if (typeof toast === 'function') toast('No records in this range to export. Pick a wider range.');
+        return true;
+      }
 
       if (action === 'r-export-visits') {
         var csv = Reports.visitsCSV(recs);

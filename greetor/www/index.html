@@ -1498,7 +1498,75 @@ function renderCapture(state, auth) {
     </div>
   `;
 
-  return `<div class="wizard">${renderWizardHead(step)}${body}</div>${saveBar}`;
+  // Quick-capture entry (audit R12): a fast 2-tap log for rush hour / festival
+  // days so the captured-walk-in denominator stays honest. Only on step 1 of a
+  // fresh capture (not mid-wizard, not editing).
+  const quickBtn = (step === 1 && !editingRecordId)
+    ? `<button class="btn btn-secondary" data-action="open-quick" style="width:100%;margin-bottom:10px">⚡ Quick log (store + reason only)</button>`
+    : "";
+
+  return `<div class="wizard">${quickBtn}${renderWizardHead(step)}${body}</div>${saveBar}`;
+}
+
+// Minimal walk-in: store + reason, everything else defaulted, NO mobile.
+// Lifts capture rate without the full wizard; attributed to the greetor so the
+// leaderboard stays fair. (audit R12 — denominator)
+function quickCaptureModal() {
+  const state = Store.load();
+  const stores = Masters.storeNames(state);
+  const reasons = Masters.reasonsTop(state);
+  const qStore = window._quickStore || state.my_store || stores[0] || "";
+  const qReason = window._quickReason || "";
+  openModal(`
+    <h2>⚡ Quick log</h2>
+    <p class="muted">Fast non-purchase log for busy times. Just store + reason — add full details later by editing.</p>
+    <div class="field">
+      <label class="field-label required">Store</label>
+      <div class="chip-group">
+        ${stores.map(s => `<button class="chip ${s === qStore ? "selected" : ""}" data-action="quick-pick" data-field="store" data-value="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join("")}
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label required">Reason they didn't buy</label>
+      <div class="chip-group">
+        ${reasons.map(r => `<button class="chip ${r === qReason ? "selected" : ""}" data-action="quick-pick" data-field="reason" data-value="${escapeHtml(r)}">${escapeHtml(r)}</button>`).join("")}
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" data-action="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="quick-save">Save walk-in</button>
+    </div>
+  `);
+}
+
+function quickSave() {
+  const state = Store.load();
+  const auth = AuthSession.current(state);
+  if (!auth) { toast("Sign in first"); return; }
+  const store = window._quickStore || state.my_store || Masters.storeNames(state)[0] || "";
+  const reason = window._quickReason || "";
+  if (!store || !reason) { showRequiredPopup(["Store", "Reason"].filter(f => (f === "Store" ? !store : !reason))); return; }
+  const now = new Date().toISOString();
+  const rec = {
+    recordId: uid(),
+    createdAt: now, updatedAt: now,
+    createdByUserId: auth.id, createdByName: auth.name,
+    store: store, visitDate: today(), visitTime: nowTime(), source: "Walk-in",
+    mobile: "", customerName: "", customerType: "Walk-by",
+    category: "", subCategory: "", brand: "", gender: "", occasion: "",
+    budget: "", urgency: "", greetor: auth.name, cro: "",
+    reason: reason, competitor: "", remarks: "",
+    followUp: "No", leadStatus: "Open", followDate: "", followTime: "",
+    photos: [], consent_at: "", quick: true,
+  };
+  state.records.unshift(rec);
+  Store.save(state);
+  logAudit("create", "Quick log — " + store + " · " + reason, { recordId: rec.recordId, quick: true });
+  window._quickStore = null;
+  window._quickReason = null;
+  closeModal();
+  toast("Quick walk-in logged.");
+  render();
 }
 
 function chipGroup(name, options, selected, opts) {
@@ -2603,6 +2671,14 @@ document.addEventListener("click", async (e) => {
     render();
     return;
   }
+  if (action === "open-quick") { window._quickStore = null; window._quickReason = null; quickCaptureModal(); return; }
+  if (action === "quick-pick") {
+    if (a.dataset.field === "store") window._quickStore = a.dataset.value;
+    else if (a.dataset.field === "reason") window._quickReason = a.dataset.value;
+    quickCaptureModal();
+    return;
+  }
+  if (action === "quick-save") { quickSave(); return; }
   if (action === "add-photo") {
     if (!window.Photo) { toast("Camera not available."); return; }
     toast("Opening camera…");
