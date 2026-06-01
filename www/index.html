@@ -92,8 +92,17 @@ input, textarea, select {
   color: var(--white);
   font-size: 20px;
   cursor: pointer;
-  padding: 6px 10px;
+  /* 44pt touch target (iOS HIG / Material accessibility floor). The smaller
+     pre-Stage-A padding made some controls (+ Add CRO, Edit ›) hard to hit on
+     small phones. The builder-cp-actions .iconbtn override at line ~1153
+     restores a compact variant for inline edit controls inside the builder. */
+  padding: 10px 12px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .iconbtn:active { background: rgba(255,255,255,0.1); }
 
@@ -9274,6 +9283,20 @@ document.addEventListener('keydown', (e) => {
   if (document.activeElement && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
   if (e.key >= '0' && e.key <= '9') { handlePinKey(e.key); e.preventDefault(); return; }
   if (e.key === 'Backspace') { handlePinKey('back'); e.preventDefault(); return; }
+});
+
+// Stage A #13 — when a textarea or input inside a modal gets focus, the
+// Android soft keyboard usually appears ~150-250ms later and reduces the
+// viewport. Auto-scroll the focused field into view so the user can see
+// what they're typing (previously the keyboard hid mid-modal textareas).
+document.addEventListener('focusin', (e) => {
+  const el = e.target;
+  if (!el || (el.tagName !== 'TEXTAREA' && el.tagName !== 'INPUT')) return;
+  if (!el.closest || !el.closest('[data-modal]')) return;
+  // Wait for the keyboard to settle before scrolling.
+  setTimeout(() => {
+    try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {}
+  }, 250);
 });
 
 // ---------------------------------------------------------------------------

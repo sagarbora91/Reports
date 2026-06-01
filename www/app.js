@@ -4791,6 +4791,20 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Backspace') { handlePinKey('back'); e.preventDefault(); return; }
 });
 
+// Stage A #13 — when a textarea or input inside a modal gets focus, the
+// Android soft keyboard usually appears ~150-250ms later and reduces the
+// viewport. Auto-scroll the focused field into view so the user can see
+// what they're typing (previously the keyboard hid mid-modal textareas).
+document.addEventListener('focusin', (e) => {
+  const el = e.target;
+  if (!el || (el.tagName !== 'TEXTAREA' && el.tagName !== 'INPUT')) return;
+  if (!el.closest || !el.closest('[data-modal]')) return;
+  // Wait for the keyboard to settle before scrolling.
+  setTimeout(() => {
+    try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {}
+  }, 250);
+});
+
 // ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------

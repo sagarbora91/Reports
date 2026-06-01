@@ -81,8 +81,17 @@ input, textarea, select {
   color: var(--white);
   font-size: 20px;
   cursor: pointer;
-  padding: 6px 10px;
+  /* 44pt touch target (iOS HIG / Material accessibility floor). The smaller
+     pre-Stage-A padding made some controls (+ Add CRO, Edit ›) hard to hit on
+     small phones. The builder-cp-actions .iconbtn override at line ~1153
+     restores a compact variant for inline edit controls inside the builder. */
+  padding: 10px 12px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .iconbtn:active { background: rgba(255,255,255,0.1); }
 
