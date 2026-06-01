@@ -670,6 +670,65 @@
     const s2 = Store.load(); delete s2._fillerForTest; Store.save(s2);
   }
 
+  // ---- 22. Pre-submit sanity check (Stage A #6) ----
+  reset();
+  {
+    const sm = await Users.create({ name: 'PreSM', role: 'SM', pin: '5151' });
+    AuthSession.login(sm.id);
+    startNewAudit({ date: today(), auditorName: 'PreSM', auditorId: sm.id, croIds: [], templateId: 'tpl_daily' });
+    // Clean state: nothing marked yet → no issues.
+    {
+      const a = currentAudit(Store.load());
+      eq('presubmit: clean draft has no issues', presubmitIssues(a, Store.load()).length, 0);
+    }
+    // Attach a photo to cp1 with no verdict → triggers photo_no_verdict.
+    addPhotoToCheckpoint(CHECKPOINTS[0].id, 'data:image/png;base64,test1');
+    {
+      const a = currentAudit(Store.load());
+      const issues = presubmitIssues(a, Store.load());
+      ok('presubmit: photo without verdict flagged', issues.some(i => i.code === 'photo_no_verdict'), JSON.stringify(issues));
+    }
+    // Mark it as Pass — photo issue clears.
+    markCheckpoint(CHECKPOINTS[0].id, 'P');
+    {
+      const a = currentAudit(Store.load());
+      ok('presubmit: photo issue clears once verdict set', !presubmitIssues(a, Store.load()).some(i => i.code === 'photo_no_verdict'), '');
+    }
+  }
+
+  // 22b. Weekly with no daily audits → weekly_missing_days fires for 7.
+  reset();
+  {
+    const gm = await Users.create({ name: 'PreGM', role: 'GM', pin: '6161' });
+    AuthSession.login(gm.id);
+    const wk = currentIsoWeekYear();
+    startWeeklyAudit({ weekNumber: wk.week, year: wk.year, gmId: gm.id, gmName: 'PreGM', templateId: 'tpl_weekly' });
+    const a = currentAudit(Store.load());
+    const issues = presubmitIssues(a, Store.load());
+    const wMiss = issues.find(i => i.code === 'weekly_missing_days');
+    ok('presubmit: weekly with no daily audits flagged', !!wMiss && /7 day/.test(wMiss.text), JSON.stringify(issues));
+  }
+
+  // 22c. Per-CRO mode with one CRO unstarted → percro_missing fires.
+  reset();
+  {
+    const tpl = Templates.create({ name: 'pre-percro', frequency: 'daily', cro_mode: 'per_cro' });
+    tpl.checkpoints = [{ id: 'X.1', section_id: tpl.sections[0].id, text: 'x', weight: 1 }];
+    Templates.save(tpl);
+    {
+      const s = Store.load();
+      s.cros = [{ id: 'cP', name: 'Pri', counter: 'Titan' }, { id: 'cQ', name: 'Qadir', counter: 'Helios' }];
+      Store.save(s);
+    }
+    startNewAudit({ date: today(), auditorName: 'Owner', auditorId: null, croIds: ['cP', 'cQ'], templateId: tpl.id });
+    markCheckpoint('X.1', 'P'); // only cP scored
+    {
+      const a = currentAudit(Store.load());
+      const issues = presubmitIssues(a, Store.load());
+      ok('presubmit: per-cro missing CRO flagged', issues.some(i => i.code === 'percro_missing'), JSON.stringify(issues));
+    }
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

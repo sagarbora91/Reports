@@ -98,6 +98,11 @@ NEW = {
     "hint.last_backup_days_fmt": ("Last backup: {n} day(s) ago.", "शेवटचा बॅकअप: {n} दिवसांपूर्वी."),
     "hint.storage_full_warn_fmt": ("Storage is {pct}% full ({mb} MB used of ~5 MB). Back up to Drive and consider removing old photos before the app stops saving new audits.", "स्टोरेज {pct}% भरले आहे (~५ MB पैकी {mb} MB वापरले). नवे ऑडिट जतन होणे थांबण्यापूर्वी Drive वर बॅकअप घ्या व जुने फोटो काढण्याचा विचार करा."),
     "label.storage_full_warn": ("⚠ Storage is filling up", "⚠ स्टोरेज भरत आहे"),
+    # --- batch 6: pre-submit advisory check (Stage A #6) ---
+    "presubmit.title": ("Submit this audit?", "हे ऑडिट सादर करायचे?"),
+    "presubmit.intro": ("A few things look incomplete. You can go back and fix them, or submit anyway — the warnings will be stamped on the audit notes.", "काही गोष्टी अपूर्ण दिसतात. तुम्ही परत जाऊन त्या दुरुस्त करू शकता किंवा तरीही सादर करू शकता — या सूचना ऑडिट नोंदींवर शिक्क्यासह जतन होतील."),
+    "presubmit.fix": ("Go back and fix", "परत जाऊन दुरुस्त करा"),
+    "presubmit.submit_anyway": ("Submit anyway", "तरीही सादर करा"),
 }
 
 

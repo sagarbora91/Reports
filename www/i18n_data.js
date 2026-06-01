@@ -2,6 +2,10 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "presubmit.title": "Submit this audit?",
+      "presubmit.intro": "A few things look incomplete. You can go back and fix them, or submit anyway — the warnings will be stamped on the audit notes.",
+      "presubmit.fix": "Go back and fix",
+      "presubmit.submit_anyway": "Submit anyway",
       "hint.last_backup_never": "No backups yet — please back up to Drive today.",
       "hint.last_backup_today": "Last backup: today.",
       "hint.last_backup_days_fmt": "Last backup: {n} day(s) ago.",
@@ -576,6 +580,10 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "presubmit.title": "हे ऑडिट सादर करायचे?",
+      "presubmit.intro": "काही गोष्टी अपूर्ण दिसतात. तुम्ही परत जाऊन त्या दुरुस्त करू शकता किंवा तरीही सादर करू शकता — या सूचना ऑडिट नोंदींवर शिक्क्यासह जतन होतील.",
+      "presubmit.fix": "परत जाऊन दुरुस्त करा",
+      "presubmit.submit_anyway": "तरीही सादर करा",
       "hint.last_backup_never": "अजून बॅकअप नाही — आज Drive वर बॅकअप घ्या.",
       "hint.last_backup_today": "शेवटचा बॅकअप: आज.",
       "hint.last_backup_days_fmt": "शेवटचा बॅकअप: {n} दिवसांपूर्वी.",

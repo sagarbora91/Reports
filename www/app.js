@@ -1658,6 +1658,96 @@ function skippedCount(audit) {
   return n;
 }
 
+// Stage A #6 — scan a draft audit for the common "submitted by accident in an
+// incomplete state" problems. Each issue is { code, text } where `text` is
+// short, plain-English, ready to render in a confirm modal. Empty array = OK.
+function presubmitIssues(audit, state) {
+  state = state || Store.load();
+  const out = [];
+  const cps = checkpointsFor(audit);
+  // 1. Photos attached but no verdict picked — easy to do by accident.
+  let photoNoVerdict = 0;
+  if (auditIsPerCro(audit)) {
+    Object.values(audit.cro_results || {}).forEach(bucket => {
+      Object.values(bucket || {}).forEach(r => {
+        if (r && (r.photos || []).length > 0 && (!r.result || r.result === 'SKIP')) photoNoVerdict++;
+      });
+    });
+  } else {
+    Object.values(audit.results || {}).forEach(r => {
+      if (r && (r.photos || []).length > 0 && (!r.result || r.result === 'SKIP')) photoNoVerdict++;
+    });
+  }
+  if (photoNoVerdict > 0) {
+    out.push({ code: 'photo_no_verdict', text: `${photoNoVerdict} checkpoint(s) have a photo but no Pass/Fail/N-A verdict` });
+  }
+  // 2. NA verdicts with a reason shorter than 3 chars (mostly defensive — the
+  //    NA modal enforces ≥3 chars, but legacy backups may have looser data).
+  let shortNa = 0;
+  const checkBucket = (bucket) => {
+    Object.values(bucket || {}).forEach(r => {
+      if (r && r.result === 'NA' && (r.finding || '').trim().length < 3) shortNa++;
+    });
+  };
+  if (auditIsPerCro(audit)) {
+    Object.values(audit.cro_results || {}).forEach(checkBucket);
+  } else {
+    checkBucket(audit.results || {});
+  }
+  if (shortNa > 0) {
+    out.push({ code: 'short_na', text: `${shortNa} N-A verdict(s) have no reason` });
+  }
+  // 3. Per-CRO mode but some CROs have nothing recorded.
+  if (auditIsPerCro(audit)) {
+    const order = audit.cro_order || [];
+    const recorded = Object.keys(audit.cro_results || {}).filter(
+      k => Object.values(audit.cro_results[k] || {}).some(r => r && r.result)
+    );
+    const missing = order.filter(id => !recorded.includes(id));
+    if (missing.length > 0) {
+      out.push({ code: 'percro_missing', text: `${missing.length} CRO(s) were started but not scored` });
+    }
+  }
+  // 4. Weekly audit with fewer than 7 daily audits in the same ISO week. The
+  //    weekly score fills missing days with 0% — this can trigger false
+  //    Trigger-1 escalations the GM didn't intend.
+  if (frequencyOf(audit) === 'weekly') {
+    const dailyPcts = dailyPctsForWeek(audit.week_number, audit.year, state);
+    if (dailyPcts.length < 7) {
+      const missing = 7 - dailyPcts.length;
+      out.push({ code: 'weekly_missing_days', text: `${missing} day(s) of this week have no daily audit — missing days count as 0% and may trigger false alerts` });
+    }
+  }
+  return out;
+}
+
+// Confirm modal opened when presubmitIssues is non-empty.
+function presubmitWarnModal(issues) {
+  const items = issues.map(i => `<li>${escapeHtml(i.text)}</li>`).join('');
+  openModal(`
+    <h3>${tUi('presubmit.title')}</h3>
+    <p style="font-size:13px;line-height:1.5;margin:6px 0 10px">${tUi('presubmit.intro')}</p>
+    <ul style="margin:6px 0 12px 18px;padding:0;font-size:14px;line-height:1.5">${items}</ul>
+    <button class="btn btn-primary" data-action="modal-cancel" style="width:100%">${tUi('presubmit.fix')}</button>
+    <div class="spacer-12"></div>
+    <button class="btn btn-ghost" data-action="submit-audit-force" style="width:100%;color:var(--amber)">${tUi('presubmit.submit_anyway')}</button>
+  `);
+}
+
+// Shared submit path used by both the clean and the "submit-anyway" handlers,
+// so the toast composition stays DRY.
+function runSubmitAudit() {
+  const submitted = submitAudit();
+  if (submitted && submitted.audit) {
+    const sc = submitted.audit.score;
+    const parts = [`${sc.pct.toFixed(1)}% ${bandLabel(sc.band)}`];
+    if (submitted.capsCreated) parts.push(`${submitted.capsCreated} CAP${submitted.capsCreated > 1 ? 's' : ''}`);
+    if (submitted.escalationsRaised) parts.push(`${submitted.escalationsRaised} alert${submitted.escalationsRaised > 1 ? 's' : ''}`);
+    toast(`${tUi('ok.audit_submitted')} · ${parts.join(' · ')}`);
+  }
+  render();
+}
+
 // Returns the submitted daily compliance %s for a given ISO week+year.
 function dailyPctsForWeek(weekNumber, year, state) {
   const pcts = [];
@@ -4388,15 +4478,36 @@ document.addEventListener('click', async (e) => {
   }
 
   if (action === 'submit-audit') {
-    const submitted = submitAudit();
-    if (submitted && submitted.audit) {
-      const sc = submitted.audit.score;
-      const parts = [`${sc.pct.toFixed(1)}% ${bandLabel(sc.band)}`];
-      if (submitted.capsCreated) parts.push(`${submitted.capsCreated} CAP${submitted.capsCreated > 1 ? 's' : ''}`);
-      if (submitted.escalationsRaised) parts.push(`${submitted.escalationsRaised} alert${submitted.escalationsRaised > 1 ? 's' : ''}`);
-      toast(`Audit submitted · ${parts.join(' · ')}`);
+    const state = Store.load();
+    const au = currentAudit(state);
+    const issues = au ? presubmitIssues(au, state) : [];
+    if (issues.length > 0) {
+      presubmitWarnModal(issues);
+      return;
     }
-    render();
+    runSubmitAudit();
+    return;
+  }
+  if (action === 'submit-audit-force') {
+    // User saw the warnings and chose Submit anyway. Stamp a note so the
+    // bypass is visible on the audit detail forever.
+    const state = Store.load();
+    const au = currentAudit(state);
+    if (au) {
+      const issues = presubmitIssues(au, state);
+      if (issues.length) {
+        const warningNote = '[Submitted with warnings: ' + issues.map(i => i.text).join('; ') + ']';
+        const notesEl = document.getElementById('auditNotes');
+        if (notesEl) {
+          notesEl.value = ((notesEl.value || '').trim() + '\n' + warningNote).trim();
+        } else {
+          au.notes = ((au.notes || '').trim() + '\n' + warningNote).trim();
+          Store.save(state);
+        }
+      }
+    }
+    closeModal();
+    runSubmitAudit();
     return;
   }
   if (action === 'cancel-audit') {
