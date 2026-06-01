@@ -1411,6 +1411,7 @@ function croModeLabel(m)       { return tUi('cromode.' + m, CRO_MODE_LABELS[m] |
 // nav stays in sync without a full DOM rebuild.
 function renderTabBar() {
   const tabs = {
+    home:      tUi('tab.home',      'Home'),
     audit:     tUi('tab.audit',     'Audit'),
     history:   tUi('tab.history',   'History'),
     caps:      tUi('tab.caps',      'CAPs'),
@@ -1908,6 +1909,8 @@ function render() {
   const freshState = Store.load();
   document.body.classList.remove('locked');
   renderUserBadge(auth);
+  const homeTab = document.getElementById('tab-home');
+  if (homeTab) homeTab.innerHTML = renderHomeTab(freshState, auth);
   document.getElementById('tab-audit').innerHTML = renderAuditTab(freshState, auth);
   document.getElementById('tab-history').innerHTML = renderHistoryTab(freshState, auth);
   document.getElementById('tab-caps').innerHTML = renderCapsTab(freshState, auth);
@@ -1915,6 +1918,7 @@ function render() {
   if (refTab) refTab.innerHTML = renderReferenceTab();
   document.getElementById('tab-settings').innerHTML = renderSettingsTab(freshState, auth);
   renderCapsBadge(freshState);
+  renderHomeBadge(freshState, auth);
 }
 
 function renderCapsBadge(state) {
@@ -2037,6 +2041,182 @@ function renderAuditTab(state, auth) {
   // there. Show the banner only on the start-screen (the entry point).
   if (a) return renderInProgressAudit(a);
   return storageWarnBanner() + renderStartAudit(state, auth);
+}
+
+// ---------------------------------------------------------------------------
+// Home tab — "What needs me today" (Stage A #1)
+//
+// Role-aware landing surface. Queries existing collections — no new schema,
+// no new state. Each card has ONE primary action so the user doesn't have to
+// decide what's most urgent — the order does that for them. Empty home is
+// the goal state ("nothing for you right now") and we say so explicitly.
+// ---------------------------------------------------------------------------
+
+function homeAttention(state, auth) {
+  const today_s = today();
+  const out = { drafts: [], escalations: [], verifyQueue: [], capsToVerify: [], todayAudit: null, weeklyDue: false };
+  if (!auth) return out;
+
+  // Current draft (for the logged-in user) — by current_audit_id.
+  const cur = currentAudit(state);
+  if (cur && !isFinalized(cur)) out.drafts.push(cur);
+
+  // Unsent escalations (everyone sees them, but actionable mostly for GM/Owner).
+  out.escalations = Escalations.unsent(state);
+
+  // Today's daily for the SM/role allowed: have they submitted one yet?
+  if (auth.role === 'SM' || auth.role === 'OWNER') {
+    const dailyTpl = Templates.byId(state, 'tpl_daily');
+    out.todayAudit = state.audits.find(
+      a => a.date === today_s && isFinalized(a) && (a.template_id || 'tpl_daily') === 'tpl_daily'
+    );
+  }
+
+  // Verify queue — finalized-but-not-verified audits that the current user
+  // didn't author. Only meaningful for GM/OWNER.
+  if (auth.role === 'OWNER' || auth.role === 'GM') {
+    out.verifyQueue = (state.audits || []).filter(a =>
+      a.status === 'submitted' && a.auditor_id !== auth.id
+    );
+    // CAPs waiting for verification (done by SM, awaiting GM/Owner verify).
+    out.capsToVerify = (state.caps || []).filter(c => c.status === 'done');
+  }
+
+  // Weekly audit due? Sunday or Monday for the current ISO week + no weekly yet.
+  if (auth.role === 'OWNER' || auth.role === 'GM') {
+    const wk = currentIsoWeekYear();
+    const day = new Date().getDay(); // 0 = Sun, 1 = Mon
+    const haveWeekly = (state.audits || []).some(a =>
+      frequencyOf(a) === 'weekly' && a.week_number === wk.week && a.year === wk.year && isFinalized(a)
+    );
+    if ((day === 0 || day === 1) && !haveWeekly) out.weeklyDue = true;
+  }
+
+  return out;
+}
+
+function homeAttentionCount(att) {
+  return att.drafts.length
+    + att.escalations.length
+    + att.verifyQueue.length
+    + att.capsToVerify.length
+    + (att.todayAudit ? 0 : 1)  // an undone daily counts as 1 for SM/Owner
+    + (att.weeklyDue ? 1 : 0);
+}
+
+function renderHomeTab(state, auth) {
+  if (!auth) return '';
+  const att = homeAttention(state, auth);
+  const cards = [];
+
+  // Storage warn first — it's catastrophic if it lands.
+  cards.push(storageWarnBanner());
+
+  // Resume draft is the single highest-priority action: an unfinished audit
+  // means the user was interrupted mid-task.
+  if (att.drafts.length) {
+    cards.push(renderResumeDraftCard(att.drafts[0]));
+  }
+
+  // Verify queue (GM/Owner only).
+  if (att.verifyQueue.length) {
+    cards.push(`
+      <div class="card" style="border-color:var(--gold);background:var(--gold-pale)">
+        <h2>${tUi('home.verify_card_title')}</h2>
+        <p style="margin:6px 0 0;font-size:14px">${tUi('home.verify_card_intro_fmt').replace('{n}', att.verifyQueue.length)}</p>
+        <div class="spacer-12"></div>
+        <button class="btn btn-primary" data-action="home-batch-verify">${tUi('home.verify_card_cta')}</button>
+      </div>`);
+  }
+
+  // Today's daily audit (SM/Owner): either a "Run today's audit" CTA or a
+  // green "Done — N% Good" confirmation.
+  if (auth.role === 'SM' || auth.role === 'OWNER') {
+    if (att.todayAudit) {
+      const sc = att.todayAudit.score;
+      cards.push(`
+        <div class="card" style="border-color:var(--green);background:var(--green-pale)">
+          <h2>${tUi('home.today_done_title')}</h2>
+          <p style="margin:6px 0 0;font-size:14px">${escapeHtml(att.todayAudit.auditor_name || '—')} · <strong>${sc.pct.toFixed(1)}%</strong> ${escapeHtml(bandLabel(sc.band))}</p>
+          <div class="spacer-12"></div>
+          <button class="btn btn-ghost" data-action="tab-go" data-tab="history">${tUi('home.today_done_cta')}</button>
+        </div>`);
+    } else if (!att.drafts.length) {
+      cards.push(`
+        <div class="card">
+          <h2>${tUi('home.run_daily_title')}</h2>
+          <p style="margin:6px 0 0;font-size:14px">${tUi('home.run_daily_intro')}</p>
+          <div class="spacer-12"></div>
+          <button class="btn btn-primary" data-action="tab-go" data-tab="audit">${tUi('home.run_daily_cta')}</button>
+        </div>`);
+    }
+  }
+
+  // Weekly audit due banner (GM/Owner on Sun/Mon).
+  if (att.weeklyDue) {
+    cards.push(`
+      <div class="card" style="border-color:var(--gold);background:var(--gold-pale)">
+        <h2>${tUi('home.weekly_due_title')}</h2>
+        <p style="margin:6px 0 0;font-size:14px">${tUi('home.weekly_due_intro')}</p>
+        <div class="spacer-12"></div>
+        <button class="btn btn-primary" data-action="tab-go" data-tab="audit">${tUi('home.weekly_due_cta')}</button>
+      </div>`);
+  }
+
+  // Escalations to send (highlight if any).
+  if (att.escalations.length) {
+    cards.push(`
+      <div class="card" style="border-color:var(--red);background:#ffe9e9">
+        <h2>${tUi('home.escalations_title')}</h2>
+        <p style="margin:6px 0 0;font-size:14px">${tUi('home.escalations_intro_fmt').replace('{n}', att.escalations.length)}</p>
+        <div class="spacer-12"></div>
+        <button class="btn btn-primary" data-action="tab-go" data-tab="audit">${tUi('home.escalations_cta')}</button>
+      </div>`);
+  }
+
+  // CAPs waiting for me (GM/Owner).
+  if (att.capsToVerify.length) {
+    cards.push(`
+      <div class="card">
+        <h2>${tUi('home.caps_to_verify_title')}</h2>
+        <p style="margin:6px 0 0;font-size:14px">${tUi('home.caps_to_verify_intro_fmt').replace('{n}', att.capsToVerify.length)}</p>
+        <div class="spacer-12"></div>
+        <button class="btn btn-ghost" data-action="tab-go" data-tab="caps">${tUi('home.caps_to_verify_cta')}</button>
+      </div>`);
+  }
+
+  // Owner-only: "Last backup" line surfaces here too (cheap visibility win).
+  if (auth.role === 'OWNER') {
+    cards.push(`
+      <div class="card" style="background:#fafafa">
+        <p class="muted" style="margin:0;font-size:13px">${escapeHtml(lastBackupLine(state))}</p>
+      </div>`);
+  }
+
+  // Empty state — explicit "nothing needs you" message rather than an empty page.
+  if (cards.filter(Boolean).length <= (auth.role === 'OWNER' ? 1 : 0)) {
+    cards.push(`
+      <div class="card">
+        <h2>${tUi('home.empty_title')}</h2>
+        <p style="margin:6px 0 0;font-size:14px">${tUi('home.empty_intro')}</p>
+      </div>`);
+  }
+
+  return cards.filter(Boolean).join('');
+}
+
+function renderHomeBadge(state, auth) {
+  const badge = document.getElementById('homeBadge');
+  if (!badge) return;
+  if (!auth) { badge.hidden = true; return; }
+  const att = homeAttention(state, auth);
+  const n = homeAttentionCount(att);
+  if (n > 0) {
+    badge.hidden = false;
+    badge.textContent = String(n);
+  } else {
+    badge.hidden = true;
+  }
 }
 
 // Resume-draft card shown above the Audit tab on first session entry when a
@@ -4599,6 +4779,16 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  if (action === 'tab-go') {
+    if (a.dataset.tab) switchTab(a.dataset.tab);
+    return;
+  }
+  if (action === 'home-batch-verify') {
+    // Stage A #5 will replace this with a stacked batch modal. For now, jump
+    // to History where the GM can verify one-by-one via the existing flow.
+    switchTab('history');
+    return;
+  }
   if (action === 'resume-draft') {
     // The session flag has already been set when the card rendered, so the
     // next render falls through to renderInProgressAudit.
@@ -4893,6 +5083,15 @@ document.addEventListener('click', async (e) => {
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + name));
+  // Remember the user's last tab so the next launch lands them where they
+  // left off (not on Home, if they've opted into another tab).
+  try {
+    const state = Store.load();
+    if (state.last_tab !== name) {
+      state.last_tab = name;
+      Store.save(state);
+    }
+  } catch (_) {}
 }
 
 // PIN pad keypress dispatch — runs only while body.locked.
@@ -5067,11 +5266,25 @@ document.addEventListener('focusin', (e) => {
 // Deep-link tab via hash, e.g. index.html#history.
 function applyHashTab() {
   const h = (location.hash || '').replace('#', '');
-  if (h && ['audit', 'history', 'caps', 'reference', 'settings'].includes(h)) {
+  if (h && ['home', 'audit', 'history', 'caps', 'reference', 'settings'].includes(h)) {
     switchTab(h);
   }
 }
 window.addEventListener('hashchange', applyHashTab);
+
+// Stage A #1 — on boot, restore the last tab the user was on, so power users
+// who lived on Audit don't get a surprise Home landing. New users (no
+// last_tab yet) land on Home. The hash deep-link still wins if present.
+function restoreLastTab() {
+  if (location.hash) return; // deep-link wins
+  const state = Store.load();
+  const last = state.last_tab;
+  if (last && ['home', 'audit', 'history', 'caps', 'reference', 'settings'].includes(last)) {
+    switchTab(last);
+  } else {
+    switchTab('home');
+  }
+}
 
 I18n.init();
 Templates.ensureSeeded();
@@ -5079,6 +5292,7 @@ _selfTestWeeklyScore();
 render();
 renderTabBar();
 applyHashTab();
+restoreLastTab();
 
 // Capacitor boot — status bar, splash, keyboard, hardware back button.
 if (window.SaagarShell) {

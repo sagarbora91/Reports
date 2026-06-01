@@ -806,6 +806,78 @@
     eq('rfire: state still has only 1 escalation', Store.load().escalations.length, 1);
   }
 
+  // ---- 25. Home tab (Stage A #1) ----
+  reset();
+  {
+    const owner = await Users.create({ name: 'HOwner', role: 'OWNER', pin: '8181' });
+    const gm = await Users.create({ name: 'HGM', role: 'GM', pin: '8282', phone: '9876520000' });
+    const sm = await Users.create({ name: 'HSM', role: 'SM', pin: '8383' });
+
+    // SM with NO audit done yet → home should suggest "Run today's daily audit".
+    AuthSession.login(sm.id);
+    {
+      const html = renderHomeTab(Store.load(), AuthSession.current());
+      ok('home(SM): suggests running daily audit', /Run today's daily audit/.test(html), '');
+      ok('home(SM): no verify card', !/waiting for verification/.test(html), '');
+    }
+
+    // SM submits an audit → home shows "Today's daily audit — done" green card.
+    startNewAudit({ date: today(), auditorName: 'HSM', auditorId: sm.id, croIds: [], templateId: 'tpl_daily' });
+    CHECKPOINTS.forEach(cp => markCheckpoint(cp.id, 'P'));
+    submitAudit();
+    {
+      const html = renderHomeTab(Store.load(), AuthSession.current());
+      ok('home(SM): shows today-done card after submit', /Today's daily audit — done/.test(html), '');
+    }
+
+    // GM logs in → sees verify card (1 unverified submitted audit).
+    AuthSession.login(gm.id);
+    {
+      const html = renderHomeTab(Store.load(), AuthSession.current());
+      ok('home(GM): shows verify card', /Audits waiting for verification/.test(html), '');
+      ok('home(GM): verify intro has the count "1"', /1 submitted audit/.test(html), '');
+    }
+
+    // Owner logs in → sees verify card + last-backup line.
+    AuthSession.login(owner.id);
+    {
+      const html = renderHomeTab(Store.load(), AuthSession.current());
+      ok('home(OWNER): shows verify card', /Audits waiting for verification/.test(html), '');
+      ok('home(OWNER): shows backup line', /No backups yet|Last backup/.test(html), '');
+    }
+  }
+
+  // 25b. homeAttentionCount sums correctly.
+  reset();
+  {
+    const gm = await Users.create({ name: 'CntGM', role: 'GM', pin: '1313' });
+    AuthSession.login(gm.id);
+    // Build state: 2 unverified submitted audits + 1 unsent escalation.
+    const st = Store.load();
+    st.audits = [
+      { id: 'a1', status: 'submitted', auditor_id: 'someone-else', date: today(), template_id: 'tpl_daily', score: { pct: 80, band: 'poor' }, results: {} },
+      { id: 'a2', status: 'submitted', auditor_id: 'someone-else', date: today(), template_id: 'tpl_daily', score: { pct: 75, band: 'critical' }, results: {} },
+    ];
+    st.escalations = [{ id: 'e1', sent_at: null }];
+    Store.save(st);
+    const att = homeAttention(Store.load(), AuthSession.current());
+    eq('home(GM): verify queue counts 2', att.verifyQueue.length, 2);
+    eq('home(GM): escalations counts 1', att.escalations.length, 1);
+    // Total attention count ≥ 3.
+    ok('home(GM): attention count ≥ 3', homeAttentionCount(att) >= 3, '' + homeAttentionCount(att));
+  }
+
+  // 25c. last_tab persistence — switchTab writes it.
+  reset();
+  {
+    const st0 = Store.load();
+    ok('last_tab: starts undefined', st0.last_tab == null, '' + st0.last_tab);
+    switchTab('history');
+    eq('last_tab: persists on switch', Store.load().last_tab, 'history');
+    switchTab('caps');
+    eq('last_tab: updates on next switch', Store.load().last_tab, 'caps');
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

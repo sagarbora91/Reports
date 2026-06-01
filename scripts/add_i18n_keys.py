@@ -125,6 +125,27 @@ NEW = {
     "dismiss.other_ph": ("e.g. checked with SM, already fixed at 10:30 AM", "उदा. एसएमशी चर्चा केली, सकाळी १०:३० ला आधीच ठीक केले"),
     "dismiss.save_other": ("Dismiss with this reason", "या कारणासह रद्द करा"),
     "ok.dismissed": ("Alert dismissed", "सूचना रद्द केली"),
+    # --- batch 10: Home tab (Stage A #1) — English-only on day one per audit ---
+    "tab.home": ("Home", "Home"),
+    "home.empty_title": ("All clear", "All clear"),
+    "home.empty_intro": ("Nothing needs you right now. Use the tabs to run an audit, review history, or change settings.", "Nothing needs you right now. Use the tabs to run an audit, review history, or change settings."),
+    "home.verify_card_title": ("Audits waiting for verification", "Audits waiting for verification"),
+    "home.verify_card_intro_fmt": ("{n} submitted audit(s) are waiting for a GM or Owner to verify.", "{n} submitted audit(s) are waiting for a GM or Owner to verify."),
+    "home.verify_card_cta": ("Verify now", "Verify now"),
+    "home.today_done_title": ("Today's daily audit — done", "Today's daily audit — done"),
+    "home.today_done_cta": ("Open in History", "Open in History"),
+    "home.run_daily_title": ("Run today's daily audit", "Run today's daily audit"),
+    "home.run_daily_intro": ("The 68-checkpoint daily audit hasn't been submitted yet for today.", "The 68-checkpoint daily audit hasn't been submitted yet for today."),
+    "home.run_daily_cta": ("Start daily audit", "Start daily audit"),
+    "home.weekly_due_title": ("Weekly audit due", "Weekly audit due"),
+    "home.weekly_due_intro": ("This week's weekly audit has not been run yet.", "This week's weekly audit has not been run yet."),
+    "home.weekly_due_cta": ("Run weekly audit", "Run weekly audit"),
+    "home.escalations_title": ("Alerts to send", "Alerts to send"),
+    "home.escalations_intro_fmt": ("{n} escalation(s) are open and unsent. WhatsApp them to the right person before the day moves on.", "{n} escalation(s) are open and unsent. WhatsApp them to the right person before the day moves on."),
+    "home.escalations_cta": ("Open alerts", "Open alerts"),
+    "home.caps_to_verify_title": ("CAPs to verify", "CAPs to verify"),
+    "home.caps_to_verify_intro_fmt": ("{n} CAP(s) marked done by the SM are waiting for your verification.", "{n} CAP(s) marked done by the SM are waiting for your verification."),
+    "home.caps_to_verify_cta": ("Open CAPs", "Open CAPs"),
 }
 
 
