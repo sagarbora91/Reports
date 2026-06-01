@@ -3245,10 +3245,43 @@ function failModal(checkpoint, cros) {
     </div>
     <div class="row">
       <button class="btn btn-ghost" data-action="modal-cancel">${tUi('btn.cancel')}</button>
-      <button class="btn btn-primary" data-action="modal-save-fail">Save &amp; next</button>
+      <button class="btn btn-primary" data-action="modal-save-fail" id="failSaveBtn">${tUi('btn.save_next')}</button>
     </div>
   `);
   renderFailPhotoGrid();
+}
+
+// Stage A #2 — feedback wrapper around capturePhotoWithStamp. Disables the
+// supplied "Save" button (if any) with a "Saving photo…" label while the
+// camera + GPS + canvas work runs (6-8s on cheaper phones), so the user
+// can't accidentally submit before the photo lands. Returns the data URL
+// or null. Caller still decides what to do with null.
+async function captureWithFeedback(opts, saveBtnSelector) {
+  const btn = saveBtnSelector ? document.querySelector(saveBtnSelector) : null;
+  let origLabel = '';
+  if (btn) {
+    origLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = tUi('hint.saving_photo');
+  }
+  try {
+    return await capturePhotoWithStamp(opts);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = origLabel;
+    }
+  }
+}
+
+// Build the user-visible toast that follows a successful photo capture.
+// Communicates both size (so the user knows the photo "took") AND GPS state
+// (so they know whether to retake outdoors — silent GPS-fail used to confuse).
+function photoAddedToast(dataUrl) {
+  const kb = dataUrlSizeKb(dataUrl);
+  const hasGps = !!(_gpsCache && (Date.now() - _gpsCache.ts < 5 * 60 * 1000));
+  const key = hasGps ? 'hint.photo_added_with_gps_fmt' : 'hint.photo_added_no_gps_fmt';
+  toast(tUi(key).replace('{kb}', kb));
 }
 
 function renderFailPhotoGrid() {
@@ -4446,11 +4479,17 @@ document.addEventListener('click', async (e) => {
       const audit = currentAudit(state);
       const idx = audit ? nextUnmarkedIndex(audit) : 0;
       const cp = audit ? checkpointsFor(audit)[idx] : null;
-      const dataUrl = await capturePhotoWithStamp({ cpId: cp ? cp.id : '' });
-      if (!dataUrl) return;
+      // Wrapper disables the modal's Save button with a "Saving photo…" label
+      // while the 6-8s camera + GPS + canvas window runs, so the user can't
+      // submit before the photo lands.
+      const dataUrl = await captureWithFeedback(
+        { cpId: cp ? cp.id : '' },
+        '#failSaveBtn'
+      );
+      if (!dataUrl) { toast(tUi('hint.photo_not_added')); return; }
       FailDraft.add(dataUrl);
       renderFailPhotoGrid();
-      toast(`Photo stamped & added (${dataUrlSizeKb(dataUrl)} KB)`);
+      photoAddedToast(dataUrl);
     } catch (err) {
       console.error(err);
       toast(tUi('err.no_photo_capture'));
@@ -4468,9 +4507,9 @@ document.addEventListener('click', async (e) => {
   if (action === 'add-cp-photo') {
     try {
       const dataUrl = await capturePhotoWithStamp({ cpId: a.dataset.cp });
-      if (!dataUrl) return;
+      if (!dataUrl) { toast(tUi('hint.photo_not_added')); return; }
       addPhotoToCheckpoint(a.dataset.cp, dataUrl);
-      toast(`Photo stamped & added (${dataUrlSizeKb(dataUrl)} KB)`);
+      photoAddedToast(dataUrl);
       render();
     } catch (err) {
       console.error(err);

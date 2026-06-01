@@ -113,6 +113,11 @@ NEW = {
     "resume.discard": ("Discard and start fresh", "टाकून द्या आणि नवीन सुरू करा"),
     "btn.skip": ("⏭ Skip — come back later", "⏭ वगळा — नंतर पुन्हा या"),
     "btn.skip_with_count_fmt": ("⏭ Skip ({n} pending) — come back later", "⏭ वगळा ({n} प्रलंबित) — नंतर पुन्हा या"),
+    # --- batch 8: photo + FAIL modal feedback (Stage A #2) ---
+    "hint.photo_not_added": ("Photo not added — camera cancelled or permission denied.", "फोटो जोडला नाही — कॅमेरा रद्द केला किंवा परवानगी नाकारली."),
+    "hint.saving_photo": ("Saving photo…", "फोटो जतन होत आहे…"),
+    "hint.photo_added_with_gps_fmt": ("Photo added ({kb} KB · GPS ✓)", "फोटो जोडला ({kb} KB · GPS ✓)"),
+    "hint.photo_added_no_gps_fmt": ("Photo added ({kb} KB · no GPS — indoors?)", "फोटो जोडला ({kb} KB · GPS नाही — इमारतीत?)"),
 }
 
 

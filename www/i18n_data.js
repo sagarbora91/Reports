@@ -2,6 +2,10 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "hint.photo_not_added": "Photo not added — camera cancelled or permission denied.",
+      "hint.saving_photo": "Saving photo…",
+      "hint.photo_added_with_gps_fmt": "Photo added ({kb} KB · GPS ✓)",
+      "hint.photo_added_no_gps_fmt": "Photo added ({kb} KB · no GPS — indoors?)",
       "resume.title": "Audit in progress",
       "resume.cp_of_fmt": "CP {n} of {total}",
       "resume.started_min_fmt": "started {n} min ago",
@@ -589,6 +593,10 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "hint.photo_not_added": "फोटो जोडला नाही — कॅमेरा रद्द केला किंवा परवानगी नाकारली.",
+      "hint.saving_photo": "फोटो जतन होत आहे…",
+      "hint.photo_added_with_gps_fmt": "फोटो जोडला ({kb} KB · GPS ✓)",
+      "hint.photo_added_no_gps_fmt": "फोटो जोडला ({kb} KB · GPS नाही — इमारतीत?)",
       "resume.title": "ऑडिट सुरू आहे",
       "resume.cp_of_fmt": "तपासणी बिंदू {n} / {total}",
       "resume.started_min_fmt": "{n} मिनिटांपूर्वी सुरू केले",
