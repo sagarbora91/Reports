@@ -43,11 +43,24 @@
     } catch (_) { return false; }
   }
 
+  // A lead is "terminal" (no follow-up reminder) when its stage is a sale or a
+  // dead-end. Cover current Greetor strings, legacy audit strings, and common
+  // user-renamed terminal stages (case-insensitive substring match) so renaming
+  // a Masters lead-status to "Lost"/"Dead"/"Won" still cancels the ping.
+  var TERMINAL_STAGES = ['converted', 'closed', 'lost', 'dead', 'won', 'not interested', 'dnd'];
+  function isTerminalStage(stage) {
+    if (!stage) return false;
+    var s = String(stage).toLowerCase();
+    for (var i = 0; i < TERMINAL_STAGES.length; i++) {
+      if (s.indexOf(TERMINAL_STAGES[i]) !== -1) return true;
+    }
+    return false;
+  }
+
   function shouldHaveReminder(record) {
     if (!record || record.followUp !== 'Yes') return false;
     if (!record.followDate) return false;
-    if (record.leadStatus === 'Converted Later') return false;
-    if (record.leadStatus === 'Closed - Not Interested') return false;
+    if (isTerminalStage(record.leadStatus)) return false;
     return true;
   }
 
@@ -172,7 +185,7 @@
       } catch (e) {
         console.warn('durable state write failed', e);
       }
-    }, 400);
+    }, 150);
   }
 
   // ---------------------------------------------------------------------
@@ -257,6 +270,15 @@
         if (window.history.length > 1) { window.history.back(); return; }
         // 4. Confirm exit.
         if (confirm('Exit Saagar Greetor?')) App.exitApp();
+      });
+      App.addListener('pause', function () {
+        // Flush any pending durable write immediately when the app backgrounds.
+        if (_durTimer) { clearTimeout(_durTimer); _durTimer = null; }
+        var pending = _durPending; _durPending = null;
+        if (pending != null) {
+          var FS = plugin('Filesystem');
+          if (FS) { try { FS.writeFile({ path: STATE_FILE, directory: 'DATA', data: pending, encoding: 'utf8' }); } catch (_) {} }
+        }
       });
     }
   }

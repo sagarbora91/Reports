@@ -28,8 +28,8 @@
       followLine = '<div class="entry-meta" style="color:#e67e22">⏰ follow ' + escapeHtml(record.followDate) + '</div>';
     }
 
-    var canLeads = !window.can || window.can('manageLeads');
-    var canEdit = !window.can || window.can('editAny');
+    var canLeads = window.canSafe && window.canSafe('manageLeads');
+    var canEdit = window.canSafe && window.canSafe('editAny');
     var convertBtn = '';
     if (stage !== 'Converted' && canLeads) {
       convertBtn = '<button class="entry-action" data-action="open-convert" data-id="' + escapeHtml(id) + '" style="min-height:44px">Convert</button>';

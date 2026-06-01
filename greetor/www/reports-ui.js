@@ -94,6 +94,42 @@
     html += '</div>';
     html += '</div>';
 
+    // ── True-conversion overlay (audit R12 / denominator) ──
+    if (window.Footfall) {
+      var ffTotal = window.Footfall.totalForRange(state, resolved.startDate, resolved.endDate);
+      if (ffTotal > 0) {
+        var truePct = window.Footfall.trueConversionPct(sum.walkins, sum.conversions, ffTotal);
+        var coverage = window.Footfall.captureCoverage(sum.walkins, ffTotal);
+        html += '<div class="card" style="margin-bottom:12px;border:1px dashed #c99a2e;">'
+          + '<div class="row-spread" style="margin-bottom:6px;"><span style="font-weight:600;">True conversion</span>'
+          + '<span class="muted tiny">vs ' + ffTotal + ' est. footfall</span></div>'
+          + '<div style="font-size:14px;">' + sum.conversions + ' converted of ' + ffTotal + ' visitors &middot; <strong>' + truePct + '%</strong></div>'
+          + (coverage != null ? '<div class="tiny muted" style="margin-top:4px;">Captured ' + coverage + '% of walk-ins (' + sum.walkins + ' of ~' + ffTotal + '). The ' + sum.conversionPct + '% above is over captured only.</div>' : '')
+          + '</div>';
+      }
+    }
+
+    // ── "Converted without value" worklist (audit R1) ──
+    // New conversions always go through the convert modal (which captures
+    // saleValue), so this only surfaces legacy/edge records to clean up —
+    // otherwise their revenue is silently counted as ₹0.
+    var noValue = recs.filter(function (r) {
+      return r.leadStatus === 'Converted' && !(Number(r.saleValue) > 0);
+    });
+    if (noValue.length) {
+      html += '<div class="card" style="margin-bottom:12px;border:1px solid #ba2d2d;">';
+      html += '<div style="font-weight:600;color:#ba2d2d;margin-bottom:6px;">Converted without sale value (' + noValue.length + ')</div>';
+      html += '<div class="tiny muted" style="margin-bottom:8px;">These count as ₹0 in revenue. Tap to open and set the value.</div>';
+      noValue.slice(0, 10).forEach(function (r) {
+        html += '<div class="entry-card" data-action="edit-entry" data-id="' + escapeHtml(r.recordId || '') + '" style="cursor:pointer;margin-bottom:6px;">'
+          + '<div class="entry-row"><span class="entry-name">' + escapeHtml(r.customerName || 'Unnamed') + '</span>'
+          + '<span class="muted tiny">' + escapeHtml(r.visitDate || '') + '</span></div>'
+          + '<div class="entry-meta tiny muted">' + escapeHtml([r.store, r.category, r.brand].filter(Boolean).join(' · ')) + '</div>'
+          + '</div>';
+      });
+      html += '</div>';
+    }
+
     // ── Trend chart + targets attainment + leaderboard (T+C+P) ──
     (function () {
       var period = range === 'today' ? 'daily' : (range === '7d' ? 'weekly' : 'monthly');
@@ -219,7 +255,7 @@
         var storeStr = escapeHtml(rec.store || '');
         var catStr = [rec.category, rec.brand, rec.reason].filter(Boolean).map(escapeHtml).join(' · ');
 
-        var canEdit = !window.can || window.can('editAny');
+        var canEdit = window.canSafe && window.canSafe('editAny');
         html += '<div class="entry-card"' + (canEdit ? ' data-action="edit-entry" data-id="' + escapeHtml(rec.recordId || '') + '" style="cursor:pointer;"' : '') + '>';
         html += '<div class="entry-row"><span class="entry-name">' + name + '</span><span class="pill ' + pClass + '">' + escapeHtml(status) + '</span></div>';
         html += '<div class="entry-mobile muted">' + timeStr + (timeStr && storeStr ? ' · ' : '') + storeStr + '</div>';

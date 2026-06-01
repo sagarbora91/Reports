@@ -112,7 +112,7 @@
             return '<img src="' + safeEscape(src) + '" alt="photo" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb">';
           }).join('') + '</div>'
         : '') +
-      ((!window.can || window.can('editAny'))
+      ((window.canSafe && window.canSafe('editAny'))
         ? '<div class="entry-actions" style="margin-top:8px">' +
           '<button class="btn btn-secondary entry-action" data-action="edit-entry" data-id="' +
           safeEscape(v.recordId) + '">Edit</button>' +
@@ -135,7 +135,7 @@
     var latestId = visits.length ? safeEscape(visits[0].recordId) : '';
     var name = safeEscape(c.name || 'Unnamed');
 
-    var convertBtn = (!c.converted && latestId && (!window.can || window.can('manageLeads')))
+    var convertBtn = (!c.converted && latestId && (window.canSafe && window.canSafe('manageLeads')))
       ? '<button class="btn btn-primary btn-full" style="margin-top:12px"' +
         ' data-action="open-convert" data-id="' + latestId + '">Convert latest to sale</button>'
       : '';

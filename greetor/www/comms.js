@@ -233,12 +233,17 @@
 
   function log(state, opts) {
     if (!state || !Array.isArray(state.commsLog)) return [];
+    var rows = state.commsLog;
     if (opts && opts.recordId) {
-      return state.commsLog.filter(function (e) {
-        return e.recordId === opts.recordId;
-      });
+      rows = rows.filter(function (e) { return e.recordId === opts.recordId; });
     }
-    return state.commsLog;
+    // Audit R3 (DPDP / anti-poaching): scope at the data layer so EVERY caller
+    // — not just renderLog — respects it. A GREETOR sees only messages they
+    // sent; Manager/Owner see the full log for oversight.
+    if (opts && opts.auth && opts.auth.role === 'GREETOR') {
+      rows = rows.filter(function (e) { return e.byUserId === opts.auth.id; });
+    }
+    return rows;
   }
 
   function endOfDaySummary(state, dateStr, role, userId) {

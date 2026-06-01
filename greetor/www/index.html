@@ -690,6 +690,7 @@ body.locked { overflow: hidden; }
   <script src="comms-ui.js"></script>
   <script src="charts.js"></script>
   <script src="targets.js"></script>
+  <script src="footfall.js"></script>
   <script src="photo.js"></script>
   <script src="dpdp.js"></script>
   <script src="i18n.js"></script>
@@ -889,6 +890,11 @@ function can(perm) {
   return (ROLE_PERMS[auth.role] || []).indexOf(perm) !== -1;
 }
 window.can = can;
+// canSafe — audit R14: a fail-CLOSED variant for the UI modules. The old
+// `!window.can || window.can(x)` idiom fails OPEN if can is ever missing
+// (shows privileged buttons). canSafe returns false when can is unavailable.
+function canSafe(perm) { return typeof window.can === "function" && window.can(perm); }
+window.canSafe = canSafe;
 
 // =====================================================================
 // Audit log — immutable record of every data action (esp. deletes).
@@ -1340,7 +1346,7 @@ function renderLoginScreen(state) {
       <h2>Sign in</h2>
       <label for="loginUser">USER</label>
       <select id="loginUser">
-        ${active.map(u => `<option value="${u.id}" ${u.id === selected ? "selected" : ""}>${escapeHtml(u.name)} · ${roleLabel(u.role)}</option>`).join("")}
+        ${active.map(u => `<option value="${u.id}" ${u.id === selected ? "selected" : ""}>${escapeHtml(u.name)}</option>`).join("")}
       </select>
       ${renderPinDots()}
       ${locked
@@ -1487,7 +1493,7 @@ function renderCapture(state, auth) {
     <div class="savebar">
       ${step > 1
         ? `<button class="btn btn-secondary" data-action="wizard-back">← Back</button>`
-        : `<button class="btn btn-secondary" data-action="wizard-reset">Reset</button>`}
+        : `<button class="btn btn-ghost" data-action="wizard-reset" style="opacity:0.75">Reset</button>`}
       <button class="btn btn-primary" data-action="${nextAction}">${nextLabel}</button>
     </div>
   `;
@@ -1835,6 +1841,17 @@ window.onTargetSet = function (period, metric, value) {
   toast("Target saved");
 };
 
+// Denominator (audit R12): Manager enters end-of-day footfall estimate per
+// store/day. Feeds the true-conversion line on Reports; never the leaderboard.
+window.onFootfallSet = function (store, value) {
+  if (!window.Footfall || !store) return;
+  const s = Store.load();
+  const me = AuthSession.current(s);
+  window.Footfall.set(s, store, today(), value, me ? { id: me.id, name: me.name } : null);
+  Store.save(s);
+  toast("Footfall saved — " + (Number(value) || 0) + " for " + store);
+};
+
 function renderTargets(state) {
   const t = (window.Targets ? window.Targets.get(state) : { store: {} }) || { store: {} };
   const sv = (period, metric) => {
@@ -1974,6 +1991,22 @@ function renderSettings(state, auth) {
       <button class="btn btn-secondary btn-full" data-action="open-targets">Set targets</button>
     </div>` : ""}
 
+    ${canEditMasters(auth) && window.Footfall ? (() => {
+      const ffStore = state.my_store || (window.Masters ? Masters.storeNames(state)[0] : "");
+      const ffToday = ffStore ? (window.Footfall.get(state, ffStore, today()) || {}) : {};
+      return `
+    <div class="settings-section">
+      <h3>Today's footfall</h3>
+      <p>Honest conversion needs the real walk-in count. Enter an end-of-day estimate of total visitors to <strong>${escapeHtml(ffStore || "your store")}</strong> — captures may only cover a fraction on festival days. Used for the true-conversion line on Reports; never affects the greetor leaderboard.</p>
+      <div class="settings-row">
+        <span><strong>Visitors today</strong> <span class="muted">${escapeHtml(ffStore || "")}</span></span>
+        <input type="number" inputmode="numeric" min="0" value="${ffToday.count != null ? ffToday.count : ""}"
+               onchange="onFootfallSet('${escapeHtml(ffStore || "")}', this.value)" placeholder="0"
+               style="width:96px;padding:8px;border-radius:8px;border:1px solid var(--gray-300)">
+      </div>
+    </div>`;
+    })() : ""}
+
     <div class="settings-section">
       <h3>Messaging</h3>
       <p>WhatsApp / SMS templates for following up with customers, plus a log of what was sent and a one-tap end-of-day summary for your manager.</p>
@@ -1996,6 +2029,9 @@ function renderSettings(state, auth) {
 
     <div class="settings-section">
       <h3>Backup &amp; restore</h3>
+      <div style="background:var(--amber-pale);border:1px solid #f4c674;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;line-height:1.5;color:#6a4a00">
+        <strong>⚠ Before the next big update:</strong> the upcoming signed version installs fresh and <strong>erases on-device data</strong>. Tap <em>Back up now</em> first (and after every busy day) — then <em>Restore</em> on the new build.
+      </div>
       <p>${state.records.length} entry(ies) on this device. A full backup is one JSON file — restore it after reinstalling to bring back everything (entries, users, masters, audit log).</p>
       <button class="btn btn-primary btn-full" data-action="backup-json">Back up now (save to Drive)</button>
       <div class="spacer-8"></div>
@@ -2253,13 +2289,34 @@ function saveRecord() {
     (existing ? "Edited entry — " : "Created entry — ") + who + " · " + (rec.store || "") + " · " + (rec.reason || ""),
     { recordId: rec.recordId });
 
+  // Audit R8 (DPDP trail): emit a symmetric consent event when consent state
+  // changes, so clearing/ticking the box on edit isn't buried in a generic edit.
+  const hadConsent = !!(existing && existing.consent_at);
+  const hasConsent = !!rec.consent_at;
+  if (hasConsent && !hadConsent) {
+    logAudit("consent_granted", "Consent recorded — " + who, { recordId: rec.recordId, at: rec.consent_at });
+  } else if (hadConsent && !hasConsent) {
+    logAudit("consent_withdrawn", "Consent cleared — " + who, { recordId: rec.recordId });
+  }
+
   if (window.SaagarShell && window.SaagarShell.scheduleFollowupReminder) {
     window.SaagarShell.scheduleFollowupReminder(rec);
   }
-  toast(existing ? "Updated." : "Saved.");
+  // Audit R17: richer toast around data we own (not OS scheduling we don't);
+  // on a NEW capture, drop back to Capture step 1 so the greetor can log the
+  // next walk-in immediately. Edits return to Reports (where they came from).
+  const fu = (rec.followUp === "Yes" && rec.followDate)
+    ? " · follow-up " + rec.followDate + (rec.followTime ? " " + rec.followTime : "")
+    : "";
   editingRecordId = null;
   Wizard.reset();
-  switchScreen("reports");
+  if (existing) {
+    toast("Updated — " + who + fu + ".");
+    switchScreen("reports");
+  } else {
+    toast("Saved — " + who + fu + ".");
+    switchScreen("capture");
+  }
 }
 
 function editRecord(recordId) {
@@ -2268,6 +2325,10 @@ function editRecord(recordId) {
   if (!r) return;
   editingRecordId = recordId;
   Wizard.reset(r);
+  // Audit R4: deep-clone the photo refs so removing a photo mid-edit and then
+  // backing out without saving doesn't mutate (or delete the files of) the
+  // still-saved record. Wizard.reset's Object.assign copied the array by ref.
+  Wizard.data.photos = Array.isArray(r.photos) ? r.photos.map(p => Object.assign({}, p)) : [];
   // Map persisted consent_at → wizard's consent checkbox state.
   Wizard.data.consent = r.consent_at ? "yes" : "";
   switchScreen("capture");
@@ -2355,10 +2416,13 @@ function restoreJson() {
       if (parsed && parsed._format === "saagar_greetor_v2" && parsed.state) {
         if (!confirm("Replace current data with this backup?")) return;
         const st = parsed.state;
-        // Re-seed masters/comms so an older backup that predates them still
-        // yields a usable wizard immediately (no app restart needed).
+        // Re-seed all seedable modules so a backup that predates a feature
+        // (targets, footfall, comms) still yields a working app immediately —
+        // otherwise Reports' targets card silently breaks (audit R7).
         if (window.Masters) window.Masters.ensureSeeded(st);
         if (window.Comms) window.Comms.ensureSeeded(st);
+        if (window.Targets) window.Targets.ensureSeeded(st);
+        if (window.Footfall) window.Footfall.ensureSeeded(st);
         Store.save(st);
         if (parsed.staff) saveStaff(parsed.staff);
         toast("Backup restored.");
@@ -2843,11 +2907,12 @@ async function boot() {
   } catch (e) { console.warn("durable hydrate skipped", e); }
 
   // 2. Seed editable masters/comms once (idempotent); also primes the file.
-  if (window.Masters || window.Comms || window.Targets) {
+  if (window.Masters || window.Comms || window.Targets || window.Footfall) {
     const _s = Store.load();
     if (window.Masters) window.Masters.ensureSeeded(_s);
     if (window.Comms) window.Comms.ensureSeeded(_s);
     if (window.Targets) window.Targets.ensureSeeded(_s);
+    if (window.Footfall) window.Footfall.ensureSeeded(_s);
     Store.save(_s);
   }
 

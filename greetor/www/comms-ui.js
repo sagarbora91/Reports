@@ -212,15 +212,11 @@
 
   /* ── renderLog ───────────────────────────────────────────────── */
   function renderLog(state) {
-    var entries = Comms.log(state, {});
-    // Audit fix #3 (DPDP): Greetors must only see their own sent messages —
-    // the log otherwise leaks every customer mobile to every staffer on the
-    // shared counter phone (poaching / DPDP exposure). Manager + Owner see
-    // the full log for oversight.
+    // Audit R3 (DPDP / anti-poaching): scope is now enforced in the data layer
+    // via opts.auth so the per-record log path is safe too. A GREETOR sees only
+    // their own sent messages; Manager/Owner see all.
     var auth = (typeof AuthSession !== 'undefined') ? AuthSession.current() : null;
-    if (auth && auth.role === 'GREETOR') {
-      entries = (entries || []).filter(function (e) { return e.byUserId === auth.id; });
-    }
+    var entries = Comms.log(state, { auth: auth });
     if (!entries || !entries.length) {
       return '<div style="padding:16px 16px 80px;">'
         + '<h2 style="margin:0 0 16px;">Message Log</h2>'
@@ -232,9 +228,10 @@
       var header = esc(e.customerName || e.mobile || '—');
       var meta = channelPill(e.channel) + ' <span class="muted tiny">' + esc(fmtTs(e.timestamp || e.sentAt || '')) + '</span>';
       if (e.templateName) meta += ' <span class="muted tiny">· ' + esc(e.templateName) + '</span>';
+      var shownMobile = (window.DPDP && window.DPDP.maskMobile) ? window.DPDP.maskMobile(e.mobile || '') : (e.mobile || '');
       return '<div class="entry-card" style="margin-bottom:8px;">'
         + '<div class="entry-row"><span class="entry-name">' + header + '</span>'
-        + '<span class="entry-mobile muted tiny">' + esc(e.mobile || '') + '</span></div>'
+        + '<span class="entry-mobile muted tiny">' + esc(shownMobile) + '</span></div>'
         + '<div style="margin:4px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' + meta + '</div>'
         + '<p style="margin:4px 0 0;font-size:.9rem;">' + esc(truncate(e.text, 120)) + '</p>'
         + '</div>';
