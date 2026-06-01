@@ -1238,6 +1238,11 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "hint.last_backup_never": "No backups yet — please back up to Drive today.",
+      "hint.last_backup_today": "Last backup: today.",
+      "hint.last_backup_days_fmt": "Last backup: {n} day(s) ago.",
+      "hint.storage_full_warn_fmt": "Storage is {pct}% full ({mb} MB used of ~5 MB). Back up to Drive and consider removing old photos before the app stops saving new audits.",
+      "label.storage_full_warn": "⚠ Storage is filling up",
       "start.footer_fmt": "{n} point(s) · target 90%+ · score = % passed",
       "settings.storage_fmt": "{a} audit(s), {c} CRO(s), {u} user(s) and {p} CAP(s) stored on this device. One backup file bundles everything — share to Drive, OneDrive, WhatsApp or any other app.",
       "cap.filter_all": "All",
@@ -1807,6 +1812,11 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "hint.last_backup_never": "अजून बॅकअप नाही — आज Drive वर बॅकअप घ्या.",
+      "hint.last_backup_today": "शेवटचा बॅकअप: आज.",
+      "hint.last_backup_days_fmt": "शेवटचा बॅकअप: {n} दिवसांपूर्वी.",
+      "hint.storage_full_warn_fmt": "स्टोरेज {pct}% भरले आहे (~५ MB पैकी {mb} MB वापरले). नवे ऑडिट जतन होणे थांबण्यापूर्वी Drive वर बॅकअप घ्या व जुने फोटो काढण्याचा विचार करा.",
+      "label.storage_full_warn": "⚠ स्टोरेज भरत आहे",
       "start.footer_fmt": "{n} बिंदू · लक्ष्य ९०%+ · गुण = % पास",
       "settings.storage_fmt": "या डिव्हाइसवर {a} ऑडिट, {c} सीआरओ, {u} वापरकर्ते व {p} CAP जतन आहेत. एकच बॅकअप फाइल सर्व काही एकत्र करते — Drive, OneDrive, WhatsApp किंवा इतर कोणत्याही अॅपवर शेअर करा.",
       "cap.filter_all": "सर्व",
@@ -4715,6 +4725,49 @@ function fmtDate(iso) {
   return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+// "Last backup: 3 days ago" etc. — used in the Settings backup card and the
+// Home tab card so the Owner can see if they've gone stale.
+function daysSince(iso) {
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  return Math.floor(ms / 86400000);
+}
+
+// Conservative storage usage estimate against the typical ~5 MB localStorage
+// quota. We measure only OUR key — the photos in audit results dominate the
+// payload. Returns { bytes, limit, pct } or null on any failure.
+const STORAGE_LIMIT_BYTES = 5 * 1024 * 1024;
+const STORAGE_WARN_PCT = 70;
+function storageHealth() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY) || '';
+    // localStorage stores UTF-16 internally — 2 bytes per JS character.
+    const bytes = raw.length * 2;
+    const pct = Math.min(100, Math.round((bytes / STORAGE_LIMIT_BYTES) * 100));
+    return { bytes, limit: STORAGE_LIMIT_BYTES, pct };
+  } catch (_) { return null; }
+}
+
+// Visible warning banner rendered above the active tab when usage > 70%.
+// Returns '' when storage is healthy so the banner doesn't take up space.
+function storageWarnBanner() {
+  const h = storageHealth();
+  if (!h || h.pct < STORAGE_WARN_PCT) return '';
+  const mb = (h.bytes / (1024 * 1024)).toFixed(1);
+  return `<div class="card" style="background:#fff4e5;border-color:#f4c674;color:#6a4a00;margin-bottom:10px">
+    <strong>${tUi('label.storage_full_warn')}</strong>
+    <p style="margin:4px 0 0;font-size:13px;line-height:1.45">${escapeHtml(tUi('hint.storage_full_warn_fmt').replace('{pct}', h.pct).replace('{mb}', mb))}</p>
+  </div>`;
+}
+
+// "Last backup" status string for the Backup & restore card.
+function lastBackupLine(state) {
+  const days = daysSince(state && state.last_backup_at);
+  if (days == null) return tUi('hint.last_backup_never');
+  if (days === 0) return tUi('hint.last_backup_today');
+  return tUi('hint.last_backup_days_fmt').replace('{n}', days);
+}
+
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
@@ -6323,8 +6376,10 @@ function renderPinPad() {
 
 function renderAuditTab(state, auth) {
   const a = currentAudit(state);
+  // Mid-audit screens are tight on space and the warning isn't actionable from
+  // there. Show the banner only on the start-screen (the entry point).
   if (a) return renderInProgressAudit(a);
-  return renderStartAudit(state, auth);
+  return storageWarnBanner() + renderStartAudit(state, auth);
 }
 
 // Which templates a role may run.
@@ -7400,6 +7455,7 @@ function builderCpModal(tplId, sectionId, cpId) {
 }
 
 function renderSettingsTab(state, auth) {
+  const banner = storageWarnBanner();
   const isOwner = auth && auth.role === 'OWNER';
   // Builder takes over the Settings tab when editing a template.
   if (isOwner && Builder.editingId) {
@@ -7408,6 +7464,7 @@ function renderSettingsTab(state, auth) {
     Builder.editingId = null;
   }
   return `
+    ${banner}
     <div class="card">
       <h2>${tUi('label.my_account')}</h2>
       <p class="muted">${tUi('label.signed_in_as')} <strong>${escapeHtml(auth.name)}</strong> &middot; ${escapeHtml(roleLabel(auth.role))}${auth.phone ? ' &middot; ' + escapeHtml(displayPhone(auth.phone)) : ''}</p>
@@ -7475,6 +7532,7 @@ function renderSettingsTab(state, auth) {
     <div class="card">
       <h2>${tUi('label.backup_restore')}</h2>
       <p class="muted">${escapeHtml(tUi('settings.storage_fmt').replace('{a}', state.audits.length).replace('{c}', state.cros.length).replace('{u}', state.users.length).replace('{p}', (state.caps || []).length))}</p>
+      <p class="muted" style="margin-top:6px;font-size:13px">${escapeHtml(lastBackupLine(state))}</p>
       <button class="btn btn-primary" data-action="backup-drive">${tUi('btn.backup_drive')}</button>
       <div class="spacer-12"></div>
       <button class="btn btn-ghost" data-action="restore-backup">${tUi('btn.restore_backup')}</button>
@@ -8298,7 +8356,12 @@ async function backupToDrive() {
     const res = await window.SaagarShell.backup();
     if (res && res.cancelled) return;
     if (res && res.ok) {
-      toast(res.via === 'share' ? 'Backup shared' : 'Backup downloaded');
+      // Stamp the success so the Settings card can show "Last backup: N days ago".
+      const st = Store.load();
+      st.last_backup_at = new Date().toISOString();
+      Store.save(st);
+      toast(res.via === 'share' ? tUi('ok.backup_shared') : tUi('ok.backup_downloaded'));
+      render();
     }
   } catch (e) {
     console.error(e);

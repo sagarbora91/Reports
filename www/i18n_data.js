@@ -2,6 +2,11 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "hint.last_backup_never": "No backups yet — please back up to Drive today.",
+      "hint.last_backup_today": "Last backup: today.",
+      "hint.last_backup_days_fmt": "Last backup: {n} day(s) ago.",
+      "hint.storage_full_warn_fmt": "Storage is {pct}% full ({mb} MB used of ~5 MB). Back up to Drive and consider removing old photos before the app stops saving new audits.",
+      "label.storage_full_warn": "⚠ Storage is filling up",
       "start.footer_fmt": "{n} point(s) · target 90%+ · score = % passed",
       "settings.storage_fmt": "{a} audit(s), {c} CRO(s), {u} user(s) and {p} CAP(s) stored on this device. One backup file bundles everything — share to Drive, OneDrive, WhatsApp or any other app.",
       "cap.filter_all": "All",
@@ -571,6 +576,11 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "hint.last_backup_never": "अजून बॅकअप नाही — आज Drive वर बॅकअप घ्या.",
+      "hint.last_backup_today": "शेवटचा बॅकअप: आज.",
+      "hint.last_backup_days_fmt": "शेवटचा बॅकअप: {n} दिवसांपूर्वी.",
+      "hint.storage_full_warn_fmt": "स्टोरेज {pct}% भरले आहे (~५ MB पैकी {mb} MB वापरले). नवे ऑडिट जतन होणे थांबण्यापूर्वी Drive वर बॅकअप घ्या व जुने फोटो काढण्याचा विचार करा.",
+      "label.storage_full_warn": "⚠ स्टोरेज भरत आहे",
       "start.footer_fmt": "{n} बिंदू · लक्ष्य ९०%+ · गुण = % पास",
       "settings.storage_fmt": "या डिव्हाइसवर {a} ऑडिट, {c} सीआरओ, {u} वापरकर्ते व {p} CAP जतन आहेत. एकच बॅकअप फाइल सर्व काही एकत्र करते — Drive, OneDrive, WhatsApp किंवा इतर कोणत्याही अॅपवर शेअर करा.",
       "cap.filter_all": "सर्व",

@@ -636,6 +636,40 @@
     eq('csv: store-mode yields 68 data rows', lines.length - 1, 68);
   }
 
+  // ---- 21. Storage health line + auto-warn banner (Stage A #12a) ----
+  reset();
+  // No backup yet → "No backups yet" line.
+  ok('storage: lastBackupLine reports never when no last_backup_at',
+     lastBackupLine(Store.load()) === 'No backups yet — please back up to Drive today.', '');
+
+  // 30 days back → days-ago line.
+  {
+    const s = Store.load(); s.last_backup_at = new Date(Date.now() - 30 * 86400000).toISOString(); Store.save(s);
+    ok('storage: lastBackupLine reports N days ago', /30 day/.test(lastBackupLine(Store.load())), '');
+  }
+
+  // storageHealth returns plausible numbers for a fresh store.
+  {
+    const h = storageHealth();
+    ok('storage: storageHealth returns numeric pct', h && typeof h.pct === 'number' && h.pct >= 0 && h.pct <= 100, JSON.stringify(h));
+  }
+
+  // Banner is empty below the warn threshold.
+  ok('storage: warn banner empty when healthy', storageWarnBanner() === '', '');
+
+  // Banner appears when usage crosses the threshold. Simulate by writing a
+  // large blob to the store and re-checking.
+  {
+    const s = Store.load();
+    // ~3.6 MB string → ~7.2 MB UTF-16 bytes → well over 70% of 5 MB.
+    s._fillerForTest = 'x'.repeat(3600000);
+    Store.save(s);
+    const banner = storageWarnBanner();
+    ok('storage: warn banner appears when usage > 70%', banner.length > 0 && /Storage|स्टोरेज/.test(banner), '');
+    // Cleanup so later tests aren't fat.
+    const s2 = Store.load(); delete s2._fillerForTest; Store.save(s2);
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);
