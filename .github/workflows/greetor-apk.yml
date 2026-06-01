@@ -221,7 +221,7 @@ jobs:
       # Release so the download URL never changes. Only fires on capacitor branch.
       - name: Publish APK to "latest-greetor" GitHub Release
         if: steps.signing.outputs.mode == 'release' && github.ref == 'refs/heads/capacitor' && success()
-        uses: softprops/action-gh-release@3bb1273dc8b9bbeac84d4f1eaa37ee07bd0f4d8f  # v2.6.2 — pinned to SHA
+        uses: softprops/action-gh-release@v2  # resolvable major-version tag
         with:
           tag_name: latest-greetor
           name: Greetor — latest build (capacitor)
