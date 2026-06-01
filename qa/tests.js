@@ -763,6 +763,49 @@
     ok('skip: button shows "(1 pending)" once a CP is skipped', /Skip \(1 pending\)/.test(html1), '');
   }
 
+  // ---- 24. Escalation dismiss-with-reason + shadow-log (Stage A #4) ----
+  reset();
+  {
+    // Build an escalation directly (bypass the audit flow for speed).
+    const st = Store.load();
+    st.escalations = [{
+      id: 'esc-test1', audit_id: 'aud-x', trigger_number: 1,
+      trigger_label: 'Daily Critical band', severity: 'critical',
+      recipient_role: 'GM', message: 'test', raised_at: new Date().toISOString(),
+      sent_at: null, sent_via: null, sent_by: null,
+    }];
+    Store.save(st);
+
+    Escalations.dismiss('esc-test1', 'user1', 'False alarm (audit verdict wrong)');
+    const e = Escalations.byId(Store.load(), 'esc-test1');
+    eq('dismiss: sent_via set to dismissed', e.sent_via, 'dismissed');
+    eq('dismiss: dismiss_reason stored', e.dismiss_reason, 'False alarm (audit verdict wrong)');
+    eq('dismiss: sent_by stored', e.sent_by, 'user1');
+    ok('dismiss: sent_at stamped', !!e.sent_at, '');
+  }
+
+  // 24b. Shadow-log fires when saveDrafts is called with a duplicate trigger.
+  reset();
+  {
+    const audit = { id: 'aud-rfire', date: today(), template_id: 'tpl_daily' };
+    const draft = {
+      trigger_number: 1, trigger_label: 'Daily Critical band', severity: 'critical',
+      recipient_role: 'GM', message: 'x',
+    };
+    // First call → 1 new escalation.
+    const a = Escalations.saveDrafts([draft], audit);
+    eq('rfire: first saveDrafts adds 1', a.length, 1);
+    // Second call with the same (audit, trigger) — should suppress (and shadow-log).
+    let logged = false;
+    const orig = console.log;
+    console.log = (...args) => { if ((args[0] || '').includes('[esc-rfire-shadow]')) logged = true; };
+    const b = Escalations.saveDrafts([draft], audit);
+    console.log = orig;
+    eq('rfire: duplicate saveDrafts adds 0', b.length, 0);
+    ok('rfire: shadow-log fires on duplicate', logged, '');
+    eq('rfire: state still has only 1 escalation', Store.load().escalations.length, 1);
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

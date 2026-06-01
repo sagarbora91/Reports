@@ -118,6 +118,13 @@ NEW = {
     "hint.saving_photo": ("Saving photo…", "फोटो जतन होत आहे…"),
     "hint.photo_added_with_gps_fmt": ("Photo added ({kb} KB · GPS ✓)", "फोटो जोडला ({kb} KB · GPS ✓)"),
     "hint.photo_added_no_gps_fmt": ("Photo added ({kb} KB · no GPS — indoors?)", "फोटो जोडला ({kb} KB · GPS नाही — इमारतीत?)"),
+    # --- batch 9: dismiss-with-reason (Stage A #4) ---
+    "dismiss.title": ("Dismiss this alert?", "ही सूचना रद्द करायची?"),
+    "dismiss.intro": ("Pick a reason so the alert history is traceable. Dismissed alerts move to history but are not sent.", "सूचना इतिहास शोधता यावा यासाठी कारण निवडा. रद्द केलेल्या सूचना इतिहासात जातात पण पाठवल्या जात नाहीत."),
+    "dismiss.other_label": ("Or write your own reason", "किंवा स्वतःचे कारण लिहा"),
+    "dismiss.other_ph": ("e.g. checked with SM, already fixed at 10:30 AM", "उदा. एसएमशी चर्चा केली, सकाळी १०:३० ला आधीच ठीक केले"),
+    "dismiss.save_other": ("Dismiss with this reason", "या कारणासह रद्द करा"),
+    "ok.dismissed": ("Alert dismissed", "सूचना रद्द केली"),
 }
 
 

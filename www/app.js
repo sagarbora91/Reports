@@ -750,10 +750,20 @@ const Escalations = {
     const state = Store.load();
     state.escalations = state.escalations || [];
     // Idempotent: skip if this trigger # for this audit already exists.
-    const newOnes = drafts
-      .filter(d => !state.escalations.some(e =>
-        e.audit_id === audit.id && e.trigger_number === d.trigger_number))
-      .map(d => Object.assign({}, d, {
+    // Stage A #4 shadow-log: when an evaluator re-fires the SAME trigger for
+    // the SAME audit, we suppress the duplicate (correct), but log it so we
+    // can confirm — before flipping the audit's recommended "keep sent
+    // escalations visible same-day" default — that no real re-fires happen
+    // in the field. Grep device logs for "[esc-rfire-shadow]" over 1 week.
+    const newOnes = [];
+    drafts.forEach(d => {
+      const dup = state.escalations.find(e =>
+        e.audit_id === audit.id && e.trigger_number === d.trigger_number);
+      if (dup) {
+        console.log('[esc-rfire-shadow]', 'audit=' + audit.id, 'trigger=T' + d.trigger_number, 'existing-id=' + dup.id);
+        return;
+      }
+      newOnes.push(Object.assign({}, d, {
         id: 'esc-' + uuid(),
         audit_id: audit.id,
         raised_at: new Date().toISOString(),
@@ -761,6 +771,7 @@ const Escalations = {
         sent_via: null,
         sent_by: null,
       }));
+    });
     state.escalations = state.escalations.concat(newOnes);
     Store.save(state);
     return newOnes;
@@ -776,13 +787,14 @@ const Escalations = {
     Store.save(state);
   },
 
-  dismiss(id, dismissedBy) {
+  dismiss(id, dismissedBy, reason) {
     const state = Store.load();
     const e = Escalations.byId(state, id);
     if (!e) return;
     e.sent_at = new Date().toISOString();
     e.sent_via = 'dismissed';
     e.sent_by = dismissedBy || null;
+    e.dismiss_reason = (reason || '').trim();
     Store.save(state);
   },
 };
@@ -840,6 +852,38 @@ function renderEscalationCards(state, auth) {
         </div>
       </div>`;
   }).join('');
+}
+
+// Stage A #4 — dismiss-with-reason modal. Quick-pick chips for the four
+// most common dismiss reasons plus a free-text fallback; the chosen reason
+// is stamped on escalation.dismiss_reason so the audit history of dismissals
+// is traceable later (the previous one-tap dismiss left no rationale).
+const DISMISS_REASONS = [
+  { key: 'false-alarm', text: 'False alarm (audit verdict wrong)' },
+  { key: 'already-handled', text: 'Already handled in person' },
+  { key: 'duplicate', text: 'Duplicate of an earlier alert' },
+  { key: 'low-priority', text: 'Low priority — review at week-end' },
+];
+function escalationDismissModal(escId) {
+  const state = Store.load();
+  const e = Escalations.byId(state, escId);
+  if (!e) return;
+  const chips = DISMISS_REASONS.map(r => `
+    <button class="btn btn-ghost" data-action="esc-dismiss-pick" data-id="${escapeHtml(escId)}" data-reason="${escapeHtml(r.text)}"
+            style="text-align:left;justify-content:flex-start">${escapeHtml(r.text)}</button>
+    <div class="spacer-12"></div>`).join('');
+  openModal(`
+    <h3>${tUi('dismiss.title')}</h3>
+    <p class="muted">T${e.trigger_number} · ${escapeHtml(e.trigger_label)}</p>
+    <p style="font-size:13px;line-height:1.5;margin:6px 0 12px">${tUi('dismiss.intro')}</p>
+    ${chips}
+    <label class="field"><span>${tUi('dismiss.other_label')}</span>
+      <textarea id="dismissOther" maxlength="200" rows="2" placeholder="${tUi('dismiss.other_ph')}"></textarea>
+    </label>
+    <button class="btn btn-ghost" data-action="esc-dismiss-other" data-id="${escapeHtml(escId)}">${tUi('dismiss.save_other')}</button>
+    <div class="spacer-12"></div>
+    <button class="btn btn-ghost" data-action="modal-cancel">${tUi('btn.cancel')}</button>
+  `);
 }
 
 function escalationPreviewModal(escId) {
@@ -4646,9 +4690,25 @@ document.addEventListener('click', async (e) => {
     return;
   }
   if (action === 'esc-dismiss') {
-    if (!confirm(tUi('confirm.dismiss_alert'))) return;
+    escalationDismissModal(a.dataset.id);
+    return;
+  }
+  if (action === 'esc-dismiss-pick') {
     const me = AuthSession.current();
-    Escalations.dismiss(a.dataset.id, me ? me.id : null);
+    Escalations.dismiss(a.dataset.id, me ? me.id : null, a.dataset.reason || '');
+    closeModal();
+    toast(tUi('ok.dismissed'));
+    render();
+    return;
+  }
+  if (action === 'esc-dismiss-other') {
+    const noteEl = document.getElementById('dismissOther');
+    const reason = noteEl ? noteEl.value.trim() : '';
+    if (reason.length < 3) { toast(tUi('err.add_short_reason')); return; }
+    const me = AuthSession.current();
+    Escalations.dismiss(a.dataset.id, me ? me.id : null, reason);
+    closeModal();
+    toast(tUi('ok.dismissed'));
     render();
     return;
   }

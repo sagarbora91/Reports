@@ -2,6 +2,12 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "dismiss.title": "Dismiss this alert?",
+      "dismiss.intro": "Pick a reason so the alert history is traceable. Dismissed alerts move to history but are not sent.",
+      "dismiss.other_label": "Or write your own reason",
+      "dismiss.other_ph": "e.g. checked with SM, already fixed at 10:30 AM",
+      "dismiss.save_other": "Dismiss with this reason",
+      "ok.dismissed": "Alert dismissed",
       "hint.photo_not_added": "Photo not added — camera cancelled or permission denied.",
       "hint.saving_photo": "Saving photo…",
       "hint.photo_added_with_gps_fmt": "Photo added ({kb} KB · GPS ✓)",
@@ -593,6 +599,12 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "dismiss.title": "ही सूचना रद्द करायची?",
+      "dismiss.intro": "सूचना इतिहास शोधता यावा यासाठी कारण निवडा. रद्द केलेल्या सूचना इतिहासात जातात पण पाठवल्या जात नाहीत.",
+      "dismiss.other_label": "किंवा स्वतःचे कारण लिहा",
+      "dismiss.other_ph": "उदा. एसएमशी चर्चा केली, सकाळी १०:३० ला आधीच ठीक केले",
+      "dismiss.save_other": "या कारणासह रद्द करा",
+      "ok.dismissed": "सूचना रद्द केली",
       "hint.photo_not_added": "फोटो जोडला नाही — कॅमेरा रद्द केला किंवा परवानगी नाकारली.",
       "hint.saving_photo": "फोटो जतन होत आहे…",
       "hint.photo_added_with_gps_fmt": "फोटो जोडला ({kb} KB · GPS ✓)",
