@@ -2,6 +2,10 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "batchverify.title_fmt": "Verify {n} audit(s)",
+      "batchverify.intro": "Tap Verify on each row to spot-check it. You'll come back here to the next one each time.",
+      "batchverify.verify_btn": "Verify",
+      "batchverify.all_done": "All audits verified ✓",
       "tab.home": "Home",
       "home.empty_title": "All clear",
       "home.empty_intro": "Nothing needs you right now. Use the tabs to run an audit, review history, or change settings.",
@@ -619,6 +623,10 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "batchverify.title_fmt": "Verify {n} audit(s)",
+      "batchverify.intro": "Tap Verify on each row to spot-check it. You'll come back here to the next one each time.",
+      "batchverify.verify_btn": "Verify",
+      "batchverify.all_done": "All audits verified ✓",
       "tab.home": "Home",
       "home.empty_title": "All clear",
       "home.empty_intro": "Nothing needs you right now. Use the tabs to run an audit, review history, or change settings.",

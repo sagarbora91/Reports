@@ -146,6 +146,11 @@ NEW = {
     "home.caps_to_verify_title": ("CAPs to verify", "CAPs to verify"),
     "home.caps_to_verify_intro_fmt": ("{n} CAP(s) marked done by the SM are waiting for your verification.", "{n} CAP(s) marked done by the SM are waiting for your verification."),
     "home.caps_to_verify_cta": ("Open CAPs", "Open CAPs"),
+    # --- batch 11: batch verify modal (Stage A #5; EN-only day one) ---
+    "batchverify.title_fmt": ("Verify {n} audit(s)", "Verify {n} audit(s)"),
+    "batchverify.intro": ("Tap Verify on each row to spot-check it. You'll come back here to the next one each time.", "Tap Verify on each row to spot-check it. You'll come back here to the next one each time."),
+    "batchverify.verify_btn": ("Verify", "Verify"),
+    "batchverify.all_done": ("All audits verified ✓", "All audits verified ✓"),
 }
 
 

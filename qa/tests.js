@@ -878,6 +878,46 @@
     eq('last_tab: updates on next switch', Store.load().last_tab, 'caps');
   }
 
+  // ---- 26. Batch verify (Stage A #5) ----
+  reset();
+  {
+    const gm = await Users.create({ name: 'BvGM', role: 'GM', pin: '7171' });
+    const sm = await Users.create({ name: 'BvSM', role: 'SM', pin: '7272' });
+    AuthSession.login(sm.id);
+    // Submit two daily audits as the SM.
+    startNewAudit({ date: today(), auditorName: 'BvSM', auditorId: sm.id, croIds: [], templateId: 'tpl_daily' });
+    CHECKPOINTS.forEach(cp => markCheckpoint(cp.id, 'P'));
+    const a1 = submitAudit();
+    startNewAudit({ date: today(), auditorName: 'BvSM', auditorId: sm.id, croIds: [], templateId: 'tpl_daily' });
+    CHECKPOINTS.forEach(cp => markCheckpoint(cp.id, 'P'));
+    const a2 = submitAudit();
+    AuthSession.login(gm.id);
+    const items = unverifiedAuditsForUser(Store.load(), AuthSession.current());
+    eq('batchverify: 2 audits queued for GM', items.length, 2);
+    // GM is the auditor → exclude own audits (regression check).
+    AuthSession.login(gm.id);
+    startWeeklyAudit({ weekNumber: currentIsoWeekYear().week, year: currentIsoWeekYear().year, gmId: gm.id, gmName: 'BvGM', templateId: 'tpl_weekly' });
+    WEEKLY_CHECKPOINTS.forEach(cp => markCheckpoint(cp.id, 'P'));
+    submitAudit(); // weekly authored by GM
+    const items2 = unverifiedAuditsForUser(Store.load(), AuthSession.current());
+    eq('batchverify: GM own audit excluded', items2.length, 2);
+    // Simulate batch-verify completion path: mark one verified.
+    {
+      const st = Store.load();
+      const a = audit(items2[0].id, st);
+      a.status = 'verified'; a.verifier_id = gm.id; a.verifier_name = gm.name; a.verified_at = new Date().toISOString();
+      Store.save(st);
+    }
+    const items3 = unverifiedAuditsForUser(Store.load(), AuthSession.current());
+    eq('batchverify: queue drops after verify', items3.length, 1);
+    // Render the batch modal — it should open the modal-root with our markers.
+    batchVerifyModal();
+    const html = document.getElementById('modal-root').innerHTML;
+    ok('batchverify: modal title shows count', /Verify 1 audit/.test(html), '');
+    ok('batchverify: has per-row Verify button', /data-action="batch-verify-one"/.test(html), '');
+    closeModal();
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

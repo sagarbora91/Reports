@@ -1249,6 +1249,10 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "batchverify.title_fmt": "Verify {n} audit(s)",
+      "batchverify.intro": "Tap Verify on each row to spot-check it. You'll come back here to the next one each time.",
+      "batchverify.verify_btn": "Verify",
+      "batchverify.all_done": "All audits verified ✓",
       "tab.home": "Home",
       "home.empty_title": "All clear",
       "home.empty_intro": "Nothing needs you right now. Use the tabs to run an audit, review history, or change settings.",
@@ -1866,6 +1870,10 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "batchverify.title_fmt": "Verify {n} audit(s)",
+      "batchverify.intro": "Tap Verify on each row to spot-check it. You'll come back here to the next one each time.",
+      "batchverify.verify_btn": "Verify",
+      "batchverify.all_done": "All audits verified ✓",
       "tab.home": "Home",
       "home.empty_title": "All clear",
       "home.empty_intro": "Nothing needs you right now. Use the tabs to run an audit, review history, or change settings.",
@@ -8432,6 +8440,55 @@ function verifyControlsHtml(a, me) {
   return `<div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#fff8e1;border:1px solid #f4c674;color:#6a4a00;font-size:13px">${tUi('verify.awaiting')}</div>`;
 }
 
+// Stage A #5 — batch verify on Home. Shows every still-unverified submitted
+// audit the current user is allowed to verify (i.e. they didn't author it),
+// each with summary stats + "Verify" + "Open detail". Tapping Verify opens
+// the existing spot-check modal; on confirm we re-enter this batch modal
+// with the now-verified audit removed. Auto-closes when the list empties.
+function unverifiedAuditsForUser(state, me) {
+  return (state.audits || []).filter(a =>
+    a.status === 'submitted' && (!me || a.auditor_id !== me.id)
+  ).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function batchVerifyModal() {
+  const state = Store.load();
+  const me = AuthSession.current(state);
+  if (!me || (me.role !== 'OWNER' && me.role !== 'GM')) {
+    toast(tUi('err.only_gm_owner_verify'));
+    return;
+  }
+  const items = unverifiedAuditsForUser(state, me);
+  if (items.length === 0) {
+    window._batchVerifyActive = false;
+    closeModal();
+    toast(tUi('batchverify.all_done'));
+    render();
+    return;
+  }
+  window._batchVerifyActive = true;
+  const rows = items.map(a => {
+    const tpl = templateFor(a);
+    const tplLabel = tpl ? tplName(tpl) : (a.audit_type === 'weekly' ? 'Weekly' : 'Daily');
+    const sc = a.score || {};
+    return `
+      <div class="result-row" style="align-items:center;padding:6px 0">
+        <div class="cp-body">
+          <div><strong>${escapeHtml(tplLabel)} · ${escapeHtml(fmtDate(a.date))}</strong></div>
+          <div class="tiny">${escapeHtml(a.auditor_name || '—')} &middot; ${(sc.pct != null ? sc.pct.toFixed(1) : '—')}% ${escapeHtml(bandLabel(sc.band || 'good'))} &middot; ${sc.p || 0} P · ${sc.f || 0} F</div>
+        </div>
+        <button class="btn btn-primary" data-action="batch-verify-one" data-id="${escapeHtml(a.id)}" style="width:auto;padding:8px 14px;font-size:14px">${tUi('batchverify.verify_btn')}</button>
+      </div>`;
+  }).join('');
+  openModal(`
+    <h3>${tUi('batchverify.title_fmt').replace('{n}', items.length)}</h3>
+    <p style="font-size:13px;line-height:1.5;margin:6px 0 10px">${tUi('batchverify.intro')}</p>
+    <div class="detail-sop">${rows}</div>
+    <div class="spacer-12"></div>
+    <button class="btn btn-ghost" data-action="batch-verify-close" style="width:100%">${tUi('btn.close')}</button>
+  `);
+}
+
 // Spot-check modal: shows up to 3 of the auditor's recorded verdicts (FAILs
 // preferred — those are the riskiest to fake), a note field, and a confirm.
 function verifyAuditModal(auditId) {
@@ -9366,9 +9423,20 @@ document.addEventListener('click', async (e) => {
     return;
   }
   if (action === 'home-batch-verify') {
-    // Stage A #5 will replace this with a stacked batch modal. For now, jump
-    // to History where the GM can verify one-by-one via the existing flow.
-    switchTab('history');
+    batchVerifyModal();
+    return;
+  }
+  if (action === 'batch-verify-one') {
+    // Hand off to the existing spot-check modal. The
+    // modal-confirm-verify handler will detect _batchVerifyActive and
+    // re-open the batch list when it finishes.
+    verifyAuditModal(a.dataset.id);
+    return;
+  }
+  if (action === 'batch-verify-close') {
+    window._batchVerifyActive = false;
+    closeModal();
+    render();
     return;
   }
   if (action === 'resume-draft') {
@@ -9642,7 +9710,13 @@ document.addEventListener('click', async (e) => {
     Store.save(state);
     closeModal();
     toast(tUi('ok.audit_verified'));
-    render();
+    // If the verify started from the batch modal, return to it (with the
+    // newly-verified row gone). Otherwise just refresh the page as before.
+    if (window._batchVerifyActive) {
+      batchVerifyModal();
+    } else {
+      render();
+    }
     return;
   }
   if (action === 'share-audit-wa') {
