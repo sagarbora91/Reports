@@ -2,6 +2,15 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "resume.title": "Audit in progress",
+      "resume.cp_of_fmt": "CP {n} of {total}",
+      "resume.started_min_fmt": "started {n} min ago",
+      "resume.started_hr_fmt": "started {n} hr ago",
+      "resume.started_day_fmt": "started {n} day(s) ago",
+      "resume.continue": "Continue this audit",
+      "resume.discard": "Discard and start fresh",
+      "btn.skip": "⏭ Skip — come back later",
+      "btn.skip_with_count_fmt": "⏭ Skip ({n} pending) — come back later",
       "presubmit.title": "Submit this audit?",
       "presubmit.intro": "A few things look incomplete. You can go back and fix them, or submit anyway — the warnings will be stamped on the audit notes.",
       "presubmit.fix": "Go back and fix",
@@ -580,6 +589,15 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "resume.title": "ऑडिट सुरू आहे",
+      "resume.cp_of_fmt": "तपासणी बिंदू {n} / {total}",
+      "resume.started_min_fmt": "{n} मिनिटांपूर्वी सुरू केले",
+      "resume.started_hr_fmt": "{n} तासांपूर्वी सुरू केले",
+      "resume.started_day_fmt": "{n} दिवसांपूर्वी सुरू केले",
+      "resume.continue": "हे ऑडिट सुरू ठेवा",
+      "resume.discard": "टाकून द्या आणि नवीन सुरू करा",
+      "btn.skip": "⏭ वगळा — नंतर पुन्हा या",
+      "btn.skip_with_count_fmt": "⏭ वगळा ({n} प्रलंबित) — नंतर पुन्हा या",
       "presubmit.title": "हे ऑडिट सादर करायचे?",
       "presubmit.intro": "काही गोष्टी अपूर्ण दिसतात. तुम्ही परत जाऊन त्या दुरुस्त करू शकता किंवा तरीही सादर करू शकता — या सूचना ऑडिट नोंदींवर शिक्क्यासह जतन होतील.",
       "presubmit.fix": "परत जाऊन दुरुस्त करा",

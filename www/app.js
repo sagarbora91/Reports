@@ -1981,10 +1981,49 @@ function renderPinPad() {
 
 function renderAuditTab(state, auth) {
   const a = currentAudit(state);
+  // Stage A #8 — on the FIRST visit to the Audit tab in this session, if a
+  // draft is in progress, show an explicit "Resume / Discard" card before
+  // diving back into the checkpoint walk. Stops the SM from being silently
+  // dropped into mid-audit when they re-open the app the next morning.
+  if (a && !sessionStorage.getItem('saagar_draft_card_seen')) {
+    sessionStorage.setItem('saagar_draft_card_seen', '1');
+    return storageWarnBanner() + renderResumeDraftCard(a);
+  }
   // Mid-audit screens are tight on space and the warning isn't actionable from
   // there. Show the banner only on the start-screen (the entry point).
   if (a) return renderInProgressAudit(a);
   return storageWarnBanner() + renderStartAudit(state, auth);
+}
+
+// Resume-draft card shown above the Audit tab on first session entry when a
+// non-finalized audit is current. Reads only — does not mutate state.
+function renderResumeDraftCard(a) {
+  const cps = checkpointsFor(a);
+  const idx = nextUnmarkedIndex(a);
+  const tpl = templateFor(a);
+  const tplLabel = tpl ? tplName(tpl) : (a.audit_type === 'weekly' ? 'Weekly audit' : 'Daily audit');
+  const startedAgo = (function () {
+    if (!a.started_at) return '';
+    const mins = Math.max(0, Math.floor((Date.now() - new Date(a.started_at).getTime()) / 60000));
+    if (mins < 60) return tUi('resume.started_min_fmt').replace('{n}', mins);
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return tUi('resume.started_hr_fmt').replace('{n}', hours);
+    const days = Math.floor(hours / 24);
+    return tUi('resume.started_day_fmt').replace('{n}', days);
+  })();
+  return `
+    <div class="card" style="border-color:var(--gold);background:var(--gold-pale)">
+      <h2>${tUi('resume.title')}</h2>
+      <p style="margin:6px 0 0;font-size:14px;line-height:1.5">
+        <strong>${escapeHtml(tplLabel)}</strong>
+        &middot; ${tUi('resume.cp_of_fmt').replace('{n}', idx).replace('{total}', cps.length)}
+        ${startedAgo ? ' &middot; ' + escapeHtml(startedAgo) : ''}
+      </p>
+      <div class="spacer-12"></div>
+      <button class="btn btn-primary" data-action="resume-draft">${tUi('resume.continue')}</button>
+      <div class="spacer-12"></div>
+      <button class="btn btn-ghost" data-action="cancel-audit" style="color:var(--red);border-color:var(--red)">${tUi('resume.discard')}</button>
+    </div>`;
 }
 
 // Which templates a role may run.
@@ -2201,7 +2240,7 @@ function renderInProgressAudit(a) {
     ${!isRevisitingSkip ? `
       <button class="btn btn-ghost" data-action="mark" data-verdict="SKIP"
               style="margin-top:8px;color:var(--amber);border:1px dashed var(--amber)">
-        ⏭ Skip — come back later
+        ${skipped > 0 ? tUi('btn.skip_with_count_fmt').replace('{n}', skipped) : tUi('btn.skip')}
       </button>` : ''}
     <div class="minicounts">
       <div class="minicount p"><span class="n">${live.p}</span><span class="lbl">PASS</span></div>
@@ -4477,6 +4516,12 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  if (action === 'resume-draft') {
+    // The session flag has already been set when the card rendered, so the
+    // next render falls through to renderInProgressAudit.
+    render();
+    return;
+  }
   if (action === 'submit-audit') {
     const state = Store.load();
     const au = currentAudit(state);

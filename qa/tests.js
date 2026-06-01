@@ -729,6 +729,40 @@
     }
   }
 
+  // ---- 23. Resume-draft card on first session entry (Stage A #8) ----
+  reset();
+  {
+    sessionStorage.removeItem('saagar_draft_card_seen');
+    const sm = await Users.create({ name: 'ResSM', role: 'SM', pin: '4040' });
+    AuthSession.login(sm.id);
+    startNewAudit({ date: today(), auditorName: 'ResSM', auditorId: sm.id, croIds: [], templateId: 'tpl_daily' });
+    markCheckpoint(CHECKPOINTS[0].id, 'P');
+    markCheckpoint(CHECKPOINTS[1].id, 'P');
+    const html1 = renderAuditTab(Store.load(), AuthSession.current());
+    ok('resume: card shows on first session entry', /Audit in progress/.test(html1), '');
+    ok('resume: card shows CP n of total', /CP 2 of/.test(html1), '');
+    const html2 = renderAuditTab(Store.load(), AuthSession.current());
+    ok('resume: second call drops into in-progress (no card)', !/Audit in progress/.test(html2), '');
+  }
+
+  // 23b. SKIP button label shows pending count once non-zero.
+  reset();
+  {
+    const sm = await Users.create({ name: 'SkSM', role: 'SM', pin: '5252' });
+    AuthSession.login(sm.id);
+    startNewAudit({ date: today(), auditorName: 'SkSM', auditorId: sm.id, croIds: [], templateId: 'tpl_daily' });
+    // Initially 0 skipped.
+    sessionStorage.setItem('saagar_draft_card_seen', '1'); // bypass resume card
+    const a0 = currentAudit(Store.load());
+    const html0 = renderInProgressAudit(a0);
+    ok('skip: button shows base label at 0 skips', /Skip — come back later/.test(html0), '');
+    // SKIP one checkpoint.
+    markCheckpoint(CHECKPOINTS[0].id, 'SKIP');
+    const a1 = currentAudit(Store.load());
+    const html1 = renderInProgressAudit(a1);
+    ok('skip: button shows "(1 pending)" once a CP is skipped', /Skip \(1 pending\)/.test(html1), '');
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

@@ -103,6 +103,16 @@ NEW = {
     "presubmit.intro": ("A few things look incomplete. You can go back and fix them, or submit anyway — the warnings will be stamped on the audit notes.", "काही गोष्टी अपूर्ण दिसतात. तुम्ही परत जाऊन त्या दुरुस्त करू शकता किंवा तरीही सादर करू शकता — या सूचना ऑडिट नोंदींवर शिक्क्यासह जतन होतील."),
     "presubmit.fix": ("Go back and fix", "परत जाऊन दुरुस्त करा"),
     "presubmit.submit_anyway": ("Submit anyway", "तरीही सादर करा"),
+    # --- batch 7: resume-draft card + SKIP button (Stage A #8) ---
+    "resume.title": ("Audit in progress", "ऑडिट सुरू आहे"),
+    "resume.cp_of_fmt": ("CP {n} of {total}", "तपासणी बिंदू {n} / {total}"),
+    "resume.started_min_fmt": ("started {n} min ago", "{n} मिनिटांपूर्वी सुरू केले"),
+    "resume.started_hr_fmt": ("started {n} hr ago", "{n} तासांपूर्वी सुरू केले"),
+    "resume.started_day_fmt": ("started {n} day(s) ago", "{n} दिवसांपूर्वी सुरू केले"),
+    "resume.continue": ("Continue this audit", "हे ऑडिट सुरू ठेवा"),
+    "resume.discard": ("Discard and start fresh", "टाकून द्या आणि नवीन सुरू करा"),
+    "btn.skip": ("⏭ Skip — come back later", "⏭ वगळा — नंतर पुन्हा या"),
+    "btn.skip_with_count_fmt": ("⏭ Skip ({n} pending) — come back later", "⏭ वगळा ({n} प्रलंबित) — नंतर पुन्हा या"),
 }
 
 
