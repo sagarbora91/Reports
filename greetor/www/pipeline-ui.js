@@ -184,6 +184,22 @@
         var id2 = dataset.id;
         var newStage = dataset.stage;
         if (!id2 || !newStage) return false;
+        // Audit fix #1: route stage→Converted through the dedicated convert
+        // modal so saleValue + convertedAt + audit event are always recorded
+        // together. Without this, p-set-stage was a third writer of Converted
+        // that left saleValue empty and per-greetor revenue undercounted.
+        if (newStage === 'Converted') {
+          closeModal();
+          // Defer to the host's open-convert (it renders the modal and the
+          // save-convert handler writes the full triple + cancels reminders).
+          var b = document.createElement('button');
+          b.setAttribute('data-action', 'open-convert');
+          b.setAttribute('data-id', id2);
+          document.body.appendChild(b);
+          b.click();
+          document.body.removeChild(b);
+          return true;
+        }
         var s2 = Store.load();
         var rec2 = (s2.records || []).filter(function (r) { return r.recordId === id2; })[0];
         var fromStage = rec2 ? (rec2.leadStatus || 'Open') : '';
@@ -194,6 +210,15 @@
             'Moved lead ' + ((rec2 && (rec2.customerName || rec2.mobile)) || '') +
             ' from ' + fromStage + ' to ' + newStage,
             { recordId: id2, from: fromStage, to: newStage });
+        }
+        // Audit fix #2: re-evaluate the OS follow-up reminder on every stage
+        // change. shouldHaveReminder() auto-cancels for Converted/Closed, so
+        // dead leads stop pinging staff at 9 AM.
+        if (window.SaagarShell && window.SaagarShell.scheduleFollowupReminder) {
+          var updated = (Store.load().records || []).filter(function (r) { return r.recordId === id2; })[0];
+          if (updated) {
+            try { window.SaagarShell.scheduleFollowupReminder(updated); } catch (_) {}
+          }
         }
         closeModal();
         render();

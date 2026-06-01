@@ -106,14 +106,27 @@
     var cutoff = cutoffDate(months);
     var kept = [];
     var purged = 0;
+    // Audit fix #4: collect photos from purged records and remove the files
+    // — orphan watermarked JPEGs would otherwise outlive the retention window
+    // and break the DPDP guarantee on personal data.
+    var photosToRemove = [];
 
     for (var i = 0; i < records.length; i++) {
       var rec = records[i];
       var vd = (rec && typeof rec.visitDate === "string") ? rec.visitDate : "";
       if (vd && vd < cutoff) {
         purged++;
+        if (rec && Array.isArray(rec.photos)) {
+          for (var pi = 0; pi < rec.photos.length; pi++) photosToRemove.push(rec.photos[pi]);
+        }
       } else {
         kept.push(rec);
+      }
+    }
+
+    if (photosToRemove.length && typeof window !== "undefined" && window.Photo && typeof window.Photo.remove === "function") {
+      for (var ri = 0; ri < photosToRemove.length; ri++) {
+        try { window.Photo.remove(photosToRemove[ri]); } catch (_) {}
       }
     }
 

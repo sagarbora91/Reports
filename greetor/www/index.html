@@ -1683,7 +1683,8 @@ function renderStep4(state) {
     ${d.followUp === "Yes" ? `
     <div class="field">
       <label class="field-label">Lead status</label>
-      ${chipGroup("leadStatus", Masters.globalList(state, "leadStatuses"), d.leadStatus)}
+      ${chipGroup("leadStatus", Masters.globalList(state, "leadStatuses").filter(s => s !== "Converted" && s !== "Closed"), d.leadStatus)}
+      <p class="field-hint">Converted &amp; Closed are set via the Convert button on Leads (records sale value + logs the conversion).</p>
     </div>
 
     <div class="field">
@@ -2280,6 +2281,14 @@ function deleteRecord(recordId) {
   const snapshot = state.records.find(r => r.recordId === recordId) || null;
   state.records = state.records.filter(r => r.recordId !== recordId);
   Store.save(state);
+  // Audit fix #4 (DPDP): delete the watermarked photo files too — otherwise
+  // face/product photos outlive the record and orphan files accumulate in
+  // the app's Data dir past the retention window.
+  if (snapshot && Array.isArray(snapshot.photos) && window.Photo && window.Photo.remove) {
+    snapshot.photos.forEach(function (p) {
+      try { window.Photo.remove(p); } catch (_) {}
+    });
+  }
   if (snapshot) {
     const who = snapshot.customerName || snapshot.mobile || "walk-in";
     logAudit("delete",

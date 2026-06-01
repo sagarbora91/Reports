@@ -213,6 +213,14 @@
   /* ── renderLog ───────────────────────────────────────────────── */
   function renderLog(state) {
     var entries = Comms.log(state, {});
+    // Audit fix #3 (DPDP): Greetors must only see their own sent messages —
+    // the log otherwise leaks every customer mobile to every staffer on the
+    // shared counter phone (poaching / DPDP exposure). Manager + Owner see
+    // the full log for oversight.
+    var auth = (typeof AuthSession !== 'undefined') ? AuthSession.current() : null;
+    if (auth && auth.role === 'GREETOR') {
+      entries = (entries || []).filter(function (e) { return e.byUserId === auth.id; });
+    }
     if (!entries || !entries.length) {
       return '<div style="padding:16px 16px 80px;">'
         + '<h2 style="margin:0 0 16px;">Message Log</h2>'
