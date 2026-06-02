@@ -5666,6 +5666,8 @@ const AuthSession = {
     const state = Store.load();
     state.current_user_id = null;
     Store.save(state);
+    // Clear transient view state so the next user starts clean (Stage B #11).
+    UiState.reset();
   },
 };
 
@@ -7944,6 +7946,39 @@ const Builder = {
   editingId: null,
   open(id) { this.editingId = id; render(); switchTab('settings'); },
   close() { this.editingId = null; render(); },
+};
+
+// ---------------------------------------------------------------------------
+// UiState (Stage B #11) — the single place that knows about every piece of
+// TRANSIENT, per-session view state (things that live in memory, not in the
+// persisted store). reset() restores them all to defaults and is called on
+// logout, so the next user on a shared phone/tablet starts clean. Before this,
+// one user's CAP filter / history view / glossary search / template picker
+// leaked into the next user's session.
+//
+// The state itself still lives in its existing well-named holders (HistoryView,
+// StartState, RefState, Builder, PinBuf, and a few window._* flags) — this is
+// the one inventory + reset point for all of it.
+// ---------------------------------------------------------------------------
+const UiState = {
+  reset() {
+    HistoryView.mode = 'list';            // History tab: list vs trends
+    StartState.templateId = null;         // Start-audit template picker
+    RefState.sub = 'bands';               // Reference tab sub-view
+    RefState.glossaryFilter = '';         // Reference glossary search box
+    Builder.editingId = null;             // Template builder open template
+    PinBuf.reset();                       // PIN entry buffer
+    window._capsFilter = null;            // CAPs tab status filter
+    window._loginUserId = null;           // login screen user picker
+    window._batchVerifyActive = false;    // batch-verify modal flag
+    window._croReviewMode = false;        // per-CRO review/edit mode
+    window._recheckCpId = null;           // per-CRO checkpoint being re-checked
+    window._croReviewReturnTo = null;     // index to return to after review
+    // First-time-setup globals (_setupStage / _setupPin / _setupOwnerName) are
+    // deliberately NOT cleared here: they only exist during the no-users-yet
+    // flow, never during a logged-in session, so logout can't strand them.
+    try { sessionStorage.removeItem('saagar_draft_card_seen'); } catch (_) {}
+  },
 };
 
 const FREQ_LABELS = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', custom: 'Custom' };

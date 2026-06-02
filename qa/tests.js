@@ -1051,6 +1051,42 @@
     }
   }
 
+  // ---- 30. UiState reset on logout (Stage B #11) ----
+  reset();
+  {
+    const u = await Users.create({ name: 'UiUser', role: 'GM', pin: '1919' });
+    AuthSession.login(u.id);
+    // Dirty up every transient view-state holder.
+    HistoryView.mode = 'trends';
+    StartState.templateId = 'tpl_weekly';
+    RefState.sub = 'glossary';
+    RefState.glossaryFilter = 'cash';
+    Builder.editingId = 'tpl_daily';
+    window._capsFilter = 'closed';
+    window._loginUserId = u.id;
+    window._batchVerifyActive = true;
+    window._croReviewMode = true;
+    window._recheckCpId = 'X.1';
+    window._croReviewReturnTo = 2;
+    sessionStorage.setItem('saagar_draft_card_seen', '1');
+
+    AuthSession.logout();
+
+    eq('uistate: history mode reset', HistoryView.mode, 'list');
+    eq('uistate: start template cleared', StartState.templateId, null);
+    eq('uistate: ref sub reset', RefState.sub, 'bands');
+    eq('uistate: glossary filter cleared', RefState.glossaryFilter, '');
+    eq('uistate: builder editing cleared', Builder.editingId, null);
+    eq('uistate: caps filter cleared', window._capsFilter, null);
+    eq('uistate: login user cleared', window._loginUserId, null);
+    eq('uistate: batch-verify flag cleared', window._batchVerifyActive, false);
+    eq('uistate: cro review mode cleared', window._croReviewMode, false);
+    eq('uistate: recheck cp cleared', window._recheckCpId, null);
+    eq('uistate: cro returnTo cleared', window._croReviewReturnTo, null);
+    eq('uistate: draft-card session flag cleared', sessionStorage.getItem('saagar_draft_card_seen'), null);
+    eq('uistate: PIN buffer cleared', PinBuf.value, '');
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);
