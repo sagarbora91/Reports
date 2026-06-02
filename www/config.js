@@ -45,10 +45,12 @@ const CONFIG = {
     lockoutMs: 60 * 1000,      // lockout duration
   },
 
-  // Photo capture + watermark.
+  // Photo capture + watermark. Smaller than before to roughly halve each
+  // evidence photo's size — still clearly legible. Reversible: bump these back
+  // to 1024 / 0.72 if you want sharper evidence photos at the cost of space.
   photo: {
-    maxDim: 1024,   // longest edge after resize (keeps storage small)
-    quality: 0.72,  // JPEG quality
+    maxDim: 800,    // longest edge after resize (keeps storage small)
+    quality: 0.6,   // JPEG quality
   },
 
   // Scoring.

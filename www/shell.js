@@ -48,7 +48,11 @@
   }
 
   async function backupEverything() {
-    const payload = backupPayload();
+    // Prefer the app's builder (handles compression + photos-in-IndexedDB +
+    // the full schema); fall back to the local plain reader only if absent.
+    const payload = (window.SaagarAudit && window.SaagarAudit.buildBackupPayload)
+      ? await window.SaagarAudit.buildBackupPayload()
+      : backupPayload();
     const json = JSON.stringify(payload, null, 2);
     const filename = backupFilename();
     const blob = new Blob([json], { type: 'application/json' });
@@ -140,7 +144,12 @@
       try {
         const text = await file.text();
         const data = JSON.parse(text);
-        const counts = applyRestore(data);
+        // Prefer the app's restorer (writes the full schema incl. templates,
+        // snapshots, escalations, and moves photos into IndexedDB); fall back
+        // to the local one only if the app layer isn't loaded.
+        const counts = (window.SaagarAudit && window.SaagarAudit.applyBackupPayload)
+          ? await window.SaagarAudit.applyBackupPayload(data)
+          : applyRestore(data);
         const msg = `Restored ${counts.audits} audit(s), ${counts.cros} CRO(s), ${counts.users} user(s), ${counts.caps} CAP(s)`;
         if (onDone) onDone({ ok: true, counts, message: msg });
       } catch (err) {

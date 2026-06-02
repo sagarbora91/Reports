@@ -1279,6 +1279,75 @@
     ok('lz: legacy plain JSON still loads', s && Array.isArray(s.audits), '');
   }
 
+  // ---- 36. Photos → IndexedDB (Storage Phase 2) ----
+  reset();
+  {
+    // PhotoStore put/get (in-memory fallback in Node).
+    await PhotoStore.put('ph_test1', 'data:image/png;base64,AAAA');
+    eq('photo: PhotoStore round-trip', await PhotoStore.get('ph_test1'), 'data:image/png;base64,AAAA');
+    eq('photo: PhotoStore miss → null', await PhotoStore.get('ph_nope'), null);
+    // photoImg emits a hydration placeholder, not an inline src.
+    const img = photoImg('ph_x', 'alt');
+    ok('photo: photoImg uses data-photo not src', /data-photo="ph_x"/.test(img) && !/\bsrc=/.test(img), img);
+    ok('photo: isPhotoId / isDataUrl', isPhotoId('ph_a') && !isPhotoId('data:x') && isDataUrl('data:x') && !isDataUrl('ph_a'), '');
+  }
+
+  // 36b. Boot migration moves inline data-URL photos → IndexedDB IDs.
+  reset();
+  {
+    const st = Store.load();
+    st.audits = [{
+      id: 'pa1', date: today(), status: 'submitted', template_id: 'tpl_daily', audit_type: 'daily',
+      score: { pct: 90, band: 'good' },
+      results: { 'C1': { result: 'F', finding: 'x', photos: ['data:image/jpeg;base64,PHOTODATA'] } },
+    }];
+    st.caps = [{ id: 'CAP-1', status: 'open', photos: ['data:image/jpeg;base64,CAPPHOTO'] }];
+    Store.save(st);
+    const moved = await migratePhotosToIDB();
+    eq('photo-migrate: moved 2 inline photos', moved, 2);
+    const after = Store.load();
+    const auditPhoto = after.audits[0].results['C1'].photos[0];
+    ok('photo-migrate: audit photo became an ID', isPhotoId(auditPhoto), auditPhoto);
+    eq('photo-migrate: ID resolves to original data URL', await PhotoStore.get(auditPhoto), 'data:image/jpeg;base64,PHOTODATA');
+    ok('photo-migrate: CAP photo became an ID', isPhotoId(after.caps[0].photos[0]), '');
+    // Second run is a no-op (all already IDs).
+    eq('photo-migrate: idempotent (0 on re-run)', await migratePhotosToIDB(), 0);
+  }
+
+  // 36c. Backup round-trip — COMPLETE state (templates, snapshots, escalations)
+  // + photos rehydrated inline; restore brings it all back. (Fixes the old
+  // shell.js restore that silently dropped templates/snapshots/escalations.)
+  reset();
+  {
+    await PhotoStore.put('ph_b1', 'data:image/jpeg;base64,BACKUPPHOTO');
+    const st = Store.load();
+    st.audits = [{ id: 'ba1', date: today(), status: 'verified', template_id: 'tpl_daily', audit_type: 'daily', snapshot_ref: 'tpl_daily@x', score: { pct: 88, band: 'fair' }, results: { 'C1': { result: 'F', photos: ['ph_b1'] } } }];
+    st.template_snapshots = { 'tpl_daily@x': { name: 'Daily', frequency: 'daily', cro_mode: 'store', sections: [], checkpoints: [{ id: 'C1', text: 'cp', section_id: 's' }] } };
+    st.escalations = [{ id: 'e1', trigger_number: 1, sent_at: null, audit_id: 'ba1' }];
+    st.templates = Templates.all(st); // built-ins + any
+    st.current_user_id = 'someone';
+    Store.save(st);
+
+    const payload = await SaagarAudit.buildBackupPayload();
+    ok('backup: includes templates', Array.isArray(payload.templates) && payload.templates.length >= 2, '');
+    ok('backup: includes template_snapshots', !!payload.template_snapshots && !!payload.template_snapshots['tpl_daily@x'], '');
+    ok('backup: includes escalations', Array.isArray(payload.escalations) && payload.escalations.length === 1, '');
+    ok('backup: schema_version present', payload.schema_version === SCHEMA_VERSION, '');
+    eq('backup: photo rehydrated inline', payload.audits[0].results['C1'].photos[0], 'data:image/jpeg;base64,BACKUPPHOTO');
+    ok('backup: _format stamped', payload._format === 'saagar_audit_v1', '');
+
+    // Now wipe everything and restore from the payload.
+    localStorage.clear(); PhotoStore._mem = {}; Templates.ensureSeeded();
+    const counts = await SaagarAudit.applyBackupPayload(JSON.parse(JSON.stringify(payload)));
+    const restored = Store.load();
+    eq('restore: audits count', counts.audits, 1);
+    ok('restore: template_snapshots came back', !!restored.template_snapshots['tpl_daily@x'], '');
+    eq('restore: escalations came back', restored.escalations.length, 1);
+    ok('restore: photo moved back into IndexedDB as ID', isPhotoId(restored.audits[0].results['C1'].photos[0]), '');
+    eq('restore: restored photo resolves', await PhotoStore.get(restored.audits[0].results['C1'].photos[0]), 'data:image/jpeg;base64,BACKUPPHOTO');
+    eq('restore: session cleared (re-auth)', restored.current_user_id, null);
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

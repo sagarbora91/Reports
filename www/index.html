@@ -1469,10 +1469,12 @@ const CONFIG = {
     lockoutMs: 60 * 1000,      // lockout duration
   },
 
-  // Photo capture + watermark.
+  // Photo capture + watermark. Smaller than before to roughly halve each
+  // evidence photo's size — still clearly legible. Reversible: bump these back
+  // to 1024 / 0.72 if you want sharper evidence photos at the cost of space.
   photo: {
-    maxDim: 1024,   // longest edge after resize (keeps storage small)
-    quality: 0.72,  // JPEG quality
+    maxDim: 800,    // longest edge after resize (keeps storage small)
+    quality: 0.6,   // JPEG quality
   },
 
   // Scoring.
@@ -5039,6 +5041,140 @@ function resolveSnapshot(ref) {
 }
 
 // ---------------------------------------------------------------------------
+// PhotoStore (Storage Phase 2) — photos (base64 data URLs) are the bulk of the
+// storage footprint and would blow the small ~5 MB localStorage quota. We keep
+// them in IndexedDB (large quota) instead; the audit/CAP state stores small
+// photo IDs ('ph_...'). Legacy inline data URLs still render and are migrated
+// to IndexedDB on boot. Falls back to an in-memory map when IndexedDB is
+// unavailable (the Node QA harness), so all the data logic stays testable.
+// ---------------------------------------------------------------------------
+const PHOTO_DB = 'saagar_photos';
+const PHOTO_STORE_NAME = 'photos';
+const PhotoStore = {
+  _db: null, _mem: {}, _ready: null, _useMem: false,
+  init() {
+    if (this._ready) return this._ready;
+    const self = this;
+    this._ready = new Promise(function (resolve) {
+      try {
+        if (typeof indexedDB === 'undefined') { self._useMem = true; resolve(); return; }
+        const req = indexedDB.open(PHOTO_DB, 1);
+        req.onupgradeneeded = function (e) { e.target.result.createObjectStore(PHOTO_STORE_NAME); };
+        req.onsuccess = function (e) { self._db = e.target.result; resolve(); };
+        req.onerror = function () { self._useMem = true; resolve(); };
+      } catch (_) { self._useMem = true; resolve(); }
+    });
+    return this._ready;
+  },
+  _os(mode) { return this._db.transaction(PHOTO_STORE_NAME, mode).objectStore(PHOTO_STORE_NAME); },
+  put(id, dataUrl) {
+    const self = this;
+    return this.init().then(function () {
+      if (self._useMem || !self._db) { self._mem[id] = dataUrl; return id; }
+      return new Promise(function (resolve, reject) {
+        const r = self._os('readwrite').put(dataUrl, id);
+        r.onsuccess = function () { resolve(id); };
+        r.onerror = function () { reject(r.error); };
+      });
+    });
+  },
+  get(id) {
+    const self = this;
+    return this.init().then(function () {
+      if (self._useMem || !self._db) return self._mem[id] != null ? self._mem[id] : null;
+      return new Promise(function (resolve) {
+        const r = self._os('readonly').get(id);
+        r.onsuccess = function () { resolve(r.result != null ? r.result : null); };
+        r.onerror = function () { resolve(null); };
+      });
+    });
+  },
+  remove(id) {
+    const self = this;
+    return this.init().then(function () {
+      if (self._useMem || !self._db) { delete self._mem[id]; return; }
+      return new Promise(function (resolve) {
+        const r = self._os('readwrite').delete(id);
+        r.onsuccess = function () { resolve(); };
+        r.onerror = function () { resolve(); };
+      });
+    });
+  },
+};
+
+function isPhotoId(s) { return typeof s === 'string' && s.indexOf('ph_') === 0; }
+function isDataUrl(s) { return typeof s === 'string' && s.indexOf('data:') === 0; }
+
+// Visit every photo array in a state (daily results, per-CRO results, CAPs).
+// The visitor may mutate the array in place.
+function forEachPhotoArray(state, visitor) {
+  (state.audits || []).forEach(function (a) {
+    Object.values(a.results || {}).forEach(function (r) { if (r && Array.isArray(r.photos)) visitor(r.photos); });
+    Object.values(a.cro_results || {}).forEach(function (b) { Object.values(b || {}).forEach(function (r) { if (r && Array.isArray(r.photos)) visitor(r.photos); }); });
+  });
+  (state.caps || []).forEach(function (c) { if (c && Array.isArray(c.photos)) visitor(c.photos); });
+}
+
+// Move any inline data-URL photos in the live store into IndexedDB, replacing
+// them with IDs. Runs at boot; no-op once everything is an ID.
+function migratePhotosToIDB() {
+  return PhotoStore.init().then(function () {
+    const state = Store.load();
+    const puts = [];
+    forEachPhotoArray(state, function (arr) {
+      for (let i = 0; i < arr.length; i++) {
+        if (isDataUrl(arr[i])) {
+          const id = 'ph_' + uuid();
+          puts.push(PhotoStore.put(id, arr[i]));
+          arr[i] = id;
+        }
+      }
+    });
+    if (!puts.length) return 0;
+    return Promise.all(puts).then(function () { Store.save(state); return puts.length; });
+  });
+}
+
+// Deep copy of a state with photo IDs rehydrated to inline data URLs, for a
+// self-contained backup that restores on any device.
+function inlinePhotosForBackup(state) {
+  return PhotoStore.init().then(function () {
+    const copy = JSON.parse(JSON.stringify(state));
+    const jobs = [];
+    forEachPhotoArray(copy, function (arr) {
+      arr.forEach(function (v, idx) {
+        if (isPhotoId(v)) {
+          jobs.push(PhotoStore.get(v).then(function (url) { if (url) arr[idx] = url; }));
+        }
+      });
+    });
+    return Promise.all(jobs).then(function () { return copy; });
+  });
+}
+
+// Hydrate <img data-photo> elements: data: URLs set directly; ph_ IDs fetched
+// from IndexedDB. Returns a promise that resolves once all srcs are set (used
+// by the print path, which must wait before window.print()).
+function hydratePhotos(root) {
+  if (!root || !root.querySelectorAll) return Promise.resolve();
+  const jobs = [];
+  root.querySelectorAll('img[data-photo]').forEach(function (img) {
+    const v = img.getAttribute('data-photo');
+    img.removeAttribute('data-photo');
+    if (!v) return;
+    if (isDataUrl(v)) { img.src = v; return; }
+    jobs.push(PhotoStore.get(v).then(function (url) { if (url) img.src = url; }));
+  });
+  return Promise.all(jobs);
+}
+
+// Emit an <img> that hydratePhotos() will fill — accepts a photo ID or a
+// legacy inline data URL.
+function photoImg(entry, alt) {
+  return '<img data-photo="' + escapeHtml(entry) + '" alt="' + escapeHtml(alt || '') + '">';
+}
+
+// ---------------------------------------------------------------------------
 // Audit templates — checklists are DATA now, not code. Built-ins (daily,
 // weekly) are seeded from the factory constants below; the user can edit them
 // and create new daily/weekly/monthly/custom templates in the builder UI.
@@ -6969,6 +7105,8 @@ function render() {
   document.getElementById('tab-settings').innerHTML = renderSettingsTab(freshState, auth);
   renderCapsBadge(freshState);
   renderHomeBadge(freshState, auth);
+  // Fill in any <img data-photo> from IndexedDB (Storage Phase 2).
+  hydratePhotos(document.body);
 }
 
 function renderCapsBadge(state) {
@@ -7554,7 +7692,7 @@ function renderCheckpointPhotoStrip(audit, cpId) {
   const photos = r.photos || [];
   const tiles = photos.map((url, i) => `
     <div class="cp-photo-tile">
-      <img src="${url}" alt="Photo ${i + 1}">
+      ${photoImg(url, 'Photo ' + (i + 1))}
       <button class="photo-remove" data-action="remove-cp-photo" data-cp="${escapeHtml(cpId)}" data-i="${i}" title="Remove">×</button>
     </div>`).join('');
   return `
@@ -8062,7 +8200,7 @@ function capDetailModal(capId) {
         </label>`).join('');
 
   const photosHtml = (c.photos && c.photos.length)
-    ? `<div class="photo-grid" style="margin-top:8px">${c.photos.map(p => `<div class="photo-tile"><img src="${p}" alt=""></div>`).join('')}</div>`
+    ? `<div class="photo-grid" style="margin-top:8px">${c.photos.map(p => `<div class="photo-tile">${photoImg(p)}</div>`).join('')}</div>`
     : '';
 
   const verifyNotesHtml = c.verify_notes
@@ -8602,6 +8740,7 @@ function openModal(html, opts) {
   const strict = !!(opts && opts.strict);
   const strictAttr = strict ? ' data-modal-strict' : '';
   root.innerHTML = `<div class="modal-backdrop" data-modal-backdrop><div class="modal" data-modal${strictAttr}>${html}</div></div>`;
+  hydratePhotos(root);  // fill any <img data-photo> in the modal from IndexedDB
 }
 
 // Owner-controllable opt-out — if Sagar finds the new behaviour annoying he
@@ -8704,10 +8843,13 @@ function renderFailPhotoGrid() {
   }
   root.innerHTML = FailDraft.photos.map((url, i) => `
     <div class="photo-tile">
-      <img src="${url}" alt="Photo ${i + 1}">
+      ${photoImg(url, 'Photo ' + (i + 1))}
       <button class="photo-remove" data-action="remove-fail-photo" data-index="${i}" title="Remove">×</button>
     </div>
   `).join('');
+  // FailDraft holds a mix of newly-captured data URLs and existing photo IDs;
+  // hydrate the IDs from IndexedDB.
+  hydratePhotos(root);
 }
 
 function naModal(checkpoint) {
@@ -8874,7 +9016,7 @@ function perCroHistoryDetailModal(a, tpl, croById) {
     const fails = Object.entries(res).filter(([, r]) => r.result === 'F').map(([cpId, r]) => {
       const cp = cpById[cpId];
       const photoHtml = (r.photos || []).length
-        ? `<div class="detail-photos">${r.photos.map(p => `<img src="${p}" alt="">`).join('')}</div>` : '';
+        ? `<div class="detail-photos">${r.photos.map(p => photoImg(p)).join('')}</div>` : '';
       return `<div class="result-row"><span class="cp-id">${escapeHtml(cpId)}</span>
         <div class="cp-body"><div>${escapeHtml(cp ? cp.text : '')}</div>
         ${r.finding ? `<div class="cp-finding">${escapeHtml(r.finding)}</div>` : ''}${photoHtml}</div>
@@ -8953,7 +9095,7 @@ function historyDetailModal(a) {
       const cro = r.cro_id ? croById[r.cro_id] : null;
       const photos = (r.photos || []);
       const photoHtml = photos.length
-        ? `<div class="detail-photos">${photos.map(p => `<img src="${p}" alt="">`).join('')}</div>`
+        ? `<div class="detail-photos">${photos.map(p => photoImg(p)).join('')}</div>`
         : '';
       const detailHtml = (v === 'F' || v === 'NA') && r.finding
         ? `<div class="cp-finding">${escapeHtml(r.finding)}${cro ? ` · <em>${escapeHtml(cro.name)}</em>` : ''}</div>${photoHtml}`
@@ -9204,7 +9346,7 @@ function dailyReportHtml(a, state) {
         <td>${escapeHtml(cp.text)}</td>
         <td><strong>${escapeHtml(r.result || '—')}</strong></td>
         <td>${escapeHtml(r.finding || '')}${cro ? `<br><em>${escapeHtml(cro.name)}</em>` : ''}${
-          photos.length ? `<div class="photo-row">${photos.map(p => `<img src="${p}" alt="">`).join('')}</div>` : ''
+          photos.length ? `<div class="photo-row">${photos.map(p => photoImg(p)).join('')}</div>` : ''
         }</td>
       </tr>`;
     }).join('');
@@ -9462,14 +9604,18 @@ function weeklyReportHtml(a, state) {
   `;
 }
 
-function printAudit(auditId) {
+async function printAudit(auditId) {
   const state = Store.load();
   const a = audit(auditId, state);
   if (!a) return;
   const pageHtml = frequencyOf(a) === 'weekly'
     ? weeklyReportHtml(a, state)
     : dailyReportHtml(a, state);
-  document.getElementById('print-root').innerHTML = pageHtml;
+  const printRoot = document.getElementById('print-root');
+  printRoot.innerHTML = pageHtml;
+  // Photos now live in IndexedDB — fill the <img data-photo> tags and WAIT for
+  // them before printing, so the PDF isn't generated with blank images.
+  try { await hydratePhotos(printRoot); } catch (_) {}
   document.body.classList.add('printing');
   const cleanup = () => {
     document.body.classList.remove('printing');
@@ -9477,16 +9623,61 @@ function printAudit(auditId) {
     window.removeEventListener('afterprint', cleanup);
   };
   window.addEventListener('afterprint', cleanup);
-  setTimeout(() => window.print(), 100);
+  // A bit more delay so the browser decodes the just-set image srcs.
+  setTimeout(() => window.print(), 200);
 }
 
 // ---------------------------------------------------------------------------
 // Backup & restore
 // ---------------------------------------------------------------------------
 
-// Backup / restore — implementation lives in shell.js. The shell wraps the
-// localStorage state into a JSON file and uses the Android share sheet so
-// the user can hand it off to Drive / OneDrive / WhatsApp.
+// Backup payload building/restoring lives HERE (not shell.js) because it needs
+// Store (decompression), PhotoStore (IndexedDB) and the full schema. shell.js
+// only does the native file/share plumbing and delegates to these.
+//
+// The exported file is a COMPLETE, self-contained snapshot: the full migrated
+// state (templates, template_snapshots, escalations, schema_version included)
+// with photo IDs rehydrated to inline data URLs, so a restore on a fresh phone
+// brings back everything — including the images.
+const SaagarAudit = {
+  buildBackupPayload() {
+    return inlinePhotosForBackup(Store.load()).then(function (snapshot) {
+      snapshot._format = 'saagar_audit_v1';
+      snapshot._exported_at = new Date().toISOString();
+      snapshot._app_version = (typeof CONFIG !== 'undefined' && CONFIG.version) || '';
+      return snapshot;
+    });
+  },
+  applyBackupPayload(data) {
+    // Accept the current format and the legacy unified backup (audit nested
+    // under .audit). Pull the audit-state object out either way.
+    let src = data;
+    if (data && data._format === 'saagar_unified_v1' && data.audit) src = data.audit;
+    // Build a full state: start from empty() so every field exists, overlay the
+    // backup, drop the export-only meta keys.
+    const state = Object.assign(Store.empty(), src || {});
+    delete state._format; delete state._exported_at; delete state._app_version;
+    // A restored backup may reference a different user table — clear the session
+    // so the user re-authenticates against the restored users.
+    state.current_user_id = null;
+    state.current_audit_id = null;
+    Store.save(state);
+    // Move the just-restored inline photos into IndexedDB.
+    return migratePhotosToIDB().then(function () {
+      const s = Store.load();
+      return {
+        audits: (s.audits || []).length,
+        cros: (s.cros || []).length,
+        users: (s.users || []).length,
+        caps: (s.caps || []).length,
+      };
+    });
+  },
+};
+if (typeof window !== 'undefined') window.SaagarAudit = SaagarAudit;
+
+// Backup / restore — file/share plumbing lives in shell.js, which calls the
+// SaagarAudit helpers above to build/apply the payload.
 async function backupToDrive() {
   if (!window.SaagarShell) { toast(tUi('err.shell_not_loaded')); return; }
   try {
@@ -9973,7 +10164,10 @@ document.addEventListener('click', async (e) => {
     try {
       const dataUrl = await capturePhotoWithStamp({ cpId: a.dataset.cp });
       if (!dataUrl) { toast(tUi('hint.photo_not_added')); return; }
-      addPhotoToCheckpoint(a.dataset.cp, dataUrl);
+      // Store the photo in IndexedDB; keep only its small ID in the audit state.
+      const id = 'ph_' + uuid();
+      await PhotoStore.put(id, dataUrl);
+      addPhotoToCheckpoint(a.dataset.cp, id);
       photoAddedToast(dataUrl);
       render();
     } catch (err) {
@@ -10001,7 +10195,14 @@ document.addEventListener('click', async (e) => {
       toast(tUi('hint.photo_evidence_required'));
       return;
     }
-    markCheckpoint(cp.id, 'F', { finding, croId, photos: FailDraft.photos.slice() });
+    // FailDraft holds a mix of newly-captured data URLs and pre-existing photo
+    // IDs. Persist any data URLs to IndexedDB; store only IDs in the audit.
+    const photoIds = [];
+    for (const entry of FailDraft.photos) {
+      if (isPhotoId(entry)) { photoIds.push(entry); }
+      else if (isDataUrl(entry)) { const id = 'ph_' + uuid(); await PhotoStore.put(id, entry); photoIds.push(id); }
+    }
+    markCheckpoint(cp.id, 'F', { finding, croId, photos: photoIds });
     FailDraft.reset();
     window._recheckCpId = null;
     closeModal();
@@ -10617,6 +10818,15 @@ render();
 renderTabBar();
 applyHashTab();
 restoreLastTab();
+
+// Storage Phase 2 — move any legacy inline photos into IndexedDB in the
+// background, then re-render so they display from their new home. No-op for
+// fresh installs / the demo (which has no inline photos). Never blocks boot.
+if (typeof PhotoStore !== 'undefined') {
+  Promise.resolve().then(migratePhotosToIDB).then(function (n) {
+    if (n) { console.log('Migrated ' + n + ' photo(s) to IndexedDB.'); render(); }
+  }).catch(function (e) { console.error('photo migration failed', e); });
+}
 
 // Capacitor boot — status bar, splash, keyboard, hardware back button.
 if (window.SaagarShell) {
