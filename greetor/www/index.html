@@ -761,19 +761,31 @@ function isValidMobile(raw) { return /^[6-9]\d{9}$/.test(raw); }
 // Storage + migration
 // =====================================================================
 
+// In-memory canonical serialized state — the real synchronous working copy.
+// The durable Capacitor Filesystem file is the PRIMARY persistence (no ~5MB
+// cap; limited only by device storage). localStorage is a best-effort fast
+// cache whose write may fail (QuotaExceededError) without breaking the app.
+// _stateJson is set at boot from the file (see boot()).
+let _stateJson = null;
+
 const Store = {
   load() {
+    // Synchronous read from the in-memory canonical copy — fresh parse per call
+    // preserves the load→mutate→save isolation the app relies on.
+    if (_stateJson != null) {
+      try { return JSON.parse(_stateJson); } catch (e) { console.error("state parse", e); }
+    }
+    // Cold / pre-boot path: try the localStorage cache, then legacy v1, then default.
     try {
       const raw = localStorage.getItem(STATE_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) { _stateJson = raw; return JSON.parse(raw); }
     } catch (e) { console.error("v2 store corrupt", e); }
-    // First load OR no v2 yet — migrate from v1 records array if any.
     let records = [];
     try {
       const legacy = localStorage.getItem(LEGACY_RECORDS_KEY);
       if (legacy) records = JSON.parse(legacy) || [];
     } catch (_) {}
-    return {
+    const def = {
       users: [],
       current_user_id: null,
       my_store: null,
@@ -781,12 +793,30 @@ const Store = {
       reminder_enabled: true,
       auditLog: [],
     };
+    _stateJson = JSON.stringify(def);
+    return def;
+  },
+  // Adopt a serialized state directly into the in-memory copy (boot hydration).
+  _hydrate(json) {
+    if (typeof json === "string") {
+      try { JSON.parse(json); _stateJson = json; return true; } catch (e) {}
+    }
+    return false;
   },
   save(s) {
     const json = JSON.stringify(s);
-    localStorage.setItem(STATE_KEY, json);           // fast synchronous working copy
-    // Durable write-through to a file (survives localStorage eviction).
+    _stateJson = json;                                 // canonical in-memory truth (uncapped)
+    // Durable file = PRIMARY persistence — no ~5MB localStorage ceiling.
     if (window.SaagarShell && window.SaagarShell.durableWrite) window.SaagarShell.durableWrite(json);
+    // localStorage = best-effort fast cache. A full cache must never crash a
+    // save: the file already has the data and boot prefers the file.
+    try { localStorage.setItem(STATE_KEY, json); }
+    catch (e) { console.warn("localStorage cache full — relying on durable file", e && e.name); }
+  },
+  // Serialized byte size of the stored state (Settings storage meter).
+  bytes() {
+    try { return _stateJson ? new TextEncoder().encode(_stateJson).length : 0; }
+    catch (e) { return _stateJson ? _stateJson.length : 0; }
   },
 };
 
@@ -2101,6 +2131,10 @@ function renderSettings(state, auth) {
         <strong>⚠ Before the next big update:</strong> the upcoming signed version installs fresh and <strong>erases on-device data</strong>. Tap <em>Back up now</em> first (and after every busy day) — then <em>Restore</em> on the new build.
       </div>
       <p>${state.records.length} entry(ies) on this device. A full backup is one JSON file — restore it after reinstalling to bring back everything (entries, users, masters, audit log).</p>
+      ${(() => {
+        const mb = (Store.bytes() / 1024 / 1024);
+        return `<p class="tiny muted" style="margin:-4px 0 10px">Data stored: <strong>${mb.toFixed(2)} MB</strong> · saved to a durable file (no fixed size limit; bounded by device storage).</p>`;
+      })()}
       <button class="btn btn-primary btn-full" data-action="backup-json">Back up now (save to Drive)</button>
       <div class="spacer-8"></div>
       <button class="btn btn-secondary btn-full" data-action="restore-json">Restore from backup file</button>
@@ -2970,17 +3004,21 @@ function sweepReminders() {
 // =====================================================================
 
 async function boot() {
-  // 1. Eviction recovery: if localStorage was wiped but the durable file
-  //    survived, restore the working copy from it before anything reads it.
+  // 1. Hydrate the in-memory canonical state. PREFER the durable Filesystem
+  //    file (uncapped, most complete) over the localStorage cache — so once
+  //    the cache hits its ~5MB quota and stops updating, the file still
+  //    carries the full, current dataset.
   try {
-    if (window.SaagarShell && window.SaagarShell.durableRead && !localStorage.getItem(STATE_KEY)) {
+    let hydrated = false;
+    if (window.SaagarShell && window.SaagarShell.durableRead) {
       const fileText = await window.SaagarShell.durableRead();
-      if (fileText) {
-        JSON.parse(fileText);                  // validate before adopting
-        localStorage.setItem(STATE_KEY, fileText);
-      }
+      if (fileText && Store._hydrate(fileText)) hydrated = true;
     }
-  } catch (e) { console.warn("durable hydrate skipped", e); }
+    if (!hydrated) {
+      const raw = localStorage.getItem(STATE_KEY);
+      if (raw) Store._hydrate(raw);
+    }
+  } catch (e) { console.warn("hydrate skipped", e); }
 
   // 2. Seed editable masters/comms once (idempotent); also primes the file.
   if (window.Masters || window.Comms || window.Targets || window.Footfall) {
