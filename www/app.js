@@ -59,11 +59,29 @@ function migrateState(s, fromVersion) {
   return s;
 }
 
+// Marker prefixed to a COMPRESSED localStorage payload. Plain JSON state always
+// starts with '{', never this control sequence — so load() can tell them apart.
+const LZ_PREFIX = 'LZv1:';
+function _isQuotaError(e) {
+  return e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || /quota/i.test(e.message || ''));
+}
+
 const Store = {
+  // Set once a save hits the quota and we switch to compressed writes, so we
+  // don't waste a doomed plain attempt on every subsequent save this session.
+  _forceCompress: false,
+
   load() {
     try {
-      const raw = localStorage.getItem(STORE_KEY);
+      let raw = localStorage.getItem(STORE_KEY);
       if (!raw) return Store.empty();
+      // Compressed payloads (the quota safety-valve) carry LZ_PREFIX; legacy /
+      // small stores are plain JSON. Decompress transparently.
+      if (raw.slice(0, LZ_PREFIX.length) === LZ_PREFIX) {
+        const body = window.LZString ? LZString.decompressFromUTF16(raw.slice(LZ_PREFIX.length)) : null;
+        if (body == null) { console.error('Store.load: decompress failed, resetting'); return Store.empty(); }
+        raw = body;
+      }
       const parsed = JSON.parse(raw);
       // Detect version from the raw object BEFORE the merge below masks it.
       const fromVersion = typeof parsed.schema_version === 'number' ? parsed.schema_version : 0;
@@ -74,24 +92,38 @@ const Store = {
       return Store.empty();
     }
   },
+
   save(s) {
-    try {
-      localStorage.setItem(STORE_KEY, JSON.stringify(s));
-    } catch (e) {
-      // Most common cause: localStorage quota (~5 MB). Hits when many photos
-      // accumulate. We surface a toast but DON'T crash the flow — caller can
-      // decide whether to retry, clear old data, etc.
-      console.error('Store.save failed:', e);
-      if (e && (e.name === 'QuotaExceededError' || /quota/i.test(e.message || ''))) {
-        try {
-          const t = document.getElementById('toast');
-          if (t) {
-            t.textContent = 'Storage full — export and clear old audits';
-            t.hidden = false;
-            setTimeout(() => { t.hidden = true; }, 4000);
-          }
-        } catch (_) {}
+    const json = JSON.stringify(s);
+    // Fast path: store plain. This keeps the hot path (a checkpoint tap saves
+    // the whole store) instant — compressing the full store every time would
+    // cost ~0.7s at 6-month scale. Compression is only a rescue, below.
+    if (!Store._forceCompress) {
+      try {
+        localStorage.setItem(STORE_KEY, json);
+        return;
+      } catch (e) {
+        if (!_isQuotaError(e)) { console.error('Store.save failed:', e); throw e; }
+        // Quota hit — fall through and try the compressed write. Remember so we
+        // skip the doomed plain attempt next time this session.
+        Store._forceCompress = true;
+        console.warn('Store.save: quota hit, switching to compressed storage');
       }
+    }
+    // Rescue path: compress (~16x smaller) so we keep saving instead of failing.
+    try {
+      if (!window.LZString) throw new Error('LZString unavailable');
+      localStorage.setItem(STORE_KEY, LZ_PREFIX + LZString.compressToUTF16(json));
+    } catch (e) {
+      console.error('Store.save failed even compressed:', e);
+      try {
+        const t = document.getElementById('toast');
+        if (t) {
+          t.textContent = tUi ? tUi('err.storage_full') : 'Storage full — back up and erase old audits';
+          t.hidden = false;
+          setTimeout(() => { t.hidden = true; }, 4000);
+        }
+      } catch (_) {}
       throw e;
     }
   },

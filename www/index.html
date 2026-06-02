@@ -1246,6 +1246,183 @@ body.locked #auth-screen { display: block; }
   <script src="shell.js"></script>
   <script>
 // ---------------------------------------------------------------------------
+// LZString (Pieroxy, MIT) — compressToUTF16 / decompressFromUTF16 only.
+// Used to compress the localStorage payload so the small ~5 MB WebView quota
+// holds far more structured data. compressToUTF16 produces a storage-safe
+// UTF-16 string (15 bits/char) — the right variant for localStorage.
+//
+// Verified by a byte-exact round-trip of the full app state in the QA harness
+// (qa/tests.js section 35). Do not edit by hand.
+// ---------------------------------------------------------------------------
+var LZString = (function () {
+  var f = String.fromCharCode;
+  function _compress(uncompressed, bitsPerChar, getCharFromInt) {
+    if (uncompressed == null) return '';
+    var i, value,
+      context_dictionary = {}, context_dictionaryToCreate = {},
+      context_c = '', context_wc = '', context_w = '',
+      context_enlargeIn = 2, context_dictSize = 3, context_numBits = 2,
+      context_data = [], context_data_val = 0, context_data_position = 0, ii;
+    for (ii = 0; ii < uncompressed.length; ii += 1) {
+      context_c = uncompressed.charAt(ii);
+      if (!Object.prototype.hasOwnProperty.call(context_dictionary, context_c)) {
+        context_dictionary[context_c] = context_dictSize++;
+        context_dictionaryToCreate[context_c] = true;
+      }
+      context_wc = context_w + context_c;
+      if (Object.prototype.hasOwnProperty.call(context_dictionary, context_wc)) {
+        context_w = context_wc;
+      } else {
+        if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+          if (context_w.charCodeAt(0) < 256) {
+            for (i = 0; i < context_numBits; i++) {
+              context_data_val = (context_data_val << 1);
+              if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; } else { context_data_position++; }
+            }
+            value = context_w.charCodeAt(0);
+            for (i = 0; i < 8; i++) {
+              context_data_val = (context_data_val << 1) | (value & 1);
+              if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; } else { context_data_position++; }
+              value = value >> 1;
+            }
+          } else {
+            value = 1;
+            for (i = 0; i < context_numBits; i++) {
+              context_data_val = (context_data_val << 1) | value;
+              if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; } else { context_data_position++; }
+              value = 0;
+            }
+            value = context_w.charCodeAt(0);
+            for (i = 0; i < 16; i++) {
+              context_data_val = (context_data_val << 1) | (value & 1);
+              if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; } else { context_data_position++; }
+              value = value >> 1;
+            }
+          }
+          context_enlargeIn--;
+          if (context_enlargeIn == 0) { context_enlargeIn = Math.pow(2, context_numBits); context_numBits++; }
+          delete context_dictionaryToCreate[context_w];
+        } else {
+          value = context_dictionary[context_w];
+          for (i = 0; i < context_numBits; i++) {
+            context_data_val = (context_data_val << 1) | (value & 1);
+            if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; } else { context_data_position++; }
+            value = value >> 1;
+          }
+        }
+        context_enlargeIn--;
+        if (context_enlargeIn == 0) { context_enlargeIn = Math.pow(2, context_numBits); context_numBits++; }
+        context_dictionary[context_wc] = context_dictSize++;
+        context_w = String(context_c);
+      }
+    }
+    if (context_w !== '') {
+      if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+        if (context_w.charCodeAt(0) < 256) {
+          for (i = 0; i < context_numBits; i++) {
+            context_data_val = (context_data_val << 1);
+            if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; } else { context_data_position++; }
+          }
+          value = context_w.charCodeAt(0);
+          for (i = 0; i < 8; i++) {
+            context_data_val = (context_data_val << 1) | (value & 1);
+            if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; } else { context_data_position++; }
+            value = value >> 1;
+          }
+        } else {
+          value = 1;
+          for (i = 0; i < context_numBits; i++) {
+            context_data_val = (context_data_val << 1) | value;
+            if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; } else { context_data_position++; }
+            value = 0;
+          }
+          value = context_w.charCodeAt(0);
+          for (i = 0; i < 16; i++) {
+            context_data_val = (context_data_val << 1) | (value & 1);
+            if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; } else { context_data_position++; }
+            value = value >> 1;
+          }
+        }
+        context_enlargeIn--;
+        if (context_enlargeIn == 0) { context_enlargeIn = Math.pow(2, context_numBits); context_numBits++; }
+        delete context_dictionaryToCreate[context_w];
+      } else {
+        value = context_dictionary[context_w];
+        for (i = 0; i < context_numBits; i++) {
+          context_data_val = (context_data_val << 1) | (value & 1);
+          if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; } else { context_data_position++; }
+          value = value >> 1;
+        }
+      }
+      context_enlargeIn--;
+      if (context_enlargeIn == 0) { context_enlargeIn = Math.pow(2, context_numBits); context_numBits++; }
+    }
+    value = 2;
+    for (i = 0; i < context_numBits; i++) {
+      context_data_val = (context_data_val << 1) | (value & 1);
+      if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; } else { context_data_position++; }
+      value = value >> 1;
+    }
+    while (true) {
+      context_data_val = (context_data_val << 1);
+      if (context_data_position == bitsPerChar - 1) { context_data.push(getCharFromInt(context_data_val)); break; } else context_data_position++;
+    }
+    return context_data.join('');
+  }
+  function _decompress(length, resetValue, getNextValue) {
+    var dictionary = [], enlargeIn = 4, dictSize = 4, numBits = 3,
+      entry = '', result = [], i, w, bits, resb, maxpower, power, c,
+      data = { val: getNextValue(0), position: resetValue, index: 1 };
+    for (i = 0; i < 3; i += 1) dictionary[i] = i;
+    bits = 0; maxpower = Math.pow(2, 2); power = 1;
+    while (power != maxpower) { resb = data.val & data.position; data.position >>= 1; if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); } bits |= (resb > 0 ? 1 : 0) * power; power <<= 1; }
+    switch (bits) {
+      case 0: bits = 0; maxpower = Math.pow(2, 8); power = 1;
+        while (power != maxpower) { resb = data.val & data.position; data.position >>= 1; if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); } bits |= (resb > 0 ? 1 : 0) * power; power <<= 1; }
+        c = f(bits); break;
+      case 1: bits = 0; maxpower = Math.pow(2, 16); power = 1;
+        while (power != maxpower) { resb = data.val & data.position; data.position >>= 1; if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); } bits |= (resb > 0 ? 1 : 0) * power; power <<= 1; }
+        c = f(bits); break;
+      case 2: return '';
+    }
+    dictionary[3] = c; w = c; result.push(c);
+    while (true) {
+      if (data.index > length) return '';
+      bits = 0; maxpower = Math.pow(2, numBits); power = 1;
+      while (power != maxpower) { resb = data.val & data.position; data.position >>= 1; if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); } bits |= (resb > 0 ? 1 : 0) * power; power <<= 1; }
+      switch (c = bits) {
+        case 0: bits = 0; maxpower = Math.pow(2, 8); power = 1;
+          while (power != maxpower) { resb = data.val & data.position; data.position >>= 1; if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); } bits |= (resb > 0 ? 1 : 0) * power; power <<= 1; }
+          dictionary[dictSize++] = f(bits); c = dictSize - 1; enlargeIn--; break;
+        case 1: bits = 0; maxpower = Math.pow(2, 16); power = 1;
+          while (power != maxpower) { resb = data.val & data.position; data.position >>= 1; if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); } bits |= (resb > 0 ? 1 : 0) * power; power <<= 1; }
+          dictionary[dictSize++] = f(bits); c = dictSize - 1; enlargeIn--; break;
+        case 2: return result.join('');
+      }
+      if (enlargeIn == 0) { enlargeIn = Math.pow(2, numBits); numBits++; }
+      if (dictionary[c]) { entry = dictionary[c]; }
+      else { if (c === dictSize) { entry = w + w.charAt(0); } else { return null; } }
+      result.push(entry);
+      dictionary[dictSize++] = w + entry.charAt(0);
+      enlargeIn--;
+      w = entry;
+      if (enlargeIn == 0) { enlargeIn = Math.pow(2, numBits); numBits++; }
+    }
+  }
+  return {
+    compressToUTF16: function (input) {
+      if (input == null) return '';
+      return _compress(input, 15, function (a) { return f(a + 32); }) + ' ';
+    },
+    decompressFromUTF16: function (compressed) {
+      if (compressed == null) return '';
+      if (compressed == '') return null;
+      return _decompress(compressed.length, 16384, function (index) { return compressed.charCodeAt(index) - 32; });
+    },
+  };
+})();
+if (typeof window !== 'undefined') window.LZString = LZString;
+// ---------------------------------------------------------------------------
 // CONFIG — single source of truth for the app's tunable numbers and thresholds.
 //
 // Stage B #12b: these used to be magic numbers scattered through app.js (band
@@ -1313,6 +1490,7 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "err.storage_full": "Storage full — back up to Drive and erase old audits.",
       "demo.title": "🧪 Demo data loaded",
       "demo.intro": "This build is pre-loaded with 6 months of sample audits for testing. When you're ready for real use, go to Settings → Erase all data and start fresh.",
       "err.ref_missing_fmt": "A linked {kind} was missing — it may have been deleted.",
@@ -1945,6 +2123,7 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "err.storage_full": "स्टोरेज भरले — Drive वर बॅकअप घ्या व जुने ऑडिट पुसा.",
       "demo.title": "🧪 डेमो डेटा लोड केला",
       "demo.intro": "हे बिल्ड चाचणीसाठी ६ महिन्यांच्या नमुना ऑडिटसह आधीच भरलेले आहे. खऱ्या वापरासाठी तयार झाल्यावर सेटिंग्ज → सर्व डेटा पुसा वर जाऊन नव्याने सुरू करा.",
       "err.ref_missing_fmt": "जोडलेला {kind} सापडला नाही — कदाचित हटवला असावा.",
@@ -4735,11 +4914,29 @@ function migrateState(s, fromVersion) {
   return s;
 }
 
+// Marker prefixed to a COMPRESSED localStorage payload. Plain JSON state always
+// starts with '{', never this control sequence — so load() can tell them apart.
+const LZ_PREFIX = 'LZv1:';
+function _isQuotaError(e) {
+  return e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || /quota/i.test(e.message || ''));
+}
+
 const Store = {
+  // Set once a save hits the quota and we switch to compressed writes, so we
+  // don't waste a doomed plain attempt on every subsequent save this session.
+  _forceCompress: false,
+
   load() {
     try {
-      const raw = localStorage.getItem(STORE_KEY);
+      let raw = localStorage.getItem(STORE_KEY);
       if (!raw) return Store.empty();
+      // Compressed payloads (the quota safety-valve) carry LZ_PREFIX; legacy /
+      // small stores are plain JSON. Decompress transparently.
+      if (raw.slice(0, LZ_PREFIX.length) === LZ_PREFIX) {
+        const body = window.LZString ? LZString.decompressFromUTF16(raw.slice(LZ_PREFIX.length)) : null;
+        if (body == null) { console.error('Store.load: decompress failed, resetting'); return Store.empty(); }
+        raw = body;
+      }
       const parsed = JSON.parse(raw);
       // Detect version from the raw object BEFORE the merge below masks it.
       const fromVersion = typeof parsed.schema_version === 'number' ? parsed.schema_version : 0;
@@ -4750,24 +4947,38 @@ const Store = {
       return Store.empty();
     }
   },
+
   save(s) {
-    try {
-      localStorage.setItem(STORE_KEY, JSON.stringify(s));
-    } catch (e) {
-      // Most common cause: localStorage quota (~5 MB). Hits when many photos
-      // accumulate. We surface a toast but DON'T crash the flow — caller can
-      // decide whether to retry, clear old data, etc.
-      console.error('Store.save failed:', e);
-      if (e && (e.name === 'QuotaExceededError' || /quota/i.test(e.message || ''))) {
-        try {
-          const t = document.getElementById('toast');
-          if (t) {
-            t.textContent = 'Storage full — export and clear old audits';
-            t.hidden = false;
-            setTimeout(() => { t.hidden = true; }, 4000);
-          }
-        } catch (_) {}
+    const json = JSON.stringify(s);
+    // Fast path: store plain. This keeps the hot path (a checkpoint tap saves
+    // the whole store) instant — compressing the full store every time would
+    // cost ~0.7s at 6-month scale. Compression is only a rescue, below.
+    if (!Store._forceCompress) {
+      try {
+        localStorage.setItem(STORE_KEY, json);
+        return;
+      } catch (e) {
+        if (!_isQuotaError(e)) { console.error('Store.save failed:', e); throw e; }
+        // Quota hit — fall through and try the compressed write. Remember so we
+        // skip the doomed plain attempt next time this session.
+        Store._forceCompress = true;
+        console.warn('Store.save: quota hit, switching to compressed storage');
       }
+    }
+    // Rescue path: compress (~16x smaller) so we keep saving instead of failing.
+    try {
+      if (!window.LZString) throw new Error('LZString unavailable');
+      localStorage.setItem(STORE_KEY, LZ_PREFIX + LZString.compressToUTF16(json));
+    } catch (e) {
+      console.error('Store.save failed even compressed:', e);
+      try {
+        const t = document.getElementById('toast');
+        if (t) {
+          t.textContent = tUi ? tUi('err.storage_full') : 'Storage full — back up and erase old audits';
+          t.hidden = false;
+          setTimeout(() => { t.hidden = true; }, 4000);
+        }
+      } catch (_) {}
       throw e;
     }
   },

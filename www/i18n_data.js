@@ -2,6 +2,7 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "err.storage_full": "Storage full — back up to Drive and erase old audits.",
       "demo.title": "🧪 Demo data loaded",
       "demo.intro": "This build is pre-loaded with 6 months of sample audits for testing. When you're ready for real use, go to Settings → Erase all data and start fresh.",
       "err.ref_missing_fmt": "A linked {kind} was missing — it may have been deleted.",
@@ -634,6 +635,7 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "err.storage_full": "स्टोरेज भरले — Drive वर बॅकअप घ्या व जुने ऑडिट पुसा.",
       "demo.title": "🧪 डेमो डेटा लोड केला",
       "demo.intro": "हे बिल्ड चाचणीसाठी ६ महिन्यांच्या नमुना ऑडिटसह आधीच भरलेले आहे. खऱ्या वापरासाठी तयार झाल्यावर सेटिंग्ज → सर्व डेटा पुसा वर जाऊन नव्याने सुरू करा.",
       "err.ref_missing_fmt": "जोडलेला {kind} सापडला नाही — कदाचित हटवला असावा.",

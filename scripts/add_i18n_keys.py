@@ -160,6 +160,8 @@ NEW = {
     "crojump.cancel_edit": ("Cancel — keep current verdict", "रद्द — सध्याचा निकाल ठेवा"),
     # --- batch 14: defensive lookups (Stage B #10) ---
     "err.ref_missing_fmt": ("A linked {kind} was missing — it may have been deleted.", "जोडलेला {kind} सापडला नाही — कदाचित हटवला असावा."),
+    # --- storage full (compressed-and-still-full) ---
+    "err.storage_full": ("Storage full — back up to Drive and erase old audits.", "स्टोरेज भरले — Drive वर बॅकअप घ्या व जुने ऑडिट पुसा."),
     # --- batch 15: demo build banner ---
     "demo.title": ("🧪 Demo data loaded", "🧪 डेमो डेटा लोड केला"),
     "demo.intro": ("This build is pre-loaded with 6 months of sample audits for testing. When you're ready for real use, go to Settings → Erase all data and start fresh.", "हे बिल्ड चाचणीसाठी ६ महिन्यांच्या नमुना ऑडिटसह आधीच भरलेले आहे. खऱ्या वापरासाठी तयार झाल्यावर सेटिंग्ज → सर्व डेटा पुसा वर जाऊन नव्याने सुरू करा."),

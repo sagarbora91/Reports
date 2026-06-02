@@ -17,7 +17,7 @@ import sys
 
 ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "www")
 INDEX = os.path.join(ROOT, "index.html")
-JS_ORDER = ["config.js", "i18n_data.js", "reference_data.js", "data.js", "weekly_data.js", "app.js"]
+JS_ORDER = ["lzstring.js", "config.js", "i18n_data.js", "reference_data.js", "data.js", "weekly_data.js", "app.js"]
 
 
 def read(path):

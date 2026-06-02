@@ -1212,6 +1212,73 @@
     eq('dedup: frozen text preserved', checkpointsFor(m.audits[0])[0].text, 'one');
   }
 
+  // ---- 35. Compression safety-valve (Phase 1) ----
+  // LZString round-trips arbitrary app state byte-exact.
+  reset();
+  {
+    ok('lz: LZString present', typeof LZString === 'object' && typeof LZString.compressToUTF16 === 'function', '');
+    const sample = JSON.stringify({ a: 1, msg: 'मराठी + English · ₹800 "quoted" \n newline', arr: [1, 2, { x: null }], emoji: '✓🧪' });
+    const round = LZString.decompressFromUTF16(LZString.compressToUTF16(sample));
+    eq('lz: round-trip byte-exact', round, sample);
+    // A realistic store round-trips and reparses equal.
+    const owner = await Users.create({ name: 'LZOwner', role: 'OWNER', pin: '1212' });
+    AuthSession.login(owner.id);
+    startNewAudit({ date: today(), auditorName: 'LZOwner', auditorId: owner.id, croIds: [], templateId: 'tpl_daily' });
+    CHECKPOINTS.forEach((cp, i) => markCheckpoint(cp.id, i < 4 ? 'F' : 'P', i < 4 ? { finding: 'lz fail ' + i } : {}));
+    submitAudit();
+    const st = Store.load();
+    const j = JSON.stringify(st);
+    eq('lz: store round-trips exact', LZString.decompressFromUTF16(LZString.compressToUTF16(j)), j);
+  }
+
+  // Normal save is PLAIN (no LZ prefix) — fast hot path.
+  reset();
+  {
+    const u = await Users.create({ name: 'PlainU', role: 'SM', pin: '2323' });
+    AuthSession.login(u.id);
+    Store._forceCompress = false;
+    const raw = localStorage.getItem(STORE_KEY);
+    ok('lz: normal save stays plain JSON', raw && raw[0] === '{', raw ? raw.slice(0, 3) : 'null');
+    ok('lz: plain payload has no LZ prefix', !(raw && raw.slice(0, LZ_PREFIX.length) === LZ_PREFIX), '');
+  }
+
+  // Quota hit → compressed rescue → load reads it back identically.
+  reset();
+  {
+    const u = await Users.create({ name: 'QuotaU', role: 'OWNER', pin: '3434' });
+    AuthSession.login(u.id);
+    const expected = Store.load();
+    const expectedUsers = expected.users.length;
+    // Monkeypatch localStorage.setItem to throw QuotaExceeded ONCE for a plain
+    // (non-prefixed) write, simulating a full quota; compressed write succeeds.
+    const realSet = localStorage.setItem.bind(localStorage);
+    let threw = false;
+    localStorage.setItem = function (k, v) {
+      if (k === STORE_KEY && v[0] === '{' && !threw) { threw = true; const e = new Error('quota'); e.name = 'QuotaExceededError'; throw e; }
+      return realSet(k, v);
+    };
+    Store._forceCompress = false;
+    Store.save(expected);                       // plain throws → compressed rescue
+    localStorage.setItem = realSet;             // restore
+    ok('lz: quota triggered compressed write', threw && Store._forceCompress, '');
+    const stored = localStorage.getItem(STORE_KEY);
+    ok('lz: stored payload is compressed (LZ prefix)', stored && stored.slice(0, LZ_PREFIX.length) === LZ_PREFIX, stored ? stored.slice(0, 6) : 'null');
+    // load() transparently decompresses + migrates.
+    const back = Store.load();
+    eq('lz: compressed store loads back (users)', back.users.length, expectedUsers);
+    eq('lz: compressed store loads back (schema)', back.schema_version, SCHEMA_VERSION);
+    Store._forceCompress = false;
+  }
+
+  // Legacy plain payload (no prefix) still loads.
+  reset();
+  {
+    const plain = JSON.stringify({ schema_version: 2, audits: [], cros: [], users: [], caps: [], escalations: [], templates: [], template_snapshots: {} });
+    localStorage.setItem(STORE_KEY, plain);
+    const s = Store.load();
+    ok('lz: legacy plain JSON still loads', s && Array.isArray(s.audits), '');
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);
