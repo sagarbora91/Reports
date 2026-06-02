@@ -251,15 +251,13 @@ function daysSince(iso) {
 // Conservative storage usage estimate against the typical ~5 MB localStorage
 // quota. We measure only OUR key — the photos in audit results dominate the
 // payload. Returns { bytes, limit, pct } or null on any failure.
-const STORAGE_LIMIT_BYTES = 5 * 1024 * 1024;
-const STORAGE_WARN_PCT = 70;
 function storageHealth() {
   try {
     const raw = localStorage.getItem(STORE_KEY) || '';
     // localStorage stores UTF-16 internally — 2 bytes per JS character.
     const bytes = raw.length * 2;
-    const pct = Math.min(100, Math.round((bytes / STORAGE_LIMIT_BYTES) * 100));
-    return { bytes, limit: STORAGE_LIMIT_BYTES, pct };
+    const pct = Math.min(100, Math.round((bytes / CONFIG.storage.limitBytes) * 100));
+    return { bytes, limit: CONFIG.storage.limitBytes, pct };
   } catch (_) { return null; }
 }
 
@@ -267,7 +265,7 @@ function storageHealth() {
 // Returns '' when storage is healthy so the banner doesn't take up space.
 function storageWarnBanner() {
   const h = storageHealth();
-  if (!h || h.pct < STORAGE_WARN_PCT) return '';
+  if (!h || h.pct < CONFIG.storage.warnPct) return '';
   const mb = (h.bytes / (1024 * 1024)).toFixed(1);
   return `<div class="card" style="background:#fff4e5;border-color:#f4c674;color:#6a4a00;margin-bottom:10px">
     <strong>${tUi('label.storage_full_warn')}</strong>
@@ -294,7 +292,7 @@ function toast(msg) {
   el.textContent = msg;
   el.hidden = false;
   clearTimeout(toast._t);
-  toast._t = setTimeout(() => { el.hidden = true; }, 1800);
+  toast._t = setTimeout(() => { el.hidden = true; }, CONFIG.timing.toastMs);
 }
 
 // ---------------------------------------------------------------------------
@@ -547,7 +545,7 @@ function evaluateEscalationsForAudit(audit, state) {
       severity: 'critical',
       recipient_role: cashOrInvFail ? 'OWNER' : 'GM',
       message: composeMessage({
-        what: `Daily audit on ${fmtDateShort(audit.date)} scored ${score.pct.toFixed(1)}% (Critical, target 90%+).`,
+        what: `Daily audit on ${fmtDateShort(audit.date)} scored ${score.pct.toFixed(1)}% (Critical, target ${CONFIG.targets.daily}%+).`,
         evidence: `${fails.length} FAILs across ${sopBreakdown || 'multiple SOPs'}. Auditor: ${audit.auditor_name || '—'}.`,
         impact: cashOrInvFail
           ? 'Compliance band breached AND a Cash or Inventory critical FAILed — direct loss risk.'
@@ -914,7 +912,7 @@ async function hashPin(pin, salt) {
     'raw', enc.encode(pin), { name: 'PBKDF2' }, false, ['deriveBits']
   );
   const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt: enc.encode(salt), iterations: 100000, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt: enc.encode(salt), iterations: CONFIG.auth.pbkdf2Iterations, hash: 'SHA-256' },
     keyMaterial, 256
   );
   return Array.from(new Uint8Array(bits))
@@ -1085,8 +1083,8 @@ const LoginGuard = {
   register(success) {
     if (success) { this.attempts = 0; this.lockedUntil = 0; return; }
     this.attempts++;
-    if (this.attempts >= 5) {
-      this.lockedUntil = Date.now() + 60 * 1000;
+    if (this.attempts >= CONFIG.auth.lockoutAttempts) {
+      this.lockedUntil = Date.now() + CONFIG.auth.lockoutMs;
       this.attempts = 0;
     }
   },
@@ -1111,7 +1109,7 @@ function dataUrlSizeKb(dataUrl) {
 let _gpsCache = null;
 function getCachedGps() {
   return new Promise(resolve => {
-    if (_gpsCache && (Date.now() - _gpsCache.ts < 5 * 60 * 1000)) {
+    if (_gpsCache && (Date.now() - _gpsCache.ts < CONFIG.timing.gpsCacheMs)) {
       resolve(_gpsCache);
       return;
     }
@@ -1126,7 +1124,7 @@ function getCachedGps() {
         resolve(_gpsCache);
       },
       () => resolve(null),
-      { enableHighAccuracy: false, timeout: 6000, maximumAge: 5 * 60 * 1000 }
+      { enableHighAccuracy: false, timeout: CONFIG.timing.gpsTimeoutMs, maximumAge: CONFIG.timing.gpsCacheMs }
     );
   });
 }
@@ -1169,7 +1167,7 @@ function fileToImage(file) {
 
 // Watermarked photo: resizes to maxDim=1024, draws a navy/gold bar at the
 // bottom carrying date+time+auditor+CP+GPS. Result is a JPEG data URL.
-async function capturePhotoWithStamp({ cpId, quality = 0.72, maxDim = 1024 } = {}) {
+async function capturePhotoWithStamp({ cpId, quality = CONFIG.photo.quality, maxDim = CONFIG.photo.maxDim } = {}) {
   const file = await pickFromCamera();
   if (!file) return null;
 
@@ -1276,10 +1274,10 @@ function dailyTemplateCount() {
 
 // Shared band function so daily + weekly agree on the boundaries (Spec §6.2).
 function bandFor(pct) {
-  if (pct >= 95) return 'excellent';
-  if (pct >= 90) return 'good';
-  if (pct >= 85) return 'fair';
-  if (pct >= 80) return 'poor';
+  if (pct >= CONFIG.bands.excellent) return 'excellent';
+  if (pct >= CONFIG.bands.good) return 'good';
+  if (pct >= CONFIG.bands.fair) return 'fair';
+  if (pct >= CONFIG.bands.poor) return 'poor';
   return 'critical';
 }
 
@@ -1296,9 +1294,9 @@ function bandFor(pct) {
 //
 // Canonical (Workbook §5.2): daily %s 92.2/91.1/90.0/88.8/93.3/89.7/91.4,
 // weekly Ops 7/10, Cash 10/16, R&S 4/6, Inv 22/24 → 104.8/124 = 84.5% Poor.
+// (The fixed 68-weight budget now lives at CONFIG.scoring.dailyMaxWeighted;
+//  equal-weight scoring uses dailyTemplateCount() instead.)
 // ---------------------------------------------------------------------------
-
-const DAILY_MAX_WEIGHTED = 68; // sum of daily checkpoint weights (Spec §2)
 
 function round1(x) { return Math.round(x * 10) / 10; }
 
@@ -3422,7 +3420,7 @@ function renderSettingsTab(state, auth) {
       <button class="btn btn-ghost" data-action="clear-data" style="color:var(--red);border-color:var(--red)">${tUi('btn.erase_all')}</button>
     </div>` : ''}
 
-    <p class="tiny" style="text-align:center">Saagar Audit &middot; v0.2.0</p>
+    <p class="tiny" style="text-align:center">Saagar Audit &middot; v${escapeHtml(CONFIG.version)}</p>
   `;
 }
 
@@ -3526,7 +3524,7 @@ async function captureWithFeedback(opts, saveBtnSelector) {
 // (so they know whether to retake outdoors — silent GPS-fail used to confuse).
 function photoAddedToast(dataUrl) {
   const kb = dataUrlSizeKb(dataUrl);
-  const hasGps = !!(_gpsCache && (Date.now() - _gpsCache.ts < 5 * 60 * 1000));
+  const hasGps = !!(_gpsCache && (Date.now() - _gpsCache.ts < CONFIG.timing.gpsCacheMs));
   const key = hasGps ? 'hint.photo_added_with_gps_fmt' : 'hint.photo_added_no_gps_fmt';
   toast(tUi(key).replace('{kb}', kb));
 }
@@ -4085,7 +4083,7 @@ function weeklyReportHtml(a, state) {
   const cpById = {}; cps.forEach(c => { cpById[c.id] = c; });
   const labelOf = sectionLabelMap(a);                 // cpId → component label
   const isStar = cp => /★/.test(labelOf[cp.id] || '') || cp.critical || cp.group === 'cash_weekly' || cp.group === 'inventory_weekly';
-  const TARGET = 92;
+  const TARGET = CONFIG.targets.weekly;
 
   // ---- §3 data: the 7 daily audits of this week ----
   const dailies = dailyAuditsForWeek(week, year, state);
@@ -4147,7 +4145,7 @@ function weeklyReportHtml(a, state) {
   if (dailies.length >= 3) {
     let declining = true;
     for (let i = 1; i < dailies.length; i++) { if (dailies[i].score.pct >= dailies[i - 1].score.pct) { declining = false; break; } }
-    if (declining && dailyAvg >= 90) flags.push('Scores fall every day but the average still looks healthy — the trend is the warning.');
+    if (declining && dailyAvg >= CONFIG.targets.daily) flags.push('Scores fall every day but the average still looks healthy — the trend is the warning.');
   }
   if (dates.some(dt => !dailyByDate[dt])) {
     flags.push(`${dates.filter(dt => !dailyByDate[dt]).length} day(s) missing a daily audit.`);
@@ -5361,7 +5359,7 @@ document.addEventListener('focusin', (e) => {
   // Wait for the keyboard to settle before scrolling.
   setTimeout(() => {
     try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {}
-  }, 250);
+  }, CONFIG.timing.photoSettleMs);
 });
 
 // ---------------------------------------------------------------------------

@@ -969,6 +969,28 @@
     closeModal();
   }
 
+  // ---- 28. Config constants (Stage B #12b) ----
+  {
+    ok('config: CONFIG object exists', typeof CONFIG === 'object' && CONFIG !== null, '');
+    // Band thresholds match the historical 95/90/85/80 boundaries.
+    eq('config: band excellent = 95', CONFIG.bands.excellent, 95);
+    eq('config: band poor = 80', CONFIG.bands.poor, 80);
+    // bandFor is now driven by CONFIG — moving the threshold moves the band.
+    eq('config: bandFor honours CONFIG.bands.excellent', bandFor(CONFIG.bands.excellent), 'excellent');
+    eq('config: bandFor just below excellent → good', bandFor(CONFIG.bands.excellent - 0.1), 'good');
+    eq('config: bandFor below poor → critical', bandFor(CONFIG.bands.poor - 0.1), 'critical');
+    // Targets.
+    eq('config: weekly target 92', CONFIG.targets.weekly, 92);
+    eq('config: daily target 90', CONFIG.targets.daily, 90);
+    // Storage limit sane (5 MB).
+    eq('config: storage limit 5MB', CONFIG.storage.limitBytes, 5 * 1024 * 1024);
+    ok('config: storage warn pct between 1 and 99', CONFIG.storage.warnPct > 0 && CONFIG.storage.warnPct < 100, '');
+    // Auth work factor preserved.
+    eq('config: pbkdf2 iterations 100000', CONFIG.auth.pbkdf2Iterations, 100000);
+    // storageHealth uses CONFIG.storage.limitBytes for its denominator.
+    eq('config: storageHealth limit matches CONFIG', storageHealth().limit, CONFIG.storage.limitBytes);
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

@@ -98,9 +98,11 @@ jobs:
           sed -i "s/versionName \"1.0\"/versionName \"${VERSION_NAME}\"/" android/app/build.gradle
           # User-visible label in i18n (both English and Marathi rows)
           sed -i "s|Saagar Audit · v[0-9][^\"]*|Saagar Audit · ${DISPLAY}|g" www/i18n_data.js
+          # Single source of truth for the Settings footer: CONFIG.version
+          sed -i "s/version: '[^']*'/version: '${VERSION_NAME} (${SHORT_SHA})'/" www/config.js
           # Keep package.json in sync (informational)
           sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"${VERSION_NAME}\"/" package.json
-          # Re-inline i18n_data.js change into www/index.html so the bundled app shows the new label
+          # Re-inline source changes into www/index.html so the bundled app shows the new label
           python3 scripts/inline.py
           grep -E 'versionCode|versionName' android/app/build.gradle
           echo "VERSION_NAME=${VERSION_NAME}" >> "$GITHUB_ENV"
