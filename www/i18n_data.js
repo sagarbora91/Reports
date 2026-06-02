@@ -2,6 +2,7 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "err.ref_missing_fmt": "A linked {kind} was missing — it may have been deleted.",
       "crojump.label": "Jump to a CRO to fix a verdict",
       "crojump.placeholder": "— choose a CRO —",
       "crojump.editing_fmt": "Editing {name} — tap a checkpoint to change it",
@@ -631,6 +632,7 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "err.ref_missing_fmt": "जोडलेला {kind} सापडला नाही — कदाचित हटवला असावा.",
       "crojump.label": "निकाल दुरुस्त करण्यासाठी सीआरओकडे जा",
       "crojump.placeholder": "— सीआरओ निवडा —",
       "crojump.editing_fmt": "{name} संपादन — बदलण्यासाठी तपासणी बिंदूवर टॅप करा",

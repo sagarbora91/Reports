@@ -158,6 +158,8 @@ NEW = {
     "crojump.tap_to_change": ("Tap any row to change that verdict.", "तो निकाल बदलण्यासाठी कोणत्याही ओळीवर टॅप करा."),
     "crojump.done": ("✓ Done — back to summary", "✓ पूर्ण — सारांशाकडे परत"),
     "crojump.cancel_edit": ("Cancel — keep current verdict", "रद्द — सध्याचा निकाल ठेवा"),
+    # --- batch 14: defensive lookups (Stage B #10) ---
+    "err.ref_missing_fmt": ("A linked {kind} was missing — it may have been deleted.", "जोडलेला {kind} सापडला नाही — कदाचित हटवला असावा."),
     # --- batch 12: strict modals toggle (Stage A #3) ---
     "label.strict_modals": ("Protect modals from accidental close", "मॉडल चुकून बंद होण्यापासून संरक्षण"),
     "hint.strict_modals_desc": ("· tapping outside an open form won't discard your typing", "· उघड्या फॉर्मच्या बाहेर टॅप केल्यास तुमचे टायपिंग नष्ट होणार नाही"),

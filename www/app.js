@@ -6,13 +6,47 @@
 
 const STORE_KEY = 'saagar_audit_v1';
 
+// Current persisted-state schema version. Bump when the SHAPE of stored data
+// changes, and add a MIGRATIONS[oldVersion] step. Old data with no
+// schema_version is treated as v0 (the pre-versioning shape, which already
+// matches v1) and normalized on first load.
+const SCHEMA_VERSION = 1;
+
+// migrations[N] transforms a state AT version N into version N+1. Empty for now
+// — the framework exists so a future shape change (e.g. multi-store store_id in
+// Stage C) can be applied safely to old phones / restored backups instead of
+// silently corrupting them.
+const MIGRATIONS = [];
+
+// Bring a freshly-parsed state up to SCHEMA_VERSION. `fromVersion` is read from
+// the RAW parsed object (before merging with empty(), which would mask it).
+// For already-current data this is a zero-cost early return — load() runs on
+// every render, so it must stay cheap.
+function migrateState(s, fromVersion) {
+  if (fromVersion >= SCHEMA_VERSION) return s;
+  let v = fromVersion;
+  while (v < SCHEMA_VERSION && MIGRATIONS[v]) { s = MIGRATIONS[v](s) || s; v++; }
+  // Defensive normalize — backfill required nested fields that an old or
+  // hand-edited backup might be missing. NEVER overwrites present data.
+  (s.audits || []).forEach(a => {
+    if (a.results == null) a.results = {};
+    if (a.cro_mode && a.cro_mode !== 'store' && a.cro_results == null) a.cro_results = {};
+  });
+  (s.caps || []).forEach(c => { if (c.status == null) c.status = 'open'; });
+  s.schema_version = SCHEMA_VERSION;
+  return s;
+}
+
 const Store = {
   load() {
     try {
       const raw = localStorage.getItem(STORE_KEY);
       if (!raw) return Store.empty();
-      const s = JSON.parse(raw);
-      return Object.assign(Store.empty(), s);
+      const parsed = JSON.parse(raw);
+      // Detect version from the raw object BEFORE the merge below masks it.
+      const fromVersion = typeof parsed.schema_version === 'number' ? parsed.schema_version : 0;
+      const s = Object.assign(Store.empty(), parsed);
+      return migrateState(s, fromVersion);
     } catch (e) {
       console.error('localStorage corrupted, resetting', e);
       return Store.empty();
@@ -41,6 +75,7 @@ const Store = {
   },
   empty() {
     return {
+      schema_version: SCHEMA_VERSION,
       audits: [],
       cros: [],
       users: [],
@@ -1444,6 +1479,34 @@ function currentAudit(state) {
 function audit(id, state) {
   return state.audits.find(a => a.id === id) || null;
 }
+
+// Stage B #10 — defensive entity lookups. Return null on a miss (e.g. an
+// audit references a CRO that was later deleted) and warn ONCE per kind per
+// session, so an orphaned reference degrades gracefully instead of silently
+// rendering "undefined" or throwing. Existing modules (Caps.byId,
+// Templates.byId) already return null on miss; these add the same safety for
+// audits and CROs and give callers a single, named lookup to use.
+const _missWarned = {};
+function _warnMissOnce(kind) {
+  if (_missWarned[kind]) return;
+  _missWarned[kind] = true;
+  try { toast(tUi('err.ref_missing_fmt').replace('{kind}', kind)); } catch (_) {}
+}
+const Audit = {
+  byId(state, id) {
+    const a = (state || Store.load()).audits.find(x => x.id === id);
+    if (!a && id) _warnMissOnce('audit');
+    return a || null;
+  },
+};
+const Cro = {
+  byId(state, id) {
+    if (!id) return null;
+    const c = (state || Store.load()).cros.find(x => x.id === id);
+    if (!c) _warnMissOnce('CRO');
+    return c || null;
+  },
+};
 
 // A finalized audit is one that counts as "done" — submitted OR verified.
 // (Verifying a daily audit moves it to status 'verified'; it must still show

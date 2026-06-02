@@ -1087,6 +1087,73 @@
     eq('uistate: PIN buffer cleared', PinBuf.value, '');
   }
 
+  // ---- 31. Characterization fixtures (Stage B #10 guard) ----
+  // These pin EXACT outputs of submitAudit / escalation eval / CAP creation so
+  // that adding schema versioning + migrations to Store.load can't silently
+  // change behaviour. Captured against pre-migration code; must stay identical.
+  reset();
+  {
+    const sm = await Users.create({ name: 'CharSM', role: 'SM', pin: '2727' });
+    const gm = await Users.create({ name: 'CharGM', role: 'GM', pin: '2828', phone: '9876530000' });
+    AuthSession.login(sm.id);
+    startNewAudit({ date: '2026-03-10', auditorName: 'CharSM', auditorId: sm.id, croIds: [], templateId: 'tpl_daily' });
+    // Deterministic pattern: first 10 FAIL (with findings), rest PASS.
+    CHECKPOINTS.forEach((cp, i) => markCheckpoint(cp.id, i < 10 ? 'F' : 'P', i < 10 ? { finding: 'char fail ' + i } : {}));
+    const res = submitAudit();
+    // 58/68 pass = 85.3% → fair band.
+    eq('char: score pct', res.audit.score.pct, Math.round((58 / 68) * 1000) / 10);
+    eq('char: score band', res.audit.score.band, 'fair');
+    eq('char: pass count', res.audit.score.p, 58);
+    eq('char: fail count', res.audit.score.f, 10);
+    eq('char: 10 CAPs created', res.capsCreated, 10);
+    eq('char: caps in store', Store.load().caps.length, 10);
+    // CAP id format is deterministic for a given date.
+    const firstCap = Store.load().caps[0];
+    ok('char: CAP id format CAP-2026-W##-01', /^CAP-2026-W\d\d-\d\d$/.test(firstCap.id), firstCap.id);
+    eq('char: CAP status open', firstCap.status, 'open');
+  }
+
+  // ---- 32. Schema versioning + migrations + defensive lookups (Stage B #10) ----
+  reset();
+  {
+    // Fresh empty store carries the current schema version.
+    eq('schema: empty() stamps current version', Store.empty().schema_version, SCHEMA_VERSION);
+    eq('schema: load stamps version', Store.load().schema_version, SCHEMA_VERSION);
+
+    // Simulate OLD data with NO schema_version + a malformed audit missing
+    // `results` and a cap missing `status`. Write it raw, then load.
+    const rawOld = {
+      audits: [{ id: 'old1', date: '2025-01-01', status: 'submitted', template_id: 'tpl_daily', score: { pct: 90, band: 'good' } }], // no results{}
+      cros: [], users: [], caps: [{ id: 'CAP-x', audit_id: 'old1' }], escalations: [], templates: [],
+      // deliberately NO schema_version
+    };
+    localStorage.setItem(STORE_KEY, JSON.stringify(rawOld));
+    const migrated = Store.load();
+    eq('schema: old data migrated to current version', migrated.schema_version, SCHEMA_VERSION);
+    ok('schema: defensive normalize backfills audit.results', typeof migrated.audits[0].results === 'object' && migrated.audits[0].results !== null, '');
+    eq('schema: defensive normalize backfills cap.status', migrated.caps[0].status, 'open');
+
+    // migrateState early-returns unchanged for already-current data.
+    const cur = Store.empty();
+    cur.audits = [{ id: 'keep', results: { 'X': { result: 'P' } } }];
+    const out = migrateState(cur, SCHEMA_VERSION);
+    ok('schema: current data passes through untouched', out.audits[0].results['X'].result === 'P', '');
+  }
+
+  // 32b. Defensive lookups (Audit.byId / Cro.byId) return null + warn once.
+  reset();
+  {
+    const st = Store.load();
+    st.audits = [{ id: 'a-real' }];
+    st.cros = [{ id: 'c-real', name: 'Real CRO', counter: 'Titan' }];
+    Store.save(st);
+    eq('lookup: Audit.byId hit', Audit.byId(Store.load(), 'a-real').id, 'a-real');
+    eq('lookup: Audit.byId miss → null', Audit.byId(Store.load(), 'nope'), null);
+    eq('lookup: Cro.byId hit', Cro.byId(Store.load(), 'c-real').name, 'Real CRO');
+    eq('lookup: Cro.byId miss → null', Cro.byId(Store.load(), 'nope'), null);
+    eq('lookup: Cro.byId null id → null (no warn)', Cro.byId(Store.load(), null), null);
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);
