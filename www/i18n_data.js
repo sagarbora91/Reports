@@ -2,6 +2,8 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "label.strict_modals": "Protect modals from accidental close",
+      "hint.strict_modals_desc": "· tapping outside an open form won't discard your typing",
       "batchverify.title_fmt": "Verify {n} audit(s)",
       "batchverify.intro": "Tap Verify on each row to spot-check it. You'll come back here to the next one each time.",
       "batchverify.verify_btn": "Verify",
@@ -623,6 +625,8 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "label.strict_modals": "मॉडल चुकून बंद होण्यापासून संरक्षण",
+      "hint.strict_modals_desc": "· उघड्या फॉर्मच्या बाहेर टॅप केल्यास तुमचे टायपिंग नष्ट होणार नाही",
       "batchverify.title_fmt": "Verify {n} audit(s)",
       "batchverify.intro": "Tap Verify on each row to spot-check it. You'll come back here to the next one each time.",
       "batchverify.verify_btn": "Verify",

@@ -918,6 +918,57 @@
     closeModal();
   }
 
+  // ---- 27. Strict modals — backdrop tap is no-op on editable modals (Stage A #3) ----
+  reset();
+  {
+    // Default state: strict modals ENABLED (no disable_strict_modals flag set).
+    ok('strict: default state → strict modals ENABLED', !strictModalsDisabled(), '');
+
+    // openStrictModal stamps the data-modal-strict attribute on the inner .modal.
+    openStrictModal('<h3>Test strict</h3>');
+    const html = document.getElementById('modal-root').innerHTML;
+    ok('strict: openStrictModal stamps data-modal-strict', /data-modal-strict/.test(html), '');
+    closeModal();
+
+    // openModal without strict opt-in does NOT stamp the attribute.
+    openModal('<h3>Test loose</h3>');
+    const html2 = document.getElementById('modal-root').innerHTML;
+    ok('strict: plain openModal stays loose', !/data-modal-strict/.test(html2), '');
+    closeModal();
+
+    // The Settings toggle path: setting disable_strict_modals=true → helper reports disabled.
+    const st = Store.load();
+    st.disable_strict_modals = true;
+    Store.save(st);
+    ok('strict: Settings toggle disables', strictModalsDisabled(), '');
+    const st2 = Store.load();
+    st2.disable_strict_modals = false;
+    Store.save(st2);
+    ok('strict: re-enabling clears the flag', !strictModalsDisabled(), '');
+  }
+
+  // 27b. Real editable modals (failModal, naModal, verify, presubmit, dismiss,
+  //      changePin) all open with the strict attribute.
+  reset();
+  {
+    const sm = await Users.create({ name: 'StrSM', role: 'SM', pin: '9090' });
+    AuthSession.login(sm.id);
+    startNewAudit({ date: today(), auditorName: 'StrSM', auditorId: sm.id, croIds: [], templateId: 'tpl_daily' });
+
+    const cp = CHECKPOINTS[0];
+    failModal(cp, []);
+    ok('strict: failModal is strict', /data-modal-strict/.test(document.getElementById('modal-root').innerHTML), '');
+    closeModal();
+
+    naModal(cp);
+    ok('strict: naModal is strict', /data-modal-strict/.test(document.getElementById('modal-root').innerHTML), '');
+    closeModal();
+
+    changePinModal();
+    ok('strict: changePinModal is strict', /data-modal-strict/.test(document.getElementById('modal-root').innerHTML), '');
+    closeModal();
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

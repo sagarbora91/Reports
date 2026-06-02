@@ -872,7 +872,7 @@ function escalationDismissModal(escId) {
     <button class="btn btn-ghost" data-action="esc-dismiss-pick" data-id="${escapeHtml(escId)}" data-reason="${escapeHtml(r.text)}"
             style="text-align:left;justify-content:flex-start">${escapeHtml(r.text)}</button>
     <div class="spacer-12"></div>`).join('');
-  openModal(`
+  openStrictModal(`
     <h3>${tUi('dismiss.title')}</h3>
     <p class="muted">T${e.trigger_number} · ${escapeHtml(e.trigger_label)}</p>
     <p style="font-size:13px;line-height:1.5;margin:6px 0 12px">${tUi('dismiss.intro')}</p>
@@ -1769,7 +1769,7 @@ function presubmitIssues(audit, state) {
 // Confirm modal opened when presubmitIssues is non-empty.
 function presubmitWarnModal(issues) {
   const items = issues.map(i => `<li>${escapeHtml(i.text)}</li>`).join('');
-  openModal(`
+  openStrictModal(`
     <h3>${tUi('presubmit.title')}</h3>
     <p style="font-size:13px;line-height:1.5;margin:6px 0 10px">${tUi('presubmit.intro')}</p>
     <ul style="margin:6px 0 12px 18px;padding:0;font-size:14px;line-height:1.5">${items}</ul>
@@ -3395,6 +3395,14 @@ function renderSettingsTab(state, auth) {
                onchange="onDailyReminderToggle(this.checked)"
                style="width:42px;height:24px;cursor:pointer">
       </label>
+      <hr style="border:0;border-top:1px solid var(--gray-200);margin:12px 0">
+      <label class="row-spread" style="cursor:pointer">
+        <span><strong>${tUi('label.strict_modals')}</strong> <span class="muted" style="font-weight:400;font-size:12px">${tUi('hint.strict_modals_desc')}</span></span>
+        <input type="checkbox" id="strictModalsToggle"
+               ${strictModalsDisabled() ? '' : 'checked'}
+               data-action="toggle-strict-modals"
+               style="width:42px;height:24px;cursor:pointer">
+      </label>
     </div>
 
     <div class="card">
@@ -3422,10 +3430,25 @@ function renderSettingsTab(state, auth) {
 // Modals
 // ---------------------------------------------------------------------------
 
-function openModal(html) {
+function openModal(html, opts) {
   const root = document.getElementById('modal-root');
-  root.innerHTML = `<div class="modal-backdrop" data-modal-backdrop><div class="modal" data-modal>${html}</div></div>`;
+  // Stage A #3 — modals marked strict ignore backdrop taps (user must use the
+  // explicit Cancel/X to close). Protects against accidental loss of typed
+  // findings, attached photos, dismiss reasons, etc.
+  const strict = !!(opts && opts.strict);
+  const strictAttr = strict ? ' data-modal-strict' : '';
+  root.innerHTML = `<div class="modal-backdrop" data-modal-backdrop><div class="modal" data-modal${strictAttr}>${html}</div></div>`;
 }
+
+// Owner-controllable opt-out — if Sagar finds the new behaviour annoying he
+// can flip a Settings switch. Defaults to false (= strict modals enabled).
+function strictModalsDisabled() {
+  try { return !!Store.load().disable_strict_modals; } catch (_) { return false; }
+}
+
+// Convenience: open a modal that traps backdrop taps (used by every modal
+// where the user is typing or otherwise has unsaved state).
+function openStrictModal(html) { return openModal(html, { strict: true }); }
 
 function closeModal() {
   document.getElementById('modal-root').innerHTML = '';
@@ -3447,7 +3470,7 @@ function failModal(checkpoint, cros) {
   const croOptions = ['<option value="">— not attributed —</option>']
     .concat(cros.map(c => `<option value="${c.id}">${escapeHtml(c.name)} · ${escapeHtml(c.counter)}</option>`))
     .join('');
-  openModal(`
+  openStrictModal(`
     <h3>FAIL — CP ${escapeHtml(checkpoint.id)}</h3>
     <p class="muted">${escapeHtml(checkpoint.text)}</p>
     <label class="field">
@@ -3524,7 +3547,7 @@ function renderFailPhotoGrid() {
 }
 
 function naModal(checkpoint) {
-  openModal(`
+  openStrictModal(`
     <h3>N/A — CP ${escapeHtml(checkpoint.id)}</h3>
     <p class="muted">${escapeHtml(checkpoint.text)}</p>
     <label class="field">
@@ -3612,7 +3635,7 @@ function setPhoneModal(userId) {
 }
 
 function changePinModal() {
-  openModal(`
+  openStrictModal(`
     <h3>Change your PIN</h3>
     <label class="field">
       <span>${tUi('label.current_pin')}</span>
@@ -3948,7 +3971,7 @@ function verifyAuditModal(auditId) {
   }).join('') : `<p class="muted" style="padding:6px">${tUi('verify.no_marks')}</p>`;
 
   const when = frequencyOf(a) === 'weekly' ? `Week ${a.week_number}, ${a.year}` : escapeHtml(fmtDate(a.date));
-  openModal(`
+  openStrictModal(`
     <h3>${tUi('verify.title')}</h3>
     <p class="muted">${when} · by ${escapeHtml(a.auditor_name || '—')}</p>
     <p style="font-size:13px;line-height:1.5;margin:6px 0 10px">${tUi('verify.instructions')}</p>
@@ -4450,7 +4473,14 @@ document.addEventListener('click', async (e) => {
   }
 
   if (action === 'modal-cancel' || action === 'modal-backdrop') { closeModal(); return; }
-  if (e.target.matches('[data-modal-backdrop]')) { closeModal(); return; }
+  if (e.target.matches('[data-modal-backdrop]')) {
+    // Strict modals trap backdrop taps (Stage A #3) so the user doesn't lose
+    // half-entered work. Honoured unless Sagar's toggled it off in Settings.
+    const strictModal = document.querySelector('[data-modal-strict]');
+    if (strictModal && !strictModalsDisabled()) return;
+    closeModal();
+    return;
+  }
 
   // ----- User management (Owner-only mostly) -----
   if (action === 'change-my-pin') { changePinModal(); return; }
@@ -5263,6 +5293,15 @@ document.addEventListener('change', (e) => {
     window._loginUserId = e.target.value;
     PinBuf.reset();
     render();
+    return;
+  }
+  // Stage A #3 — Settings toggle for the strict-modals behaviour. checkbox
+  // checked = strict ON (default); unchecked = backdrop-tap closes modals
+  // as it used to before this change.
+  if (e.target.id === 'strictModalsToggle') {
+    const st = Store.load();
+    st.disable_strict_modals = !e.target.checked;
+    Store.save(st);
     return;
   }
   // Builder: persist template name / frequency / cro_mode on change.

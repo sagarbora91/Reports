@@ -151,6 +151,9 @@ NEW = {
     "batchverify.intro": ("Tap Verify on each row to spot-check it. You'll come back here to the next one each time.", "Tap Verify on each row to spot-check it. You'll come back here to the next one each time."),
     "batchverify.verify_btn": ("Verify", "Verify"),
     "batchverify.all_done": ("All audits verified ✓", "All audits verified ✓"),
+    # --- batch 12: strict modals toggle (Stage A #3) ---
+    "label.strict_modals": ("Protect modals from accidental close", "मॉडल चुकून बंद होण्यापासून संरक्षण"),
+    "hint.strict_modals_desc": ("· tapping outside an open form won't discard your typing", "· उघड्या फॉर्मच्या बाहेर टॅप केल्यास तुमचे टायपिंग नष्ट होणार नाही"),
 }
 
 
