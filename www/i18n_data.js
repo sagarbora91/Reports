@@ -2,6 +2,8 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "demo.title": "🧪 Demo data loaded",
+      "demo.intro": "This build is pre-loaded with 6 months of sample audits for testing. When you're ready for real use, go to Settings → Erase all data and start fresh.",
       "err.ref_missing_fmt": "A linked {kind} was missing — it may have been deleted.",
       "crojump.label": "Jump to a CRO to fix a verdict",
       "crojump.placeholder": "— choose a CRO —",
@@ -632,6 +634,8 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "demo.title": "🧪 डेमो डेटा लोड केला",
+      "demo.intro": "हे बिल्ड चाचणीसाठी ६ महिन्यांच्या नमुना ऑडिटसह आधीच भरलेले आहे. खऱ्या वापरासाठी तयार झाल्यावर सेटिंग्ज → सर्व डेटा पुसा वर जाऊन नव्याने सुरू करा.",
       "err.ref_missing_fmt": "जोडलेला {kind} सापडला नाही — कदाचित हटवला असावा.",
       "crojump.label": "निकाल दुरुस्त करण्यासाठी सीआरओकडे जा",
       "crojump.placeholder": "— सीआरओ निवडा —",

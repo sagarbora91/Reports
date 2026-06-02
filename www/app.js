@@ -370,6 +370,17 @@ function storageWarnBanner() {
   </div>`;
 }
 
+// Demo banner — shown only when the store was seeded from a demo dataset
+// (state._demo). Makes it unmistakable this is a test build with dummy data,
+// and tells the user how to wipe it for real use.
+function demoBanner(state) {
+  if (!state || !state._demo) return '';
+  return `<div class="card" style="background:#eef3ff;border-color:#9bb8e8;color:#1a3a6b;margin-bottom:10px">
+    <strong>${tUi('demo.title')}</strong>
+    <p style="margin:4px 0 0;font-size:13px;line-height:1.45">${tUi('demo.intro')}</p>
+  </div>`;
+}
+
 // "Last backup" status string for the Backup & restore card.
 function lastBackupLine(state) {
   const days = daysSince(state && state.last_backup_at);
@@ -2261,7 +2272,8 @@ function renderHomeTab(state, auth) {
   const att = homeAttention(state, auth);
   const cards = [];
 
-  // Storage warn first — it's catastrophic if it lands.
+  // Demo notice (test build only) + storage warn first.
+  cards.push(demoBanner(state));
   cards.push(storageWarnBanner());
 
   // Resume draft is the single highest-priority action: an unfinished audit
@@ -5695,6 +5707,19 @@ function restoreLastTab() {
     switchTab(last);
   } else {
     switchTab('home');
+  }
+}
+
+// Demo seed — if a pre-loaded dataset is bundled (demo build) AND this device
+// has no data yet, install it on first launch. Inert on the production build
+// (window.DEMO_SEED is undefined there). Runs before ensureSeeded so the
+// seeded templates win. Never overwrites real data.
+if (typeof window !== 'undefined' && window.DEMO_SEED && !localStorage.getItem(STORE_KEY)) {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(window.DEMO_SEED));
+    console.log('Demo dataset seeded (' + (window.DEMO_SEED.audits || []).length + ' audits).');
+  } catch (e) {
+    console.error('Demo seed failed (likely storage quota):', e);
   }
 }
 

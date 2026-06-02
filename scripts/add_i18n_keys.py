@@ -160,6 +160,9 @@ NEW = {
     "crojump.cancel_edit": ("Cancel — keep current verdict", "रद्द — सध्याचा निकाल ठेवा"),
     # --- batch 14: defensive lookups (Stage B #10) ---
     "err.ref_missing_fmt": ("A linked {kind} was missing — it may have been deleted.", "जोडलेला {kind} सापडला नाही — कदाचित हटवला असावा."),
+    # --- batch 15: demo build banner ---
+    "demo.title": ("🧪 Demo data loaded", "🧪 डेमो डेटा लोड केला"),
+    "demo.intro": ("This build is pre-loaded with 6 months of sample audits for testing. When you're ready for real use, go to Settings → Erase all data and start fresh.", "हे बिल्ड चाचणीसाठी ६ महिन्यांच्या नमुना ऑडिटसह आधीच भरलेले आहे. खऱ्या वापरासाठी तयार झाल्यावर सेटिंग्ज → सर्व डेटा पुसा वर जाऊन नव्याने सुरू करा."),
     # --- batch 12: strict modals toggle (Stage A #3) ---
     "label.strict_modals": ("Protect modals from accidental close", "मॉडल चुकून बंद होण्यापासून संरक्षण"),
     "hint.strict_modals_desc": ("· tapping outside an open form won't discard your typing", "· उघड्या फॉर्मच्या बाहेर टॅप केल्यास तुमचे टायपिंग नष्ट होणार नाही"),

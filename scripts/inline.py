@@ -25,10 +25,21 @@ def read(path):
         return f.read()
 
 
+def js_order():
+    """The JS files to inline, in order. demo_seed.js (a pre-loaded dataset) is
+    included right after config.js IF it exists — present only on the `demo`
+    branch, absent (and thus a no-op) on the production `capacitor` branch."""
+    order = list(JS_ORDER)
+    if os.path.exists(os.path.join(ROOT, "demo_seed.js")):
+        order.insert(1, "demo_seed.js")
+    return order
+
+
 def main():
     html = read(INDEX)
     css = read(os.path.join(ROOT, "style.css")).rstrip("\n")
-    js = "\n".join(read(os.path.join(ROOT, f)).rstrip("\n") for f in JS_ORDER)
+    order = js_order()
+    js = "\n".join(read(os.path.join(ROOT, f)).rstrip("\n") for f in order)
 
     # --- CSS block ---
     try:
@@ -52,7 +63,7 @@ def main():
 
     print("Rebuilt %s" % INDEX)
     print("  CSS:  %d bytes" % len(css))
-    print("  JS:   %d bytes (%s)" % (len(js), " + ".join(JS_ORDER)))
+    print("  JS:   %d bytes (%s)" % (len(js), " + ".join(order)))
 
 
 if __name__ == "__main__":

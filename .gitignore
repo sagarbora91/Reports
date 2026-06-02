@@ -37,6 +37,9 @@ Documentation/_p1_spec_summary.md
 *.keystore
 *.jks
 
-# QA harness — generated artifacts (keep shim.js + tests.js)
+# QA harness — generated artifacts (keep shim.js + tests.js + gen/stress sources)
 qa/app_bundle.js
 qa/run.js
+qa/gen_run.js
+qa/stress_run.js
+qa/demo_state.json
