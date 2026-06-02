@@ -1,5 +1,15 @@
 # Saagar Audit — QA Audit Report
 
+> **Update (2026-06-02):** The numbers below were a point-in-time snapshot.
+> The harness has since grown to **286 checks, all green**, adding the Stage A
+> UX pass (Home tab, photo/modal feedback, batch verify, pre-submit check,
+> dismiss-with-reason, resume-draft, storage health, touch targets, strict
+> modals) and the Stage B structural pass (config.js, per-CRO escape hatch,
+> UiState reset on logout, schema versioning + migrations + defensive lookups).
+> See `agent_outputs/architecture_audit_2026-05-30.md` for the full UX +
+> architecture audit, and `MANUAL_TEST_CHECKLIST.md` for on-device testing.
+> Re-run the harness any time with the commands in `qa/README.md`.
+
 **Date:** 2026-05-28
 **Build under test:** `capacitor` branch, post-Bucket-B (verify gate + weekly
 report + T4/T7 escalations + full Marathi wiring)

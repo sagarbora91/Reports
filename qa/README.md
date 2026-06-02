@@ -13,12 +13,15 @@ cat qa/shim.js qa/app_bundle.js qa/tests.js > qa/run.js
 node qa/run.js
 ```
 
-Expected tail: `PASS: 128   FAIL: 0   ALL GREEN ✅`
+Expected tail: `PASS: 286   FAIL: 0   ALL GREEN ✅`
+
+(Count grows as features land — what matters is `FAIL: 0`. The build step now
+prepends `config.js` to the bundle, so `CONFIG` is in scope for the tests.)
 
 ## Files
 - `shim.js` — minimal DOM / localStorage / sessionStorage / crypto / FileReader
   shim so the app boots under Node.
-- `tests.js` — the assertion battery (16 areas + render smoke tests).
+- `tests.js` — the assertion battery (33 areas + render smoke tests).
 - `app_bundle.js`, `run.js` — generated, gitignored.
 
 ## What it covers

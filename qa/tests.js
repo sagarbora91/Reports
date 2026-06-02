@@ -1154,6 +1154,32 @@
     eq('lookup: Cro.byId null id → null (no warn)', Cro.byId(Store.load(), null), null);
   }
 
+  // ---- 33. Home + batch-verify render Marathi (v0.3.1 follow-up) ----
+  reset();
+  {
+    const sm = await Users.create({ name: 'MrSM', role: 'SM', pin: '3636' });
+    AuthSession.login(sm.id);
+    I18n.current = 'mr';
+    const dev = /[ऀ-ॿ]/;
+    const home = renderHomeTab(Store.load(), AuthSession.current());
+    ok('mr-home: SM home renders Devanagari', dev.test(home), '');
+    ok('mr-home: run-daily card translated (not English)', !/Run today's daily audit/.test(home), '');
+    // Batch-verify modal title in Marathi for a GM with a queue.
+    I18n.current = 'en';
+    const gm = await Users.create({ name: 'MrGM', role: 'GM', pin: '3737' });
+    AuthSession.login(sm.id);
+    startNewAudit({ date: today(), auditorName: 'MrSM', auditorId: sm.id, croIds: [], templateId: 'tpl_daily' });
+    CHECKPOINTS.forEach(cp => markCheckpoint(cp.id, 'P'));
+    submitAudit();
+    AuthSession.login(gm.id);
+    I18n.current = 'mr';
+    batchVerifyModal();
+    const modal = document.getElementById('modal-root').innerHTML;
+    ok('mr-home: batch-verify modal renders Devanagari', dev.test(modal), '');
+    closeModal();
+    I18n.current = 'en';
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);
