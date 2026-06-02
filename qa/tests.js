@@ -98,7 +98,7 @@
   let res = submitAudit();
   eq('submit daily 100%', res.audit.score.pct, 100);
   eq('submit daily band excellent', res.audit.score.band, 'excellent');
-  eq('submit froze snapshot', !!res.audit.template_snapshot, true);
+  eq('submit froze snapshot', !!(res.audit.template_snapshot || res.audit.snapshot_ref), true);
   eq('submitted audit in history', Store.load().audits.filter(x => x.status === 'submitted').length, 1);
 
   // one with fails → CAPs created
@@ -390,7 +390,7 @@
   markCheckpoint('m1', 'P'); markCheckpoint('m2', 'F', { finding: 'expired' });
   const rm = submitAudit();
   eq('monthly score 1/2 = 50%', rm.audit.score.pct, 50);
-  eq('monthly frozen snapshot', !!rm.audit.template_snapshot, true);
+  eq('monthly frozen snapshot', !!(rm.audit.template_snapshot || rm.audit.snapshot_ref), true);
   eq('monthly no escalation (not daily)', rm.escalationsRaised, 0);
 
   // Backdated audit stores reason
@@ -1178,6 +1178,38 @@
     ok('mr-home: batch-verify modal renders Devanagari', dev.test(modal), '');
     closeModal();
     I18n.current = 'en';
+  }
+
+  // ---- 34. v1→v2 snapshot dedup migration ----
+  reset();
+  {
+    // Two old (v1) audits with FULL per-audit template_snapshot copies of the
+    // SAME template. After migration they should share one dictionary entry.
+    const fullSnap = {
+      name: 'Daily Audit', name_mr: 'दैनिक', frequency: 'daily', cro_mode: 'store',
+      sections: [{ id: 's1', name: 'S1' }],
+      checkpoints: [{ id: 'C1', section_id: 's1', text: 'one' }, { id: 'C2', section_id: 's1', text: 'two' }],
+    };
+    const rawV1 = {
+      // no schema_version → treated as v0, runs through v1 then v2 migrations
+      audits: [
+        { id: 'old-a', date: '2026-01-01', status: 'verified', template_id: 'tpl_daily', audit_type: 'daily', results: { C1: { result: 'P' }, C2: { result: 'F' } }, score: { pct: 50, band: 'critical' }, template_snapshot: JSON.parse(JSON.stringify(fullSnap)) },
+        { id: 'old-b', date: '2026-01-02', status: 'verified', template_id: 'tpl_daily', audit_type: 'daily', results: { C1: { result: 'P' }, C2: { result: 'P' } }, score: { pct: 100, band: 'excellent' }, template_snapshot: JSON.parse(JSON.stringify(fullSnap)) },
+      ],
+      cros: [], users: [], caps: [], escalations: [], templates: [],
+    };
+    localStorage.setItem(STORE_KEY, JSON.stringify(rawV1));
+    const m = Store.load();
+    eq('dedup: migrated to v2', m.schema_version, 2);
+    ok('dedup: per-audit template_snapshot removed', m.audits[0].template_snapshot === undefined, '');
+    ok('dedup: audits got snapshot_ref', !!m.audits[0].snapshot_ref && !!m.audits[1].snapshot_ref, '');
+    eq('dedup: identical snapshots share one ref', m.audits[0].snapshot_ref, m.audits[1].snapshot_ref);
+    eq('dedup: dictionary has exactly one entry', Object.keys(m.template_snapshots).length, 1);
+    // checkpointsFor still resolves the frozen checklist via the shared ref.
+    eq('dedup: checkpointsFor resolves via ref', checkpointsFor(m.audits[0]).length, 2);
+    // The resolved snapshot carries the frozen wording (immunity is exercised
+    // end-to-end by section 7 against the live template).
+    eq('dedup: frozen text preserved', checkpointsFor(m.audits[0])[0].text, 'one');
   }
 
   // ---- Result ----

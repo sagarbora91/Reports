@@ -4682,13 +4682,35 @@ const STORE_KEY = 'saagar_audit_v1';
 // changes, and add a MIGRATIONS[oldVersion] step. Old data with no
 // schema_version is treated as v0 (the pre-versioning shape, which already
 // matches v1) and normalized on first load.
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
-// migrations[N] transforms a state AT version N into version N+1. Empty for now
-// — the framework exists so a future shape change (e.g. multi-store store_id in
-// Stage C) can be applied safely to old phones / restored backups instead of
-// silently corrupting them.
-const MIGRATIONS = [];
+// migrations[N] transforms a state AT version N into version N+1.
+const MIGRATIONS = [
+  // index 0: v0 (pre-versioning) → v1. Pre-versioning data already matches the
+  // v1 shape; the defensive normalize below does the backfill. Identity here.
+  function (s) { return s; },
+  // index 1: v1 → v2. De-duplicate per-audit `template_snapshot` copies into a
+  // shared `template_snapshots` dictionary keyed by template-id + content hash,
+  // replacing each audit's full copy with a small `snapshot_ref`. 6 months of
+  // daily audits used to duplicate the full 68-checkpoint snapshot ~180×,
+  // blowing the ~5 MB localStorage quota; sharing collapses that to one copy
+  // per distinct template version. Immunity is preserved: a later template edit
+  // hashes to a NEW key, so past audits keep pointing at their original snapshot.
+  function (s) {
+    s.template_snapshots = s.template_snapshots || {};
+    (s.audits || []).forEach(a => {
+      if (a.template_snapshot && !a.snapshot_ref) {
+        const snap = a.template_snapshot;
+        const baseId = a.template_id || (a.audit_type === 'weekly' ? 'tpl_weekly' : 'tpl_daily');
+        const key = baseId + '@' + snapHashOf(snap);
+        if (!s.template_snapshots[key]) s.template_snapshots[key] = snap;
+        a.snapshot_ref = key;
+        delete a.template_snapshot;
+      }
+    });
+    return s;
+  },
+];
 
 // Bring a freshly-parsed state up to SCHEMA_VERSION. `fromVersion` is read from
 // the RAW parsed object (before merging with empty(), which would mask it).
@@ -4754,12 +4776,52 @@ const Store = {
       caps: [],
       escalations: [],
       templates: [],          // audit templates (editable checklists)
+      template_snapshots: {},  // shared frozen snapshots, keyed by id@contentHash
       current_audit_id: null,
       current_user_id: null,
       auditor_name: '',
     };
   },
 };
+
+// Content hash of a template/snapshot's scoring-and-display-relevant shape.
+// Two templates with identical structure hash the same (so audits share one
+// stored snapshot); any edit changes the hash (so past audits are unaffected).
+function snapHashOf(o) {
+  const str = JSON.stringify({ n: o.name, f: o.frequency, m: o.cro_mode, s: o.sections, c: o.checkpoints });
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) & 0xffffffff;
+  return (h >>> 0).toString(36);
+}
+function snapshotKey(tpl) { return tpl.id + '@' + snapHashOf(tpl); }
+
+// Ensure the shared dictionary holds this template's snapshot; return its key.
+function ensureSnapshot(state, tpl) {
+  const key = snapshotKey(tpl);
+  state.template_snapshots = state.template_snapshots || {};
+  if (!state.template_snapshots[key]) {
+    state.template_snapshots[key] = {
+      name: tpl.name, name_mr: tpl.name_mr,
+      frequency: tpl.frequency, cro_mode: tpl.cro_mode,
+      sections: JSON.parse(JSON.stringify(tpl.sections || [])),
+      checkpoints: JSON.parse(JSON.stringify(tpl.checkpoints || [])),
+    };
+  }
+  return key;
+}
+
+// Resolve a snapshot_ref to its frozen snapshot. Snapshots are immutable
+// (content-hashed key), so caching by ref is always safe and never stale —
+// this keeps hot render loops (trends over 180 audits) from re-parsing the
+// whole store per checkpointsFor() call.
+const _snapCache = {};
+function resolveSnapshot(ref) {
+  if (!ref) return null;
+  if (_snapCache[ref]) return _snapCache[ref];
+  const snaps = (Store.load().template_snapshots) || {};
+  if (snaps[ref]) { _snapCache[ref] = snaps[ref]; return snaps[ref]; }
+  return null;
+}
 
 // ---------------------------------------------------------------------------
 // Audit templates — checklists are DATA now, not code. Built-ins (daily,
@@ -6344,20 +6406,30 @@ const FailDraft = {
 function checkpointsFor(audit) {
   // Submitted audits carry a frozen snapshot — always render from that so a
   // later template edit never changes a past record.
+  // 1) Legacy: a full per-audit copy (pre-v2, not yet migrated).
   if (audit && audit.template_snapshot && Array.isArray(audit.template_snapshot.checkpoints))
     return audit.template_snapshot.checkpoints;
-  // In-progress audits use the live template.
+  // 2) v2+: a reference into the shared template_snapshots dictionary.
+  if (audit && audit.snapshot_ref) {
+    const s = resolveSnapshot(audit.snapshot_ref);
+    if (s && Array.isArray(s.checkpoints)) return s.checkpoints;
+  }
+  // 3) In-progress audits use the live template.
   if (audit && audit.template_id) {
     const tpl = Templates.byId(null, audit.template_id);
     if (tpl && Array.isArray(tpl.checkpoints)) return tpl.checkpoints;
   }
-  // Legacy audits (pre-templates) fall back to the hard-wired sets.
+  // 4) Legacy audits (pre-templates) fall back to the hard-wired sets.
   return (audit && audit.audit_type === 'weekly') ? WEEKLY_CHECKPOINTS : CHECKPOINTS;
 }
 
 // The template (or frozen snapshot) behind an audit; null for pure-legacy.
 function templateFor(audit) {
   if (audit && audit.template_snapshot) return audit.template_snapshot;
+  if (audit && audit.snapshot_ref) {
+    const s = resolveSnapshot(audit.snapshot_ref);
+    if (s) return s;
+  }
   if (audit && audit.template_id) return Templates.byId(null, audit.template_id);
   return null;
 }
@@ -6572,15 +6644,14 @@ function submitAudit() {
   const freq = frequencyOf(a);
 
   // Freeze the checklist into the audit so later template edits can't alter
-  // this record's score or wording.
+  // this record's score or wording. We store the snapshot ONCE in a shared
+  // dictionary (keyed by template id + content hash) and reference it, instead
+  // of copying the full 68-checkpoint snapshot into every audit — otherwise 6
+  // months of dailies blow the localStorage quota.
   const liveTpl = templateFor(a);
-  if (liveTpl && !a.template_snapshot) {
-    a.template_snapshot = {
-      name: liveTpl.name, name_mr: liveTpl.name_mr,
-      frequency: liveTpl.frequency, cro_mode: liveTpl.cro_mode,
-      sections: JSON.parse(JSON.stringify(liveTpl.sections || [])),
-      checkpoints: JSON.parse(JSON.stringify(liveTpl.checkpoints || [])),
-    };
+  if (liveTpl && !a.template_snapshot && !a.snapshot_ref && a.template_id) {
+    const tplObj = Templates.byId(state, a.template_id) || liveTpl;
+    a.snapshot_ref = ensureSnapshot(state, tplObj);
   }
 
   if (freq === 'weekly') {
