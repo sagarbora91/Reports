@@ -1689,6 +1689,20 @@ function nextUnmarkedIndex(audit) {
   return cps.length; // all done
 }
 
+// Stage B #7 — which checkpoint the action handlers (mark / fail / NA / photo)
+// should act on. Normally the next unmarked one (the linear walk); but when the
+// auditor is re-checking a specific checkpoint via the per-CRO review screen,
+// _recheckCpId points at it so the verdict change lands on the right row.
+function activeCpForAction(audit) {
+  const cps = checkpointsFor(audit);
+  if (window._recheckCpId) {
+    const cp = cps.find(c => c.id === window._recheckCpId);
+    if (cp) return cp;
+  }
+  const idx = nextUnmarkedIndex(audit);
+  return cps[idx] || null;
+}
+
 // How many checkpoints the user has SKIPped so far. Used to surface
 // "X to revisit" both during the linear walk and on the review screen.
 function skippedCount(audit) {
@@ -1780,6 +1794,10 @@ function presubmitWarnModal(issues) {
 // Shared submit path used by both the clean and the "submit-anyway" handlers,
 // so the toast composition stays DRY.
 function runSubmitAudit() {
+  // Clear any per-CRO review/edit state so it never leaks into the next audit.
+  window._croReviewMode = false;
+  window._recheckCpId = null;
+  window._croReviewReturnTo = null;
   const submitted = submitAudit();
   if (submitted && submitted.audit) {
     const sc = submitted.audit.score;
@@ -2394,7 +2412,24 @@ function cpText(audit, cp) { return cpDisplay(audit, cp).text; }
 function renderInProgressAudit(a) {
   const cps = checkpointsFor(a);
   const freq = frequencyOf(a);
-  const idx = nextUnmarkedIndex(a);
+
+  // Stage B #7 — per-CRO review/edit mode. The auditor jumped (back) to a CRO
+  // via the "Jump to CRO" dropdown to fix a verdict. Show that CRO's checklist
+  // unless they've tapped a specific checkpoint to re-check (handled below).
+  const inRecheck = !!window._recheckCpId;
+  if (auditIsPerCro(a) && window._croReviewMode && !inRecheck) {
+    return renderCroChecklist(a, a.current_cro_index || 0);
+  }
+
+  // Normal walk index — or the specific checkpoint being re-checked.
+  let idx;
+  if (inRecheck) {
+    idx = cps.findIndex(c => c.id === window._recheckCpId);
+    if (idx < 0) { window._recheckCpId = null; idx = nextUnmarkedIndex(a); }
+  } else {
+    idx = nextUnmarkedIndex(a);
+  }
+
   if (idx >= cps.length) {
     // Per-CRO: finished this CRO. Move to the next, or review if last.
     if (auditIsPerCro(a)) {
@@ -2459,7 +2494,7 @@ function renderInProgressAudit(a) {
       <button class="btn btn-fail" data-action="mark" data-verdict="F">FAIL</button>
       ${allowsNa ? `<button class="btn btn-na" data-action="mark" data-verdict="NA">N / A</button>` : ''}
     </div>
-    ${!isRevisitingSkip ? `
+    ${(!isRevisitingSkip && !inRecheck) ? `
       <button class="btn btn-ghost" data-action="mark" data-verdict="SKIP"
               style="margin-top:8px;color:var(--amber);border:1px dashed var(--amber)">
         ${skipped > 0 ? tUi('btn.skip_with_count_fmt').replace('{n}', skipped) : tUi('btn.skip')}
@@ -2470,7 +2505,9 @@ function renderInProgressAudit(a) {
       <div class="minicount na"><span class="n">${live.na}</span><span class="lbl">N/A</span></div>
     </div>
     <div class="spacer-24"></div>
-    <button class="btn btn-ghost" data-action="cancel-audit">${tUi('btn.cancel_audit')}</button>
+    ${inRecheck
+      ? `<button class="btn btn-ghost" data-action="recheck-cancel">${tUi('crojump.cancel_edit')}</button>`
+      : `<button class="btn btn-ghost" data-action="cancel-audit">${tUi('btn.cancel_audit')}</button>`}
   `;
 }
 
@@ -2534,8 +2571,68 @@ function renderCroHandoff(a, ci) {
       <p class="muted">${sc.p} pass &middot; ${sc.f} fail &middot; ${sc.na} N/A</p>
     </div>
     <button class="btn btn-primary" data-action="next-cro">Next: ${escapeHtml(nextCro ? nextCro.name : 'CRO')} (${ci + 2} of ${order.length}) →</button>
+    ${renderCroJump(a)}
     <div class="spacer-12"></div>
     <button class="btn btn-ghost" data-action="cancel-audit">${tUi('btn.discard_draft')}</button>
+  `;
+}
+
+// Stage B #7 — "Jump to CRO" dropdown. Lets the auditor hop (back) to any CRO
+// to fix a verdict, instead of being stuck going forward. No score recompute:
+// per-CRO scores are computed live from cro_results, so editing a bucket just
+// flows through.
+function renderCroJump(a) {
+  if (!auditIsPerCro(a)) return '';
+  const st = Store.load();
+  const order = a.cro_order || [];
+  if (order.length < 2) return '';
+  const cps = checkpointsFor(a);
+  const opts = order.map((cid, i) => {
+    const cro = (st.cros || []).find(c => c.id === cid);
+    const bucket = (a.cro_results && a.cro_results[cid]) || {};
+    const marked = Object.values(bucket).filter(r => r && r.result).length;
+    const sc = scoreAudit(bucket, cps);
+    const tag = marked > 0 ? `${sc.pct.toFixed(0)}%` : '—';
+    return `<option value="${i}">${escapeHtml(cro ? cro.name : 'CRO ' + (i + 1))} · ${tag}</option>`;
+  }).join('');
+  return `
+    <div class="spacer-12"></div>
+    <label class="field" style="margin:0">
+      <span>${tUi('crojump.label')}</span>
+      <select id="croJump"><option value="">${tUi('crojump.placeholder')}</option>${opts}</select>
+    </label>`;
+}
+
+// Per-CRO review/edit checklist — every checkpoint for one CRO with its current
+// verdict; tapping a row re-opens that checkpoint to change the verdict.
+function renderCroChecklist(a, ci) {
+  const st = Store.load();
+  const order = a.cro_order || [];
+  const cro = (st.cros || []).find(c => c.id === order[ci]);
+  const cps = checkpointsFor(a);
+  const bucket = (a.cro_results && a.cro_results[order[ci]]) || {};
+  const sc = scoreAudit(bucket, cps);
+  const rows = cps.map(cp => {
+    const r = bucket[cp.id] || {};
+    const v = r.result || '—';
+    return `
+      <div class="result-row" data-action="recheck-cp" data-cp="${escapeHtml(cp.id)}" style="cursor:pointer">
+        <span class="cp-id">${escapeHtml(cp.id)}</span>
+        <div class="cp-body"><div>${escapeHtml(cpDisplay(a, cp).text)}</div></div>
+        <span class="verdict-pill ${v}">${v}</span>
+      </div>`;
+  }).join('');
+  return `
+    <div class="cro-banner">${escapeHtml(tUi('crojump.editing_fmt').replace('{name}', cro ? cro.name : 'CRO'))}</div>
+    <div class="card score-card">
+      <div class="score-pct ${sc.band}">${sc.pct.toFixed(1)}%</div>
+      <div class="score-band ${sc.band}">${escapeHtml(cro ? cro.name : 'CRO')}</div>
+      <p class="muted">${sc.p} pass &middot; ${sc.f} fail &middot; ${sc.na} N/A</p>
+    </div>
+    <p class="tiny muted" style="text-align:center">${tUi('crojump.tap_to_change')}</p>
+    <div class="detail-sop">${rows}</div>
+    <div class="spacer-12"></div>
+    <button class="btn btn-primary" data-action="cro-review-done">${tUi('crojump.done')}</button>
   `;
 }
 
@@ -2569,6 +2666,7 @@ function renderReviewAudit(a) {
       <p class="muted">${s.raw} of ${s.max} points &middot; ${s.p} pass &middot; ${s.f} fail &middot; ${s.na} N/A</p>
       ${extra}
     </div>
+    ${auditIsPerCro(a) ? `<div class="card">${renderCroJump(a)}</div>` : ''}
     <div class="card">
       <label class="field" style="margin:0">
         <span>Audit notes <span class="muted" style="font-weight:400">(optional)</span></span>
@@ -4755,11 +4853,10 @@ document.addEventListener('click', async (e) => {
     const state = Store.load();
     const audit = currentAudit(state);
     if (!audit) return;
-    const idx = nextUnmarkedIndex(audit);
-    const cp = checkpointsFor(audit)[idx];
+    const cp = activeCpForAction(audit);
     if (!cp) return;
 
-    if (verdict === 'P')  { markCheckpoint(cp.id, 'P'); render(); return; }
+    if (verdict === 'P')  { markCheckpoint(cp.id, 'P'); window._recheckCpId = null; render(); return; }
     if (verdict === 'F')  { failModal(cp, state.cros.filter(c => audit.cros.includes(c.id))); return; }
     if (verdict === 'NA') { naModal(cp); return; }
     if (verdict === 'SKIP') {
@@ -4778,8 +4875,7 @@ document.addEventListener('click', async (e) => {
       // The current checkpoint we're FAILing — its CP id goes on the stamp.
       const state = Store.load();
       const audit = currentAudit(state);
-      const idx = audit ? nextUnmarkedIndex(audit) : 0;
-      const cp = audit ? checkpointsFor(audit)[idx] : null;
+      const cp = audit ? activeCpForAction(audit) : null;
       // Wrapper disables the modal's Save button with a "Saving photo…" label
       // while the 6-8s camera + GPS + canvas window runs, so the user can't
       // submit before the photo lands.
@@ -4831,14 +4927,15 @@ document.addEventListener('click', async (e) => {
     const croId = document.getElementById('failCro').value || null;
     const state = Store.load();
     const audit = currentAudit(state);
-    const idx = nextUnmarkedIndex(audit);
-    const cp = checkpointsFor(audit)[idx];
+    const cp = activeCpForAction(audit);
+    if (!cp) return;
     if (cp.photo_required_on_fail && FailDraft.photos.length === 0) {
       toast(tUi('hint.photo_evidence_required'));
       return;
     }
     markCheckpoint(cp.id, 'F', { finding, croId, photos: FailDraft.photos.slice() });
     FailDraft.reset();
+    window._recheckCpId = null;
     closeModal();
     render();
     return;
@@ -4848,9 +4945,10 @@ document.addEventListener('click', async (e) => {
     if (reason.length < 3) { toast(tUi('err.add_short_reason')); return; }
     const state = Store.load();
     const audit = currentAudit(state);
-    const idx = nextUnmarkedIndex(audit);
-    const cp = checkpointsFor(audit)[idx];
+    const cp = activeCpForAction(audit);
+    if (!cp) return;
     markCheckpoint(cp.id, 'NA', { finding: reason });
+    window._recheckCpId = null;
     closeModal();
     render();
     return;
@@ -4922,6 +5020,9 @@ document.addEventListener('click', async (e) => {
     state.audits = state.audits.filter(x => x.id !== state.current_audit_id);
     state.current_audit_id = null;
     Store.save(state);
+    window._croReviewMode = false;
+    window._recheckCpId = null;
+    window._croReviewReturnTo = null;
     render();
     return;
   }
@@ -4931,6 +5032,30 @@ document.addEventListener('click', async (e) => {
     if (!aud) return;
     aud.current_cro_index = (aud.current_cro_index || 0) + 1;
     Store.save(state);
+    render();
+    return;
+  }
+  // Stage B #7 — per-CRO escape hatch.
+  if (action === 'recheck-cp') {
+    window._recheckCpId = a.dataset.cp;
+    render();
+    return;
+  }
+  if (action === 'recheck-cancel') {
+    // Bail out of editing one checkpoint without changing its verdict.
+    window._recheckCpId = null;
+    render();
+    return;
+  }
+  if (action === 'cro-review-done') {
+    window._croReviewMode = false;
+    window._recheckCpId = null;
+    if (window._croReviewReturnTo != null) {
+      const state = Store.load();
+      const aud = currentAudit(state);
+      if (aud) { aud.current_cro_index = window._croReviewReturnTo; Store.save(state); }
+      window._croReviewReturnTo = null;
+    }
     render();
     return;
   }
@@ -5300,6 +5425,21 @@ document.addEventListener('change', (e) => {
     const st = Store.load();
     st.disable_strict_modals = !e.target.checked;
     Store.save(st);
+    return;
+  }
+  // Stage B #7 — "Jump to CRO" dropdown. Hop (back) to a CRO to fix a verdict.
+  if (e.target.id === 'croJump') {
+    const idx = parseInt(e.target.value, 10);
+    if (isNaN(idx)) return;
+    const state = Store.load();
+    const aud = currentAudit(state);
+    if (!aud) return;
+    window._croReviewReturnTo = aud.current_cro_index || 0;
+    aud.current_cro_index = idx;
+    Store.save(state);
+    window._croReviewMode = true;
+    window._recheckCpId = null;
+    render();
     return;
   }
   // Builder: persist template name / frequency / cro_mode on change.

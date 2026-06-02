@@ -2,6 +2,12 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "crojump.label": "Jump to a CRO to fix a verdict",
+      "crojump.placeholder": "— choose a CRO —",
+      "crojump.editing_fmt": "Editing {name} — tap a checkpoint to change it",
+      "crojump.tap_to_change": "Tap any row to change that verdict.",
+      "crojump.done": "✓ Done — back to summary",
+      "crojump.cancel_edit": "Cancel — keep current verdict",
       "label.strict_modals": "Protect modals from accidental close",
       "hint.strict_modals_desc": "· tapping outside an open form won't discard your typing",
       "batchverify.title_fmt": "Verify {n} audit(s)",
@@ -625,6 +631,12 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "crojump.label": "निकाल दुरुस्त करण्यासाठी सीआरओकडे जा",
+      "crojump.placeholder": "— सीआरओ निवडा —",
+      "crojump.editing_fmt": "{name} संपादन — बदलण्यासाठी तपासणी बिंदूवर टॅप करा",
+      "crojump.tap_to_change": "तो निकाल बदलण्यासाठी कोणत्याही ओळीवर टॅप करा.",
+      "crojump.done": "✓ पूर्ण — सारांशाकडे परत",
+      "crojump.cancel_edit": "रद्द — सध्याचा निकाल ठेवा",
       "label.strict_modals": "मॉडल चुकून बंद होण्यापासून संरक्षण",
       "hint.strict_modals_desc": "· उघड्या फॉर्मच्या बाहेर टॅप केल्यास तुमचे टायपिंग नष्ट होणार नाही",
       "batchverify.title_fmt": "Verify {n} audit(s)",

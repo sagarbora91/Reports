@@ -991,6 +991,66 @@
     eq('config: storageHealth limit matches CONFIG', storageHealth().limit, CONFIG.storage.limitBytes);
   }
 
+  // ---- 29. Per-CRO escape hatch (Stage B #7) ----
+  reset();
+  {
+    const tpl = Templates.create({ name: 'hatch-grooming', frequency: 'daily', cro_mode: 'per_cro' });
+    tpl.checkpoints = [
+      { id: 'H.1', section_id: tpl.sections[0].id, text: 'h one', weight: 1 },
+      { id: 'H.2', section_id: tpl.sections[0].id, text: 'h two', weight: 1 },
+    ];
+    Templates.save(tpl);
+    { const s = Store.load(); s.cros = [{ id: 'cH1', name: 'Hari', counter: 'Titan' }, { id: 'cH2', name: 'Hema', counter: 'Helios' }]; Store.save(s); }
+    startNewAudit({ date: today(), auditorName: 'Owner', auditorId: null, croIds: ['cH1', 'cH2'], templateId: tpl.id });
+
+    // CRO 1 (Hari): both PASS.
+    markCheckpoint('H.1', 'P'); markCheckpoint('H.2', 'P');
+    // Advance to CRO 2 (Hema): both PASS.
+    { const s = Store.load(); currentAudit(s).current_cro_index = 1; Store.save(s); }
+    markCheckpoint('H.1', 'P'); markCheckpoint('H.2', 'P');
+
+    // Simulate "jump back to CRO 1" via the dropdown handler logic.
+    { const s = Store.load(); const au = currentAudit(s); window._croReviewReturnTo = au.current_cro_index; au.current_cro_index = 0; Store.save(s); window._croReviewMode = true; window._recheckCpId = null; }
+
+    // The in-progress render now shows CRO 1's editable checklist.
+    {
+      const html = renderInProgressAudit(currentAudit(Store.load()));
+      ok('hatch: review mode renders CRO checklist', /data-action="recheck-cp"/.test(html), '');
+      ok('hatch: checklist names the CRO being edited', /Hari/.test(html), '');
+    }
+
+    // Re-check H.1 for CRO 1 and change PASS → activeCpForAction targets it.
+    window._recheckCpId = 'H.1';
+    {
+      const au = currentAudit(Store.load());
+      eq('hatch: activeCpForAction returns the rechecked cp', activeCpForAction(au).id, 'H.1');
+    }
+    // Mark it FAIL (writes to CRO 1's bucket since current_cro_index=0).
+    markCheckpoint('H.1', 'F', { finding: 'changed on review' });
+    window._recheckCpId = null;
+    {
+      const au = currentAudit(Store.load());
+      eq('hatch: CRO1 H.1 now F', au.cro_results['cH1']['H.1'].result, 'F');
+      eq('hatch: CRO2 H.1 untouched (still P)', au.cro_results['cH2']['H.1'].result, 'P');
+    }
+
+    // "Done" restores the index the auditor jumped from (CRO 2 = index 1).
+    {
+      const s = Store.load(); const au = currentAudit(s);
+      au.current_cro_index = window._croReviewReturnTo; Store.save(s);
+      window._croReviewMode = false; window._croReviewReturnTo = null;
+      eq('hatch: returnTo restores index 1', currentAudit(Store.load()).current_cro_index, 1);
+    }
+
+    // The edited verdict flows into the live per-CRO score (no recompute needed).
+    {
+      const au = currentAudit(Store.load());
+      const sp = scorePerCro(au, checkpointsFor(au));
+      eq('hatch: CRO1 score reflects the FAIL (1/2 = 50%)', sp.byCro['cH1'].pct, 50);
+      eq('hatch: CRO2 score still 100%', sp.byCro['cH2'].pct, 100);
+    }
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);
