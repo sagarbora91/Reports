@@ -2,7 +2,7 @@ name: Build Greetor APK
 
 on:
   push:
-    branches: [main, capacitor]
+    branches: [main, capacitor, demo]
     paths:
       - 'greetor/**'
       - '.github/workflows/greetor-apk.yml'

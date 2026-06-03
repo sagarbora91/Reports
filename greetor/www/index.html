@@ -694,6 +694,7 @@ body.locked { overflow: hidden; }
   <script src="photo.js"></script>
   <script src="dpdp.js"></script>
   <script src="i18n.js"></script>
+  <script src="seed-data.js"></script><!-- DEMO build: bundled 6-month sample data; remove this line for a clean release -->
   <script>
 "use strict";
 
@@ -3019,6 +3020,22 @@ async function boot() {
       if (raw) Store._hydrate(raw);
     }
   } catch (e) { console.warn("hydrate skipped", e); }
+
+  // 1b. DEMO/testing build: on a truly fresh install (no users yet), load the
+  // bundled 6-month sample dataset so the owner can explore a full app right
+  // away. Real PINs work (Owner 1234). Wiped via Settings → Erase all data.
+  // Remove the seed-data.js <script> tag for a clean production build.
+  try {
+    const SEED_FLAG = "saagar_greetor_seeded";
+    const _cur = Store.load();
+    // Load once ever. The flag survives "Erase all data" (which only clears
+    // the state key), so after you wipe the demo for real testing it stays clean.
+    if (window.DEMO_SEED && !localStorage.getItem(SEED_FLAG) && (!_cur.users || !_cur.users.length)) {
+      Store.save(window.DEMO_SEED);
+      localStorage.setItem(SEED_FLAG, "1");
+      console.log("Loaded DEMO_SEED: " + (window.DEMO_SEED.records || []).length + " records");
+    }
+  } catch (e) { console.warn("demo seed skipped", e); }
 
   // 2. Seed editable masters/comms once (idempotent); also primes the file.
   if (window.Masters || window.Comms || window.Targets || window.Footfall) {
