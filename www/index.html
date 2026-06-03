@@ -4923,39 +4923,46 @@ function _isQuotaError(e) {
   return e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || /quota/i.test(e.message || ''));
 }
 
-const Store = {
+// ---------------------------------------------------------------------------
+// Persistence layer (SQLite migration — Increment 1)
+//
+// Store.load()/save() are the app's ONLY persistence chokepoint. They delegate
+// to a swappable BACKEND, so a later increment can add a SQLite backend on the
+// device while the browser + the Node test harness keep using localStorage,
+// unchanged. A backend exposes two SYNCHRONOUS methods:
+//   readPersisted()   -> the stored state object, or null if none
+//   writePersisted(s) -> persist the state object
+// The generic concerns — default-merge + schema migration — stay in Store.load
+// so every backend gets them for free.
+// ---------------------------------------------------------------------------
+
+// localStorage backend = today's exact behaviour (plain JSON, LZString rescue
+// on quota). This is the default + production path, and the only backend the
+// test harness ever uses.
+const LocalStorageBackend = {
   // Set once a save hits the quota and we switch to compressed writes, so we
   // don't waste a doomed plain attempt on every subsequent save this session.
   _forceCompress: false,
 
-  load() {
-    try {
-      let raw = localStorage.getItem(STORE_KEY);
-      if (!raw) return Store.empty();
-      // Compressed payloads (the quota safety-valve) carry LZ_PREFIX; legacy /
-      // small stores are plain JSON. Decompress transparently.
-      if (raw.slice(0, LZ_PREFIX.length) === LZ_PREFIX) {
-        const body = window.LZString ? LZString.decompressFromUTF16(raw.slice(LZ_PREFIX.length)) : null;
-        if (body == null) { console.error('Store.load: decompress failed, resetting'); return Store.empty(); }
-        raw = body;
-      }
-      const parsed = JSON.parse(raw);
-      // Detect version from the raw object BEFORE the merge below masks it.
-      const fromVersion = typeof parsed.schema_version === 'number' ? parsed.schema_version : 0;
-      const s = Object.assign(Store.empty(), parsed);
-      return migrateState(s, fromVersion);
-    } catch (e) {
-      console.error('localStorage corrupted, resetting', e);
-      return Store.empty();
+  readPersisted() {
+    let raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return null;
+    // Compressed payloads (the quota safety-valve) carry LZ_PREFIX; legacy /
+    // small stores are plain JSON. Decompress transparently.
+    if (raw.slice(0, LZ_PREFIX.length) === LZ_PREFIX) {
+      const body = window.LZString ? LZString.decompressFromUTF16(raw.slice(LZ_PREFIX.length)) : null;
+      if (body == null) { console.error('LocalStorageBackend: decompress failed'); return null; }
+      raw = body;
     }
+    return JSON.parse(raw);
   },
 
-  save(s) {
+  writePersisted(s) {
     const json = JSON.stringify(s);
     // Fast path: store plain. This keeps the hot path (a checkpoint tap saves
     // the whole store) instant — compressing the full store every time would
     // cost ~0.7s at 6-month scale. Compression is only a rescue, below.
-    if (!Store._forceCompress) {
+    if (!this._forceCompress) {
       try {
         localStorage.setItem(STORE_KEY, json);
         return;
@@ -4963,7 +4970,7 @@ const Store = {
         if (!_isQuotaError(e)) { console.error('Store.save failed:', e); throw e; }
         // Quota hit — fall through and try the compressed write. Remember so we
         // skip the doomed plain attempt next time this session.
-        Store._forceCompress = true;
+        this._forceCompress = true;
         console.warn('Store.save: quota hit, switching to compressed storage');
       }
     }
@@ -4984,6 +4991,38 @@ const Store = {
       throw e;
     }
   },
+};
+
+// The active backend. SQLite (device-only, OFF BY DEFAULT) is selected in a
+// later increment; for now everything uses localStorage exactly as before.
+const Persistence = {
+  backend: LocalStorageBackend,
+};
+
+const Store = {
+  // Back-compat: the harness pokes Store._forceCompress in the LZString tests.
+  // It now lives on the backend; expose a passthrough so nothing breaks.
+  get _forceCompress() { return LocalStorageBackend._forceCompress; },
+  set _forceCompress(v) { LocalStorageBackend._forceCompress = v; },
+
+  load() {
+    try {
+      const parsed = Persistence.backend.readPersisted();
+      if (!parsed) return Store.empty();
+      // Detect version from the raw object BEFORE the merge below masks it.
+      const fromVersion = typeof parsed.schema_version === 'number' ? parsed.schema_version : 0;
+      const s = Object.assign(Store.empty(), parsed);
+      return migrateState(s, fromVersion);
+    } catch (e) {
+      console.error('persisted state corrupted, resetting', e);
+      return Store.empty();
+    }
+  },
+
+  save(s) {
+    Persistence.backend.writePersisted(s);
+  },
+
   empty() {
     return {
       schema_version: SCHEMA_VERSION,

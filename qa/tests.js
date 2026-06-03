@@ -1348,6 +1348,49 @@
     eq('restore: session cleared (re-auth)', restored.current_user_id, null);
   }
 
+  // ---- 36. Persistence abstraction — backend is swappable (SQLite Inc.1) ----
+  reset();
+  {
+    // Default backend is localStorage.
+    ok('persist: default backend is LocalStorageBackend', Persistence.backend === LocalStorageBackend, '');
+
+    // Swap in a fake in-memory backend; Store.load/save must route through it
+    // (this is exactly how the SQLite backend will plug in later).
+    const realBackend = Persistence.backend;
+    let _mem = null;
+    const FakeBackend = {
+      reads: 0, writes: 0,
+      readPersisted() { this.reads++; return _mem ? JSON.parse(_mem) : null; },
+      writePersisted(s) { this.writes++; _mem = JSON.stringify(s); },
+    };
+    Persistence.backend = FakeBackend;
+
+    // Empty fake → Store.load returns a fresh empty state (with defaults+migrate).
+    const fresh = Store.load();
+    eq('persist: load via fake backend returns empty schema', fresh.schema_version, SCHEMA_VERSION);
+    ok('persist: fake backend readPersisted was called', FakeBackend.reads > 0, '');
+
+    // Save through the fake; it lands in the fake's memory, not localStorage.
+    fresh.audits.push({ id: 'fake-a', date: today(), status: 'submitted', results: {}, score: { pct: 100, band: 'excellent' } });
+    Store.save(fresh);
+    ok('persist: fake backend writePersisted was called', FakeBackend.writes > 0, '');
+
+    // Round-trip through the fake backend preserves data.
+    const back = Store.load();
+    eq('persist: round-trip via fake backend keeps the audit', back.audits.length, 1);
+    eq('persist: round-trip audit id', back.audits[0].id, 'fake-a');
+
+    // Defaults + migration still apply on top of a backend that returns a
+    // version-less object (proves generic concerns stay in Store.load).
+    _mem = JSON.stringify({ audits: [{ id: 'old', template_snapshot: { name: 'D', frequency: 'daily', cro_mode: 'store', sections: [], checkpoints: [{ id: 'c1', text: 'x' }] } }] });
+    const migrated = Store.load();
+    eq('persist: backend data still runs through migrateState (v2)', migrated.schema_version, SCHEMA_VERSION);
+    ok('persist: snapshot deduped through backend', !!migrated.audits[0].snapshot_ref && migrated.audits[0].template_snapshot === undefined, '');
+
+    // Restore the real backend so later tests are unaffected.
+    Persistence.backend = realBackend;
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);
