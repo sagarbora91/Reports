@@ -1,5 +1,54 @@
+/* reports.js — Saagar Greetor reporting/analytics layer (SQLite Phase 2).
+ *
+ * Rewritten to be ASYNC and DB-backed. The data layer NEVER touches the DB
+ * directly: every row comes from window.Repo (which itself routes through
+ * window.GreetorDB on device / an injected node:sqlite adapter under test).
+ *
+ * BYTE-IDENTITY CONTRACT
+ * ----------------------
+ * The observable output of every analytic (summary / breakdown / visitsCSV /
+ * dailySummaryCSV / formatINR / resolveRange / rangeLabel) MUST be identical to
+ * the previous pure-over-`records` implementation on the real seed. To guarantee
+ * that, the intricate transforms (the summary loop, breakdown grouping+sort, the
+ * 28-column CSV assembly, the daily roll-up) are kept EXACTLY as they were —
+ * byte-for-byte pure functions over a `records` array — and the new async
+ * methods only change HOW the array is obtained:
+ *
+ *     OLD caller:  Reports.summary(Reports.filterByRange(state.records, key, cs, ce))
+ *     NEW method:  await Reports.summary(key, cs, ce)
+ *                    -> rows = await Repo.records.all()        // ORDER BY ord
+ *                    -> recs = filterByRange(rows, key, cs, ce)// SAME pure filter
+ *                    -> return summaryPure(recs)               // SAME pure transform
+ *
+ * Repo.records.all() returns domain records mapped by DBSchema.rowToRecord in
+ * `ord` order — i.e. the original app-array order. Because the pure transforms
+ * are unchanged and they receive the rows in the same order the old code saw in
+ * state.records, sort-stability ties, NULL/""/0 encoding (enforced by the
+ * mappers), INR formatting, CSV column order/quoting/CRLF and date-range
+ * inclusivity are all preserved by construction.
+ *
+ * Pure helpers (formatINR, date math, range resolution, csv escaping) stay SYNC
+ * and are exported unchanged so sync callers and the diff-harness can use them.
+ *
+ * Plain <script> module: sets window.Reports AND module.exports (Node). The
+ * async methods reach the DB lazily through window.Repo, so this file works
+ * unchanged in Node when a test adapter is injected via Repo.setDb().
+ */
 (function (global) {
   "use strict";
+
+  // Resolve Repo lazily at call time (not at load) so load order and a
+  // post-load Repo.setDb() both work, and Node can inject an adapter.
+  function repo() {
+    var r = global.Repo;
+    if (!r) {
+      throw new Error(
+        "Reports: window.Repo unavailable — load repo.js (+ db.js, db-schema.js) " +
+        "before reports.js, or inject a test adapter via Repo.setDb()."
+      );
+    }
+    return r;
+  }
 
   // ── helpers ──────────────────────────────────────────────────────────────
 
@@ -96,6 +145,9 @@
   }
 
   // ── filterByRange ─────────────────────────────────────────────────────────
+  // PURE/SYNC. Resolves the date window and filters a records ARRAY in place.
+  // The async methods below obtain the array via Repo, then call this with the
+  // EXACT same semantics the old callers used on state.records.
 
   function filterByRange(records, rangeKey, customStart, customEnd) {
     try {
@@ -115,7 +167,8 @@
 
   var CLOSED_STATUSES = { Converted: true, Closed: true };
 
-  function summary(records) {
+  // PURE: unchanged transform over a records array. Kept byte-identical.
+  function summaryPure(records) {
     var zero = {
       walkins: 0, conversions: 0, conversionPct: 0,
       totalSale: 0, hot: 0, followPending: 0, uniqueCustomers: 0
@@ -163,7 +216,8 @@
     return (v !== undefined && v !== null) ? ("" + v).trim() : "";
   }
 
-  function breakdown(records, field) {
+  // PURE: unchanged grouping + descending-count sort over a records array.
+  function breakdownPure(records, field) {
     try {
       if (!Array.isArray(records) || records.length === 0) return [];
       var counts = {};
@@ -223,7 +277,8 @@
     return da < db ? -1 : da > db ? 1 : 0;
   }
 
-  function visitsCSV(records) {
+  // PURE: unchanged CSV assembly over a records array (sort + 28-col rows + CRLF).
+  function visitsCSVPure(records) {
     try {
       if (!Array.isArray(records)) return "";
       var sorted = records.slice().sort(sortByDateTime);
@@ -252,7 +307,8 @@
     return best;
   }
 
-  function dailySummaryCSV(records) {
+  // PURE: unchanged daily roll-up over a records array.
+  function dailySummaryCSVPure(records) {
     try {
       if (!Array.isArray(records)) return "";
       var byDate = {};
@@ -269,7 +325,7 @@
       for (var j = 0; j < dates.length; j++) {
         var date = dates[j];
         var recs = byDate[date];
-        var s = summary(recs);
+        var s = summaryPure(recs);
         lines.push(csvRow([
           date,
           s.walkins,
@@ -286,17 +342,61 @@
     }
   }
 
+  // ── async DB-backed range fetch ─────────────────────────────────────────────
+  // The ONE place these analytics touch data. Repo.records.all() returns domain
+  // records (DBSchema.rowToRecord) in `ord` order == the original state.records
+  // order, so the pure transforms below see rows in the exact order the old
+  // pure-over-state code did. We then reuse the SAME pure filterByRange so the
+  // date window (inclusive on both bounds) is identical.
+  async function recordsInRange(rangeKey, customStart, customEnd) {
+    var all = await repo().records.all();
+    return filterByRange(all, rangeKey, customStart, customEnd);
+  }
+
+  // ── async public analytics (DB-backed; byte-identical output) ───────────────
+
+  async function summary(rangeKey, customStart, customEnd) {
+    var recs = await recordsInRange(rangeKey, customStart, customEnd);
+    return summaryPure(recs);
+  }
+
+  async function breakdown(rangeKey, field, customStart, customEnd) {
+    var recs = await recordsInRange(rangeKey, customStart, customEnd);
+    return breakdownPure(recs, field);
+  }
+
+  async function visitsCSV(rangeKey, customStart, customEnd) {
+    var recs = await recordsInRange(rangeKey, customStart, customEnd);
+    return visitsCSVPure(recs);
+  }
+
+  async function dailySummaryCSV(rangeKey, customStart, customEnd) {
+    var recs = await recordsInRange(rangeKey, customStart, customEnd);
+    return dailySummaryCSVPure(recs);
+  }
+
   // ── public API ────────────────────────────────────────────────────────────
 
-  global.Reports = {
+  var api = {
     RANGES: RANGES,
+
+    // pure helpers (sync) — exported unchanged for sync callers + diff-harness
     rangeLabel: rangeLabel,
     resolveRange: resolveRange,
     filterByRange: filterByRange,
+
+    // async, DB-backed analytics (new signatures drop the records/state arg)
     summary: summary,
     breakdown: breakdown,
     visitsCSV: visitsCSV,
     dailySummaryCSV: dailySummaryCSV,
+
+    // pure transforms exposed for the diff-harness (verify SQL path == JS path)
+    summaryPure: summaryPure,
+    breakdownPure: breakdownPure,
+    visitsCSVPure: visitsCSVPure,
+    dailySummaryCSVPure: dailySummaryCSVPure,
+
     formatINR: function (n) {
       if (global.Customers && typeof global.Customers.formatINR === "function") {
         return global.Customers.formatINR(n);
@@ -305,4 +405,7 @@
     }
   };
 
-}(window));
+  global.Reports = api;
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+
+}(typeof window !== "undefined" ? window : globalThis));

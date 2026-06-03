@@ -1,8 +1,39 @@
-(function () {
+/* customers.js — Saagar Greetor customer/CRM data layer (SQLite Phase 2).
+ *
+ * REWRITTEN to async, DB-backed. The data layer NEVER touches window.GreetorDB
+ * directly — every read/write goes through window.Repo (the single DB access
+ * point), so this module runs unchanged in Node by injecting a node:sqlite test
+ * adapter via Repo.setDb(). The DB is the source of truth; the old `state`
+ * argument is gone.
+ *
+ * BYTE-IDENTITY is the only hard requirement: every public method reproduces the
+ * EXACT observable output of the previous pure-over-`state` implementation on the
+ * real 2,612-row seed. The intricate transforms (per-mobile customer building,
+ * visit/pipeline sorting) are UNCHANGED pure functions — we just FETCH the rows
+ * via Repo (ORDER BY ord ⇒ original app-order, so grouping insertion-order and
+ * sort tie-breaks match the old in-memory array) and feed them to the SAME pure
+ * code. Pure helpers (formatINR, date math, mobile validation) stay sync.
+ *
+ * Plain <script> module: sets window.Customers AND module.exports (Node).
+ */
+(function (root) {
   "use strict";
 
   var MOBILE_RE = /^[6-9]\d{9}$/;
   var FALLBACK_STAGES = ["Open", "Hot", "Warm", "Cold", "Converted", "Closed"];
+
+  // ── Repo handle (the ONLY DB access point) ──────────────────────────────────
+  // Resolved lazily at call time so neither load order nor a post-load
+  // Repo.setDb() can break routing (mirrors repo.js's own db() resolution).
+  function repo() {
+    var r = root.Repo;
+    if (!r) {
+      throw new Error("Customers: window.Repo unavailable — load repo.js (+ db.js, db-schema.js) before customers.js.");
+    }
+    return r;
+  }
+
+  // ── pure helpers (sync — unchanged) ─────────────────────────────────────────
 
   function validMobile(m) {
     return typeof m === "string" && MOBILE_RE.test(m);
@@ -65,10 +96,14 @@
     };
   }
 
-  function groupByMobile(state) {
+  // groupByMobile — UNCHANGED pure transform, now over an explicit records[]
+  // array (the rows fetched from Repo) instead of state.records. Insertion order
+  // is preserved (rows arrive ORDER BY ord ⇒ original app-order), so the customer
+  // list's pre-sort order and every sort's tie-break are byte-identical.
+  function groupByMobile(records) {
     var map = {};
-    var records = (state && Array.isArray(state.records)) ? state.records : [];
-    records.forEach(function (r) {
+    var recs = Array.isArray(records) ? records : [];
+    recs.forEach(function (r) {
       if (!validMobile(r.mobile)) return;
       if (!map[r.mobile]) map[r.mobile] = [];
       map[r.mobile].push(r);
@@ -76,10 +111,39 @@
     return map;
   }
 
-  function list(state, opts) {
+  function formatINR(n) {
+    try {
+      var num = Math.round(Number(n) || 0);
+      if (!isFinite(num)) num = 0;
+      var str = String(Math.abs(num));
+      var result = "";
+      if (str.length <= 3) {
+        result = str;
+      } else {
+        var last3 = str.slice(-3);
+        var rest = str.slice(0, str.length - 3);
+        var parts = [];
+        while (rest.length > 2) {
+          parts.unshift(rest.slice(-2));
+          rest = rest.slice(0, rest.length - 2);
+        }
+        if (rest.length) parts.unshift(rest);
+        result = parts.join(",") + "," + last3;
+      }
+      return "₹" + (num < 0 ? "-" : "") + result;
+    } catch (e) {
+      return "₹0";
+    }
+  }
+
+  // ── async, DB-backed API ────────────────────────────────────────────────────
+
+  async function list(opts) {
     try {
       opts = opts || {};
-      var map = groupByMobile(state);
+      // FETCH all records (ORDER BY ord) then reuse the EXACT old transform.
+      var records = await repo().records.all();
+      var map = groupByMobile(records);
       var customers = Object.keys(map).map(function (mob) {
         return buildCustomer(mob, map[mob]);
       });
@@ -114,21 +178,22 @@
     }
   }
 
-  function byMobile(state, mobile) {
+  async function byMobile(mobile) {
     try {
       if (!validMobile(mobile)) return null;
-      var map = groupByMobile(state);
-      if (!map[mobile]) return null;
-      return buildCustomer(mobile, map[mobile]);
+      // Targeted fetch (uses idx_records_mobile, ORDER BY ord).
+      var records = await repo().records.byMobile(mobile);
+      if (!records || !records.length) return null;
+      return buildCustomer(mobile, records);
     } catch (e) {
       return null;
     }
   }
 
-  function stats(state) {
+  async function stats() {
     try {
-      var records = (state && Array.isArray(state.records)) ? state.records : [];
-      var map = groupByMobile(state);
+      var records = await repo().records.all();
+      var map = groupByMobile(records);
       var mobiles = Object.keys(map);
       var totalCustomers = mobiles.length;
       var repeatCustomers = mobiles.filter(function (m) { return map[m].length > 1; }).length;
@@ -151,20 +216,31 @@
     }
   }
 
-  function pipelineStages(state) {
+  async function pipelineStages() {
     try {
-      if (window.Masters && typeof window.Masters.globalList === "function") {
-        var stages = window.Masters.globalList(state, "leadStatuses");
-        if (Array.isArray(stages) && stages.length) return stages;
+      // Masters config lives in the meta KV table (key 'masters', JSON string).
+      // Parse it and feed a synthetic { masters } state to Masters.globalList —
+      // identical result to the old pipelineStages(state) since the stored JSON
+      // is a faithful round-trip of state.masters.
+      if (root.Masters && typeof root.Masters.globalList === "function") {
+        var raw = await repo().meta.get("masters");
+        var masters = null;
+        if (raw != null) {
+          try { masters = JSON.parse(raw); } catch (e) { masters = null; }
+        }
+        if (masters != null) {
+          var stages = root.Masters.globalList({ masters: masters }, "leadStatuses");
+          if (Array.isArray(stages) && stages.length) return stages;
+        }
       }
     } catch (e) {}
     return FALLBACK_STAGES.slice();
   }
 
-  function pipeline(state) {
+  async function pipeline() {
     try {
-      var stages = pipelineStages(state);
-      var records = (state && Array.isArray(state.records)) ? state.records : [];
+      var stages = await pipelineStages();
+      var records = await repo().records.all();
       var stageSet = {};
       stages.forEach(function (s) { stageSet[s] = []; });
       var other = [];
@@ -199,63 +275,36 @@
     }
   }
 
-  function findRecord(state, recordId) {
-    var records = (state && Array.isArray(state.records)) ? state.records : [];
-    for (var i = 0; i < records.length; i++) {
-      if (records[i].recordId === recordId) return records[i];
-    }
-    return null;
-  }
-
-  function setStage(state, recordId, stage) {
+  async function setStage(recordId, stage) {
     try {
-      var rec = findRecord(state, recordId);
-      if (!rec) return;
-      rec.leadStatus = stage;
+      var rec = await repo().records.byId(recordId);
+      if (!rec) return;                       // unknown id → no-op (do not throw)
+      var changes = { leadStatus: stage };
       if (stage === "Converted" && !rec.convertedAt) {
-        rec.convertedAt = new Date().toISOString();
+        changes.convertedAt = new Date().toISOString();
       }
-      rec.updatedAt = new Date().toISOString();
+      changes.updatedAt = new Date().toISOString();
+      await repo().records.update(recordId, changes);
     } catch (e) {}
   }
 
-  function convertToSale(state, recordId, saleValue) {
+  async function convertToSale(recordId, saleValue) {
     try {
-      var rec = findRecord(state, recordId);
-      if (!rec) return;
-      rec.leadStatus = "Converted";
-      rec.convertedAt = new Date().toISOString();
-      rec.saleValue = Number(saleValue) || 0;
-      rec.updatedAt = new Date().toISOString();
+      var rec = await repo().records.byId(recordId);
+      if (!rec) return;                       // unknown id → no-op
+      var changes = {
+        leadStatus: "Converted",
+        convertedAt: new Date().toISOString(),
+        saleValue: Number(saleValue) || 0,
+        updatedAt: new Date().toISOString()
+      };
+      await repo().records.update(recordId, changes);
     } catch (e) {}
   }
 
-  function formatINR(n) {
-    try {
-      var num = Math.round(Number(n) || 0);
-      if (!isFinite(num)) num = 0;
-      var str = String(Math.abs(num));
-      var result = "";
-      if (str.length <= 3) {
-        result = str;
-      } else {
-        var last3 = str.slice(-3);
-        var rest = str.slice(0, str.length - 3);
-        var parts = [];
-        while (rest.length > 2) {
-          parts.unshift(rest.slice(-2));
-          rest = rest.slice(0, rest.length - 2);
-        }
-        if (rest.length) parts.unshift(rest);
-        result = parts.join(",") + "," + last3;
-      }
-      return "₹" + (num < 0 ? "-" : "") + result;
-    } catch (e) {
-      return "₹0";
-    }
-  }
-
-  window.Customers = {
+  // ── public API (window.Customers, dual-export) ──────────────────────────────
+  var api = {
+    // async, DB-backed
     list: list,
     byMobile: byMobile,
     stats: stats,
@@ -263,7 +312,14 @@
     pipeline: pipeline,
     setStage: setStage,
     convertToSale: convertToSale,
-    formatINR: formatINR
+    // pure helpers (sync) — formatINR is exported (Reports.formatINR delegates
+    // here); buildCustomer/groupByMobile exported for reuse + harness parity.
+    formatINR: formatINR,
+    buildCustomer: buildCustomer,
+    groupByMobile: groupByMobile
   };
 
-}());
+  root.Customers = api;
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+
+}(typeof window !== "undefined" ? window : globalThis));

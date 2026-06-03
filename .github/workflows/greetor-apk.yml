@@ -63,6 +63,9 @@ jobs:
       - name: QA - SQLite schema integrity (node:sqlite)
         run: node --experimental-sqlite scripts/qa-db-schema.cjs
 
+      - name: QA - data-layer byte-identity (Phase 2 diff-harness)
+        run: node --experimental-sqlite scripts/qa-diff-datalayers.cjs
+
       - name: Install fonts for SVG rasterization
         run: |
           sudo apt-get update -qq
