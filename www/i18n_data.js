@@ -2,6 +2,19 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "sqlite.title": "Storage engine (beta)",
+      "sqlite.intro": "Switch this device to SQLite storage — unlimited room for years of audits and photos. Off by default; your data only moves after a verified copy is confirmed.",
+      "sqlite.toggle_label": "Use SQLite storage (device test)",
+      "sqlite.state_on": "· ON",
+      "sqlite.state_off": "· off",
+      "sqlite.enable_confirm": "Switch this device to SQLite storage? A backup will be taken first, then your data is copied and verified.",
+      "sqlite.need_backup": "Backup not completed — SQLite not enabled. Please complete the backup first.",
+      "sqlite.migrating": "Copying and verifying your data…",
+      "sqlite.enabled_restart": "SQLite storage is on and your data was verified. Please close and reopen the app.",
+      "sqlite.migrate_failed": "Could not switch to SQLite — staying on the current storage. Your data is unchanged.",
+      "sqlite.disable_confirm": "Switch back to standard storage? Your current data will be copied back first.",
+      "sqlite.disabled_restart": "Switched back to standard storage. Please close and reopen the app.",
+      "sqlite.disable_failed": "Could not switch back — staying on SQLite. Your data is unchanged.",
       "err.storage_full": "Storage full — back up to Drive and erase old audits.",
       "demo.title": "🧪 Demo data loaded",
       "demo.intro": "This build is pre-loaded with 6 months of sample audits for testing. When you're ready for real use, go to Settings → Erase all data and start fresh.",
@@ -635,6 +648,19 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "sqlite.title": "स्टोरेज इंजिन (बीटा)",
+      "sqlite.intro": "हे डिव्हाइस SQLite स्टोरेजवर हलवा — वर्षानुवर्षांचे ऑडिट व फोटोंसाठी अमर्याद जागा. डीफॉल्ट बंद; पडताळलेली प्रत निश्चित झाल्यावरच तुमचा डेटा हलतो.",
+      "sqlite.toggle_label": "SQLite स्टोरेज वापरा (डिव्हाइस चाचणी)",
+      "sqlite.state_on": "· चालू",
+      "sqlite.state_off": "· बंद",
+      "sqlite.enable_confirm": "हे डिव्हाइस SQLite स्टोरेजवर हलवायचे? आधी बॅकअप घेतला जाईल, मग तुमचा डेटा कॉपी करून पडताळला जाईल.",
+      "sqlite.need_backup": "बॅकअप पूर्ण झाला नाही — SQLite सुरू केले नाही. कृपया आधी बॅकअप पूर्ण करा.",
+      "sqlite.migrating": "तुमचा डेटा कॉपी करून पडताळत आहे…",
+      "sqlite.enabled_restart": "SQLite स्टोरेज सुरू झाले व तुमचा डेटा पडताळला. कृपया अॅप बंद करून पुन्हा उघडा.",
+      "sqlite.migrate_failed": "SQLite वर हलवता आले नाही — सध्याच्या स्टोरेजवरच राहिले. तुमचा डेटा अबाधित आहे.",
+      "sqlite.disable_confirm": "मानक स्टोरेजवर परत यायचे? तुमचा सध्याचा डेटा आधी परत कॉपी केला जाईल.",
+      "sqlite.disabled_restart": "मानक स्टोरेजवर परत आले. कृपया अॅप बंद करून पुन्हा उघडा.",
+      "sqlite.disable_failed": "परत हलवता आले नाही — SQLite वरच राहिले. तुमचा डेटा अबाधित आहे.",
       "err.storage_full": "स्टोरेज भरले — Drive वर बॅकअप घ्या व जुने ऑडिट पुसा.",
       "demo.title": "🧪 डेमो डेटा लोड केला",
       "demo.intro": "हे बिल्ड चाचणीसाठी ६ महिन्यांच्या नमुना ऑडिटसह आधीच भरलेले आहे. खऱ्या वापरासाठी तयार झाल्यावर सेटिंग्ज → सर्व डेटा पुसा वर जाऊन नव्याने सुरू करा.",

@@ -1417,6 +1417,28 @@
     Persistence._ready = true;
   }
 
+  // ---- 38. SQLite is OFF by default + gated to device (Inc.4 safety) ----
+  reset();
+  {
+    eq('sqlite: disabled by default', sqliteEnabled(), false);
+    setSqliteEnabled(true);
+    eq('sqlite: pref toggles on', sqliteEnabled(), true);
+    setSqliteEnabled(false);
+    eq('sqlite: pref toggles off', sqliteEnabled(), false);
+    // The pref is a dedicated device-local key, NOT part of the synced state,
+    // so a restored backup can't flip another device's backend.
+    ok('sqlite: pref not in Store state', Store.load().saagar_sqlite_enabled === undefined, '');
+    // Settings tab must NOT render the SQLite toggle without the native shell
+    // (window.SaagarShell is undefined in the harness) — production browser path
+    // never even sees the option.
+    const owner = await Users.create({ name: 'SqOwner', role: 'OWNER', pin: '1212' });
+    AuthSession.login(owner.id);
+    const settings = renderSettingsTab(Store.load(), AuthSession.current());
+    ok('sqlite: toggle hidden without native shell', !/sqliteToggle/.test(settings), '');
+    // The default backend stays localStorage regardless of the pref.
+    ok('sqlite: default backend remains localStorage', Persistence.backend === LocalStorageBackend, '');
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

@@ -266,6 +266,14 @@
 
     const App = plugin('App');
     if (App) {
+      // Flush any pending SQLite writes when the app is backgrounded. The
+      // native thread completes the transaction even as the WebView freezes,
+      // which the in-WebView pagehide listener can't guarantee on Android.
+      App.addListener('appStateChange', (state) => {
+        if (state && state.isActive === false && window.SaagarAudit && window.SaagarAudit.flushNow) {
+          try { window.SaagarAudit.flushNow(); } catch (_) {}
+        }
+      });
       App.addListener('backButton', () => {
         // 1. Open modal? Close it.
         const modal = document.querySelector('.modal-backdrop, .modal');

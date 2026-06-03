@@ -1493,6 +1493,19 @@ window.I18N_DATA = {
   "en": {
     "ui_strings": {
 
+      "sqlite.title": "Storage engine (beta)",
+      "sqlite.intro": "Switch this device to SQLite storage — unlimited room for years of audits and photos. Off by default; your data only moves after a verified copy is confirmed.",
+      "sqlite.toggle_label": "Use SQLite storage (device test)",
+      "sqlite.state_on": "· ON",
+      "sqlite.state_off": "· off",
+      "sqlite.enable_confirm": "Switch this device to SQLite storage? A backup will be taken first, then your data is copied and verified.",
+      "sqlite.need_backup": "Backup not completed — SQLite not enabled. Please complete the backup first.",
+      "sqlite.migrating": "Copying and verifying your data…",
+      "sqlite.enabled_restart": "SQLite storage is on and your data was verified. Please close and reopen the app.",
+      "sqlite.migrate_failed": "Could not switch to SQLite — staying on the current storage. Your data is unchanged.",
+      "sqlite.disable_confirm": "Switch back to standard storage? Your current data will be copied back first.",
+      "sqlite.disabled_restart": "Switched back to standard storage. Please close and reopen the app.",
+      "sqlite.disable_failed": "Could not switch back — staying on SQLite. Your data is unchanged.",
       "err.storage_full": "Storage full — back up to Drive and erase old audits.",
       "demo.title": "🧪 Demo data loaded",
       "demo.intro": "This build is pre-loaded with 6 months of sample audits for testing. When you're ready for real use, go to Settings → Erase all data and start fresh.",
@@ -2126,6 +2139,19 @@ window.I18N_DATA = {
   "mr": {
     "ui_strings": {
 
+      "sqlite.title": "स्टोरेज इंजिन (बीटा)",
+      "sqlite.intro": "हे डिव्हाइस SQLite स्टोरेजवर हलवा — वर्षानुवर्षांचे ऑडिट व फोटोंसाठी अमर्याद जागा. डीफॉल्ट बंद; पडताळलेली प्रत निश्चित झाल्यावरच तुमचा डेटा हलतो.",
+      "sqlite.toggle_label": "SQLite स्टोरेज वापरा (डिव्हाइस चाचणी)",
+      "sqlite.state_on": "· चालू",
+      "sqlite.state_off": "· बंद",
+      "sqlite.enable_confirm": "हे डिव्हाइस SQLite स्टोरेजवर हलवायचे? आधी बॅकअप घेतला जाईल, मग तुमचा डेटा कॉपी करून पडताळला जाईल.",
+      "sqlite.need_backup": "बॅकअप पूर्ण झाला नाही — SQLite सुरू केले नाही. कृपया आधी बॅकअप पूर्ण करा.",
+      "sqlite.migrating": "तुमचा डेटा कॉपी करून पडताळत आहे…",
+      "sqlite.enabled_restart": "SQLite स्टोरेज सुरू झाले व तुमचा डेटा पडताळला. कृपया अॅप बंद करून पुन्हा उघडा.",
+      "sqlite.migrate_failed": "SQLite वर हलवता आले नाही — सध्याच्या स्टोरेजवरच राहिले. तुमचा डेटा अबाधित आहे.",
+      "sqlite.disable_confirm": "मानक स्टोरेजवर परत यायचे? तुमचा सध्याचा डेटा आधी परत कॉपी केला जाईल.",
+      "sqlite.disabled_restart": "मानक स्टोरेजवर परत आले. कृपया अॅप बंद करून पुन्हा उघडा.",
+      "sqlite.disable_failed": "परत हलवता आले नाही — SQLite वरच राहिले. तुमचा डेटा अबाधित आहे.",
       "err.storage_full": "स्टोरेज भरले — Drive वर बॅकअप घ्या व जुने ऑडिट पुसा.",
       "demo.title": "🧪 डेमो डेटा लोड केला",
       "demo.intro": "हे बिल्ड चाचणीसाठी ६ महिन्यांच्या नमुना ऑडिटसह आधीच भरलेले आहे. खऱ्या वापरासाठी तयार झाल्यावर सेटिंग्ज → सर्व डेटा पुसा वर जाऊन नव्याने सुरू करा.",
@@ -4857,6 +4883,64 @@ const WEEKLY_CHECKPOINTS = [
   }
 ];
 // ---------------------------------------------------------------------------
+// CapacitorSqlDriver — the SqlDriver the SqliteBackend uses ON DEVICE. Wraps
+// the raw @capacitor-community/sqlite plugin (accessed the same no-bundler way
+// shell.js reaches its plugins: window.Capacitor.Plugins.CapacitorSQLite).
+//
+// Device-only: every method runs behind the SqliteBackend, which only activates
+// when the Owner opts in on a device. On web/harness this object is defined but
+// never instantiated. Validated by the on-device smoke test (Inc.4) — the Node
+// suite exercises the SAME SqliteBackend through the sql.js driver instead.
+//
+// Implements: open / close / exec / run / query / batch (all async).
+// ---------------------------------------------------------------------------
+function CapacitorSqlDriver(dbName) {
+  this.dbName = dbName || 'saagar_audit';
+}
+CapacitorSqlDriver.prototype._plugin = function () {
+  const SQ = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorSQLite;
+  if (!SQ) throw new Error('CapacitorSQLite plugin unavailable');
+  return SQ;
+};
+CapacitorSqlDriver.prototype.open = async function () {
+  const SQ = this._plugin();
+  // Create a no-encryption connection (idempotent — ignore "already exists"),
+  // then open it. version 1; readonly false.
+  try {
+    await SQ.createConnection({ database: this.dbName, encrypted: false, mode: 'no-encryption', version: 1, readonly: false });
+  } catch (e) {
+    if (!/exist/i.test(String(e && e.message || e))) throw e;   // connection already created — fine
+  }
+  await SQ.open({ database: this.dbName, readonly: false });
+  // WAL journal for crash-safe commits; ignore if the platform rejects it.
+  try { await SQ.execute({ database: this.dbName, statements: 'PRAGMA journal_mode=WAL;', transaction: false }); } catch (_) {}
+};
+CapacitorSqlDriver.prototype.close = async function () {
+  const SQ = this._plugin();
+  try { await SQ.close({ database: this.dbName, readonly: false }); } catch (_) {}
+  try { await SQ.closeConnection({ database: this.dbName, readonly: false }); } catch (_) {}
+};
+CapacitorSqlDriver.prototype.exec = async function (sql) {
+  // Multi-statement DDL/pragma. transaction:false so PRAGMA isn't wrapped.
+  await this._plugin().execute({ database: this.dbName, statements: sql, transaction: false });
+};
+CapacitorSqlDriver.prototype.run = async function (sql, params) {
+  const r = await this._plugin().run({ database: this.dbName, statement: sql, values: params || [], transaction: false });
+  return { changes: (r && r.changes && r.changes.changes) || 0 };
+};
+CapacitorSqlDriver.prototype.query = async function (sql, params) {
+  const r = await this._plugin().query({ database: this.dbName, statement: sql, values: params || [] });
+  return (r && r.values) || [];
+};
+CapacitorSqlDriver.prototype.batch = async function (stmts) {
+  // executeSet runs the whole set atomically (one transaction) — exactly the
+  // BEGIN…COMMIT semantics _flushOne relies on. A failure rolls the set back.
+  const set = stmts.map(function (s) { return { statement: s.sql, values: s.params || [] }; });
+  await this._plugin().executeSet({ database: this.dbName, set: set, transaction: true });
+};
+
+if (typeof window !== 'undefined') window.CapacitorSqlDriver = CapacitorSqlDriver;
+// ---------------------------------------------------------------------------
 // SqliteBackend — a Persistence backend that stores the app state in SQLite
 // (device only, OFF BY DEFAULT). Implements the same synchronous read contract
 // as LocalStorageBackend so Store.load()/save() and every call site are
@@ -5209,6 +5293,15 @@ if (typeof window !== 'undefined') window.SqliteBackend = SqliteBackend;
 
 const STORE_KEY = 'saagar_audit_v1';
 
+// SQLite opt-in flag — DEVICE-LOCAL, deliberately NOT part of the synced state
+// (so a backup restored onto another phone can't flip its backend). Read
+// directly from its own localStorage key. Default OFF: localStorage is the
+// production path until the Owner turns SQLite on and a verified migration
+// succeeds on this device.
+const SQLITE_PREF_KEY = 'saagar_sqlite_enabled';
+function sqliteEnabled() { try { return localStorage.getItem(SQLITE_PREF_KEY) === '1'; } catch (_) { return false; } }
+function setSqliteEnabled(on) { try { localStorage.setItem(SQLITE_PREF_KEY, on ? '1' : '0'); } catch (_) {} }
+
 // Current persisted-state schema version. Bump when the SHAPE of stored data
 // changes, and add a MIGRATIONS[oldVersion] step. Old data with no
 // schema_version is treated as v0 (the pre-versioning shape, which already
@@ -5354,16 +5447,19 @@ const Persistence = {
 
   isReady() { return this._ready; },
 
-  // ASYNC. On device with SQLite enabled, hydrates/migrates; otherwise a no-op
-  // that just marks ready. Wired into the device boot branch in a later
-  // increment. NEVER throws — any backend failure falls back to localStorage.
+  // ASYNC. On device with SQLite opted-in, hydrate the SqliteBackend from the
+  // device DB and ADOPT it; on any failure stay on localStorage. With no driver
+  // (browser/harness) it's a pure no-op that just marks ready. NEVER throws.
   boot(driver) {
-    const b = this.backend;
-    const p = (b.boot ? b.boot(driver) : Promise.resolve());
-    return Promise.resolve(p).catch(e => {
-      console.error('Persistence.boot failed — staying on localStorage', e);
-      this.backend = LocalStorageBackend;
-    }).then(() => { this._ready = true; });
+    const self = this;
+    if (!driver) { this._ready = true; return Promise.resolve(); }
+    return SqliteBackend.boot(driver)
+      .then(function () { self.backend = SqliteBackend; })
+      .catch(function (e) {
+        console.error('Persistence.boot: SQLite hydrate failed — staying on localStorage', e);
+        self.backend = LocalStorageBackend;
+      })
+      .then(function () { self._ready = true; });
   },
 
   // ASYNC, best-effort: ensure pending writes are durable. No-op on localStorage.
@@ -5758,6 +5854,56 @@ window.onDailyReminderToggle = async function (on) {
   } catch (e) {
     console.error(e);
     toast(tUi('err.reminder_failed'));
+  }
+};
+
+// SQLite storage toggle (Owner, device only). ENABLE: back up (must complete)
+// → verified migration → set the device flag only on success. DISABLE: back up
+// → write the live SQLite mirror BACK to localStorage (so it's current, not a
+// stale copy) → revert. Either way the original data is never lost.
+window.onSqliteToggle = async function (on) {
+  if (!window.SaagarShell || typeof CapacitorSqlDriver === 'undefined') { render(); return; }
+  if (on) {
+    if (!confirm(tUi('sqlite.enable_confirm'))) { render(); return; }
+    // 1. A real backup must complete first (invariant: no migration without
+    //    a verified backup). A cancelled share aborts.
+    let backup = null;
+    try { backup = await window.SaagarShell.backup(); } catch (_) { backup = null; }
+    if (!backup || backup.cancelled || !backup.ok) { toast(tUi('sqlite.need_backup')); render(); return; }
+    // 2. Verified migration (imports, reads back, deep-equals the live object).
+    toast(tUi('sqlite.migrating'));
+    try {
+      const driver = new CapacitorSqlDriver('saagar_audit');
+      const res = await SqliteBackend.migrateFromLocalStorage(driver, { backupVerified: true });
+      if (res && res.ok) {
+        setSqliteEnabled(true);
+        alert(tUi('sqlite.enabled_restart'));
+      } else {
+        toast(tUi('sqlite.migrate_failed') + (res && res.reason ? ' (' + res.reason + ')' : ''));
+      }
+    } catch (e) {
+      console.error('SQLite enable failed', e);
+      toast(tUi('sqlite.migrate_failed'));
+    }
+    render();
+  } else {
+    if (!confirm(tUi('sqlite.disable_confirm'))) { render(); return; }
+    try { await window.SaagarShell.backup(); } catch (_) {}
+    try {
+      // Write the CURRENT live state back to localStorage so reverting is not a
+      // stale copy (data written under SQLite is preserved).
+      const live = Persistence.backend.readPersisted();
+      LocalStorageBackend.writePersisted(live);
+    } catch (e) {
+      console.error('SQLite disable write-back failed', e);
+      toast(tUi('sqlite.disable_failed'));
+      render();
+      return;
+    }
+    setSqliteEnabled(false);
+    Persistence.backend = LocalStorageBackend;
+    alert(tUi('sqlite.disabled_restart'));
+    render();
   }
 };
 
@@ -9138,6 +9284,17 @@ function renderSettingsTab(state, auth) {
       <button class="btn btn-ghost" data-action="export-csv">${tUi('btn.export_audits_csv')}</button>
     </div>
 
+    ${(isOwner && typeof window !== 'undefined' && window.SaagarShell) ? `
+    <div class="card" style="border-color:#9bb8e8;background:#f3f7ff">
+      <h2>${tUi('sqlite.title')}</h2>
+      <p class="muted" style="font-size:13px;line-height:1.45">${tUi('sqlite.intro')}</p>
+      <label class="row-spread" style="margin-top:8px;cursor:pointer">
+        <span><strong>${tUi('sqlite.toggle_label')}</strong> <span class="muted" style="font-weight:400;font-size:12px">${sqliteEnabled() ? tUi('sqlite.state_on') : tUi('sqlite.state_off')}</span></span>
+        <input type="checkbox" id="sqliteToggle" ${sqliteEnabled() ? 'checked' : ''}
+               data-action="sqlite-toggle" style="width:42px;height:24px;cursor:pointer">
+      </label>
+    </div>` : ''}
+
     ${isOwner ? `
     <div class="card">
       <h2>${tUi('label.danger_zone')}</h2>
@@ -10093,6 +10250,9 @@ const SaagarAudit = {
       };
     });
   },
+  // Lets the native shell (shell.js, a separate script) trigger a durable
+  // flush of pending SQLite writes when the app is backgrounded.
+  flushNow() { return Persistence.flushNow(); },
 };
 if (typeof window !== 'undefined') window.SaagarAudit = SaagarAudit;
 
@@ -11116,6 +11276,11 @@ document.addEventListener('change', (e) => {
     Store.save(st);
     return;
   }
+  // SQLite storage toggle (Owner, device only). Async — fire and forget.
+  if (e.target.id === 'sqliteToggle') {
+    onSqliteToggle(e.target.checked);
+    return;
+  }
   // Stage B #7 — "Jump to CRO" dropdown. Hop (back) to a CRO to fix a verdict.
   if (e.target.id === 'croJump') {
     const idx = parseInt(e.target.value, 10);
@@ -11231,42 +11396,65 @@ if (typeof window !== 'undefined' && window.DEMO_SEED && !localStorage.getItem(S
   }
 }
 
-// Persistence is ready immediately on the localStorage path (the default and
-// the only path in browser/harness). The device SQLite branch — which awaits
-// Persistence.boot() before this point — is wired in a later increment.
-Persistence._ready = true;
+// The synchronous boot sequence — byte-for-byte what the app has always done.
+// Sets Persistence ready (it already is on device when this runs after boot()),
+// seeds, renders, and starts the Capacitor shell + background photo migration.
+function _bootSync() {
+  Persistence._ready = true;
+  I18n.init();
+  Templates.ensureSeeded();
+  _selfTestWeeklyScore();
+  render();
+  renderTabBar();
+  applyHashTab();
+  restoreLastTab();
 
-I18n.init();
-Templates.ensureSeeded();
-_selfTestWeeklyScore();
-render();
-renderTabBar();
-applyHashTab();
-restoreLastTab();
+  // Storage Phase 2 — move any legacy inline photos into IndexedDB in the
+  // background, then re-render so they display from their new home. No-op for
+  // fresh installs / the demo (which has no inline photos). Never blocks boot.
+  if (typeof PhotoStore !== 'undefined') {
+    Promise.resolve().then(migratePhotosToIDB).then(function (n) {
+      if (n) { console.log('Migrated ' + n + ' photo(s) to IndexedDB.'); render(); }
+    }).catch(function (e) { console.error('photo migration failed', e); });
+  }
 
-// Storage Phase 2 — move any legacy inline photos into IndexedDB in the
-// background, then re-render so they display from their new home. No-op for
-// fresh installs / the demo (which has no inline photos). Never blocks boot.
-if (typeof PhotoStore !== 'undefined') {
-  Promise.resolve().then(migratePhotosToIDB).then(function (n) {
-    if (n) { console.log('Migrated ' + n + ' photo(s) to IndexedDB.'); render(); }
-  }).catch(function (e) { console.error('photo migration failed', e); });
+  // Capacitor boot — status bar, splash, keyboard, hardware back button.
+  if (window.SaagarShell) {
+    window.SaagarShell.boot({
+      closeModal: closeModal,
+      onBack: () => {
+        // If audit is in progress on the Audit tab, confirm before exit-on-back.
+        const onAudit = document.querySelector('#tab-audit.active') !== null;
+        const state = Store.load();
+        if (onAudit && currentAudit(state)) {
+          if (!confirm(tUi('confirm.exit_audit'))) return true;
+        }
+        return false; // let default handler run (history.back / exit)
+      },
+    });
+  }
 }
 
-// Capacitor boot — status bar, splash, keyboard, hardware back button.
-if (window.SaagarShell) {
-  window.SaagarShell.boot({
-    closeModal: closeModal,
-    onBack: () => {
-      // If audit is in progress on the Audit tab, confirm before exit-on-back.
-      const onAudit = document.querySelector('#tab-audit.active') !== null;
-      const state = Store.load();
-      if (onAudit && currentAudit(state)) {
-        if (!confirm(tUi('confirm.exit_audit'))) return true;
-      }
-      return false; // let default handler run (history.back / exit)
-    },
-  });
+// SQLite path is ONLY taken on a real device with the Owner toggle on. There,
+// we hydrate the SQLite mirror (async) before the first render. Everywhere
+// else — browser, the Node harness, or SQLite-off — boot is the exact
+// synchronous sequence with no extra microtask (Safety invariant #2).
+if (window.SaagarShell && typeof CapacitorSqlDriver !== 'undefined' && sqliteEnabled()) {
+  (function () {
+    const driver = new CapacitorSqlDriver('saagar_audit');
+    Persistence.boot(driver).then(function () {
+      _bootSync();
+      // Best-effort draft flush when the app is backgrounded (durability for
+      // submitted records rests on the synchronous flush-tier enqueue, not on
+      // these — see the spec). The native appStateChange hook in shell.js is
+      // the more reliable trigger on Android.
+      ['pagehide', 'visibilitychange'].forEach(function (ev) {
+        try { window.addEventListener(ev, function () { Persistence.flushNow(); }); } catch (_) {}
+      });
+    });
+  })();
+} else {
+  _bootSync();
 }
   </script>
 </body>

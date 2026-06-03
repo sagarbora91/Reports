@@ -10,6 +10,7 @@
     "test:sqlite": "cat qa/shim.js qa/app_bundle.js qa/sqlite_tests.js > qa/sqlite_run.js && node qa/sqlite_run.js"
   },
   "dependencies": {
+    "@capacitor-community/sqlite": "^6.0.2",
     "@capacitor/android": "^6.1.2",
     "@capacitor/app": "^6.0.2",
     "@capacitor/core": "^6.1.2",

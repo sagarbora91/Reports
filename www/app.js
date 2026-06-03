@@ -6,6 +6,15 @@
 
 const STORE_KEY = 'saagar_audit_v1';
 
+// SQLite opt-in flag — DEVICE-LOCAL, deliberately NOT part of the synced state
+// (so a backup restored onto another phone can't flip its backend). Read
+// directly from its own localStorage key. Default OFF: localStorage is the
+// production path until the Owner turns SQLite on and a verified migration
+// succeeds on this device.
+const SQLITE_PREF_KEY = 'saagar_sqlite_enabled';
+function sqliteEnabled() { try { return localStorage.getItem(SQLITE_PREF_KEY) === '1'; } catch (_) { return false; } }
+function setSqliteEnabled(on) { try { localStorage.setItem(SQLITE_PREF_KEY, on ? '1' : '0'); } catch (_) {} }
+
 // Current persisted-state schema version. Bump when the SHAPE of stored data
 // changes, and add a MIGRATIONS[oldVersion] step. Old data with no
 // schema_version is treated as v0 (the pre-versioning shape, which already
@@ -151,16 +160,19 @@ const Persistence = {
 
   isReady() { return this._ready; },
 
-  // ASYNC. On device with SQLite enabled, hydrates/migrates; otherwise a no-op
-  // that just marks ready. Wired into the device boot branch in a later
-  // increment. NEVER throws — any backend failure falls back to localStorage.
+  // ASYNC. On device with SQLite opted-in, hydrate the SqliteBackend from the
+  // device DB and ADOPT it; on any failure stay on localStorage. With no driver
+  // (browser/harness) it's a pure no-op that just marks ready. NEVER throws.
   boot(driver) {
-    const b = this.backend;
-    const p = (b.boot ? b.boot(driver) : Promise.resolve());
-    return Promise.resolve(p).catch(e => {
-      console.error('Persistence.boot failed — staying on localStorage', e);
-      this.backend = LocalStorageBackend;
-    }).then(() => { this._ready = true; });
+    const self = this;
+    if (!driver) { this._ready = true; return Promise.resolve(); }
+    return SqliteBackend.boot(driver)
+      .then(function () { self.backend = SqliteBackend; })
+      .catch(function (e) {
+        console.error('Persistence.boot: SQLite hydrate failed — staying on localStorage', e);
+        self.backend = LocalStorageBackend;
+      })
+      .then(function () { self._ready = true; });
   },
 
   // ASYNC, best-effort: ensure pending writes are durable. No-op on localStorage.
@@ -555,6 +567,56 @@ window.onDailyReminderToggle = async function (on) {
   } catch (e) {
     console.error(e);
     toast(tUi('err.reminder_failed'));
+  }
+};
+
+// SQLite storage toggle (Owner, device only). ENABLE: back up (must complete)
+// → verified migration → set the device flag only on success. DISABLE: back up
+// → write the live SQLite mirror BACK to localStorage (so it's current, not a
+// stale copy) → revert. Either way the original data is never lost.
+window.onSqliteToggle = async function (on) {
+  if (!window.SaagarShell || typeof CapacitorSqlDriver === 'undefined') { render(); return; }
+  if (on) {
+    if (!confirm(tUi('sqlite.enable_confirm'))) { render(); return; }
+    // 1. A real backup must complete first (invariant: no migration without
+    //    a verified backup). A cancelled share aborts.
+    let backup = null;
+    try { backup = await window.SaagarShell.backup(); } catch (_) { backup = null; }
+    if (!backup || backup.cancelled || !backup.ok) { toast(tUi('sqlite.need_backup')); render(); return; }
+    // 2. Verified migration (imports, reads back, deep-equals the live object).
+    toast(tUi('sqlite.migrating'));
+    try {
+      const driver = new CapacitorSqlDriver('saagar_audit');
+      const res = await SqliteBackend.migrateFromLocalStorage(driver, { backupVerified: true });
+      if (res && res.ok) {
+        setSqliteEnabled(true);
+        alert(tUi('sqlite.enabled_restart'));
+      } else {
+        toast(tUi('sqlite.migrate_failed') + (res && res.reason ? ' (' + res.reason + ')' : ''));
+      }
+    } catch (e) {
+      console.error('SQLite enable failed', e);
+      toast(tUi('sqlite.migrate_failed'));
+    }
+    render();
+  } else {
+    if (!confirm(tUi('sqlite.disable_confirm'))) { render(); return; }
+    try { await window.SaagarShell.backup(); } catch (_) {}
+    try {
+      // Write the CURRENT live state back to localStorage so reverting is not a
+      // stale copy (data written under SQLite is preserved).
+      const live = Persistence.backend.readPersisted();
+      LocalStorageBackend.writePersisted(live);
+    } catch (e) {
+      console.error('SQLite disable write-back failed', e);
+      toast(tUi('sqlite.disable_failed'));
+      render();
+      return;
+    }
+    setSqliteEnabled(false);
+    Persistence.backend = LocalStorageBackend;
+    alert(tUi('sqlite.disabled_restart'));
+    render();
   }
 };
 
@@ -3935,6 +3997,17 @@ function renderSettingsTab(state, auth) {
       <button class="btn btn-ghost" data-action="export-csv">${tUi('btn.export_audits_csv')}</button>
     </div>
 
+    ${(isOwner && typeof window !== 'undefined' && window.SaagarShell) ? `
+    <div class="card" style="border-color:#9bb8e8;background:#f3f7ff">
+      <h2>${tUi('sqlite.title')}</h2>
+      <p class="muted" style="font-size:13px;line-height:1.45">${tUi('sqlite.intro')}</p>
+      <label class="row-spread" style="margin-top:8px;cursor:pointer">
+        <span><strong>${tUi('sqlite.toggle_label')}</strong> <span class="muted" style="font-weight:400;font-size:12px">${sqliteEnabled() ? tUi('sqlite.state_on') : tUi('sqlite.state_off')}</span></span>
+        <input type="checkbox" id="sqliteToggle" ${sqliteEnabled() ? 'checked' : ''}
+               data-action="sqlite-toggle" style="width:42px;height:24px;cursor:pointer">
+      </label>
+    </div>` : ''}
+
     ${isOwner ? `
     <div class="card">
       <h2>${tUi('label.danger_zone')}</h2>
@@ -4890,6 +4963,9 @@ const SaagarAudit = {
       };
     });
   },
+  // Lets the native shell (shell.js, a separate script) trigger a durable
+  // flush of pending SQLite writes when the app is backgrounded.
+  flushNow() { return Persistence.flushNow(); },
 };
 if (typeof window !== 'undefined') window.SaagarAudit = SaagarAudit;
 
@@ -5913,6 +5989,11 @@ document.addEventListener('change', (e) => {
     Store.save(st);
     return;
   }
+  // SQLite storage toggle (Owner, device only). Async — fire and forget.
+  if (e.target.id === 'sqliteToggle') {
+    onSqliteToggle(e.target.checked);
+    return;
+  }
   // Stage B #7 — "Jump to CRO" dropdown. Hop (back) to a CRO to fix a verdict.
   if (e.target.id === 'croJump') {
     const idx = parseInt(e.target.value, 10);
@@ -6028,40 +6109,63 @@ if (typeof window !== 'undefined' && window.DEMO_SEED && !localStorage.getItem(S
   }
 }
 
-// Persistence is ready immediately on the localStorage path (the default and
-// the only path in browser/harness). The device SQLite branch — which awaits
-// Persistence.boot() before this point — is wired in a later increment.
-Persistence._ready = true;
+// The synchronous boot sequence — byte-for-byte what the app has always done.
+// Sets Persistence ready (it already is on device when this runs after boot()),
+// seeds, renders, and starts the Capacitor shell + background photo migration.
+function _bootSync() {
+  Persistence._ready = true;
+  I18n.init();
+  Templates.ensureSeeded();
+  _selfTestWeeklyScore();
+  render();
+  renderTabBar();
+  applyHashTab();
+  restoreLastTab();
 
-I18n.init();
-Templates.ensureSeeded();
-_selfTestWeeklyScore();
-render();
-renderTabBar();
-applyHashTab();
-restoreLastTab();
+  // Storage Phase 2 — move any legacy inline photos into IndexedDB in the
+  // background, then re-render so they display from their new home. No-op for
+  // fresh installs / the demo (which has no inline photos). Never blocks boot.
+  if (typeof PhotoStore !== 'undefined') {
+    Promise.resolve().then(migratePhotosToIDB).then(function (n) {
+      if (n) { console.log('Migrated ' + n + ' photo(s) to IndexedDB.'); render(); }
+    }).catch(function (e) { console.error('photo migration failed', e); });
+  }
 
-// Storage Phase 2 — move any legacy inline photos into IndexedDB in the
-// background, then re-render so they display from their new home. No-op for
-// fresh installs / the demo (which has no inline photos). Never blocks boot.
-if (typeof PhotoStore !== 'undefined') {
-  Promise.resolve().then(migratePhotosToIDB).then(function (n) {
-    if (n) { console.log('Migrated ' + n + ' photo(s) to IndexedDB.'); render(); }
-  }).catch(function (e) { console.error('photo migration failed', e); });
+  // Capacitor boot — status bar, splash, keyboard, hardware back button.
+  if (window.SaagarShell) {
+    window.SaagarShell.boot({
+      closeModal: closeModal,
+      onBack: () => {
+        // If audit is in progress on the Audit tab, confirm before exit-on-back.
+        const onAudit = document.querySelector('#tab-audit.active') !== null;
+        const state = Store.load();
+        if (onAudit && currentAudit(state)) {
+          if (!confirm(tUi('confirm.exit_audit'))) return true;
+        }
+        return false; // let default handler run (history.back / exit)
+      },
+    });
+  }
 }
 
-// Capacitor boot — status bar, splash, keyboard, hardware back button.
-if (window.SaagarShell) {
-  window.SaagarShell.boot({
-    closeModal: closeModal,
-    onBack: () => {
-      // If audit is in progress on the Audit tab, confirm before exit-on-back.
-      const onAudit = document.querySelector('#tab-audit.active') !== null;
-      const state = Store.load();
-      if (onAudit && currentAudit(state)) {
-        if (!confirm(tUi('confirm.exit_audit'))) return true;
-      }
-      return false; // let default handler run (history.back / exit)
-    },
-  });
+// SQLite path is ONLY taken on a real device with the Owner toggle on. There,
+// we hydrate the SQLite mirror (async) before the first render. Everywhere
+// else — browser, the Node harness, or SQLite-off — boot is the exact
+// synchronous sequence with no extra microtask (Safety invariant #2).
+if (window.SaagarShell && typeof CapacitorSqlDriver !== 'undefined' && sqliteEnabled()) {
+  (function () {
+    const driver = new CapacitorSqlDriver('saagar_audit');
+    Persistence.boot(driver).then(function () {
+      _bootSync();
+      // Best-effort draft flush when the app is backgrounded (durability for
+      // submitted records rests on the synchronous flush-tier enqueue, not on
+      // these — see the spec). The native appStateChange hook in shell.js is
+      // the more reliable trigger on Android.
+      ['pagehide', 'visibilitychange'].forEach(function (ev) {
+        try { window.addEventListener(ev, function () { Persistence.flushNow(); }); } catch (_) {}
+      });
+    });
+  })();
+} else {
+  _bootSync();
 }
