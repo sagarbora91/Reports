@@ -236,6 +236,39 @@
     Persistence._migrating = false;
   }
 
+  // ---- 9. Phase B: SqliteBackend.query() reads via indexed columns ----
+  {
+    const S = sampleState();
+    // give a few distinct audits to query
+    S.audits = [
+      { id: 'q1', date: '2026-01-05', status: 'verified', results: {}, score: { pct: 90, band: 'good' } },
+      { id: 'q2', date: '2026-02-10', status: 'submitted', results: {}, score: { pct: 80, band: 'poor' } },
+      { id: 'q3', date: '2026-03-15', status: 'verified', results: {}, score: { pct: 95, band: 'excellent' } },
+    ];
+    const driver = await freshSqlite();
+    Persistence.backend = SqliteBackend;
+    await Store.saveFlush(S);
+    await Persistence.flushNow();
+    // where: status = verified → 2 rows.
+    const verified = await SqliteBackend.query('audits', { where: { status: 'verified' } });
+    eq('query: where status=verified → 2', verified.length, 2);
+    ok('query: returns parsed entities', verified.every(a => a.id && a.score), '');
+    // order date desc + limit 1 → newest audit (q3).
+    const newest = await SqliteBackend.query('audits', { order: 'date desc', limit: 1 });
+    eq('query: order date desc + limit 1 → q3', newest[0].id, 'q3');
+    // whereRaw clause (date range).
+    const range = await SqliteBackend.query('audits', { whereRaw: { clause: 'date >= ? AND date <= ?', params: ['2026-02-01', '2026-12-31'] }, order: 'date asc' });
+    eq('query: date-range whereRaw → 2', range.length, 2);
+    eq('query: range first is q2', range[0].id, 'q2');
+    // offset.
+    const offset1 = await SqliteBackend.query('audits', { order: 'date asc', offset: 1 });
+    eq('query: offset 1 skips first', offset1[0].id, 'q2');
+    // order injection guard: a bad order string is ignored (no throw, returns rows).
+    const safe = await SqliteBackend.query('audits', { order: 'date; DROP TABLE audits' });
+    ok('query: malicious order ignored, table intact', safe.length === 3, '' + safe.length);
+    Persistence.backend = realBackend;
+  }
+
   // ---- Result ----
   console.log('\n===== SQLITE BACKEND RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

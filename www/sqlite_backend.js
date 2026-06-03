@@ -255,6 +255,37 @@ const SqliteBackend = {
     this._lastIndex = idx;
   },
 
+  // ---- Phase B: indexed query (read straight from SQLite, not the mirror) ----
+  // query(tableKeyOrName, { where:{col:val}, whereRaw:{clause,params}, order, limit, offset })
+  //   -> Promise<Array<parsed entity>>. Uses the indexed columns (date/status/
+  //   week/store_id) so it stays fast at multi-store / multi-year scale. The
+  //   `order` is developer-controlled and allow-listed (no user input → no
+  //   injection). Returns [] if the table is unknown or the driver isn't open.
+  async query(table, opts) {
+    opts = opts || {};
+    const T = SQLITE_TABLES.find(t => t.table === table || t.key === table);
+    if (!T || !this._driver) return [];
+    let sql = 'SELECT data FROM ' + T.table;
+    const params = [];
+    const where = [];
+    if (opts.where) Object.keys(opts.where).forEach(col => {
+      if (!/^[a-z_]+$/i.test(col)) return;          // guard: only column-name identifiers
+      where.push(col + '=?'); params.push(opts.where[col]);
+    });
+    if (opts.whereRaw && opts.whereRaw.clause) { where.push('(' + opts.whereRaw.clause + ')'); (opts.whereRaw.params || []).forEach(p => params.push(p)); }
+    if (where.length) sql += ' WHERE ' + where.join(' AND ');
+    if (opts.order && /^[a-z_]+\s+(asc|desc)$/i.test(opts.order)) sql += ' ORDER BY ' + opts.order;
+    if (opts.limit != null) sql += ' LIMIT ' + parseInt(opts.limit, 10);
+    if (opts.offset != null) {
+      if (opts.limit == null) sql += ' LIMIT -1';   // SQLite requires a LIMIT before OFFSET
+      sql += ' OFFSET ' + parseInt(opts.offset, 10);
+    }
+    const rows = await this._driver.query(sql, params);
+    const out = [];
+    rows.forEach(r => { try { out.push(JSON.parse(r.data)); } catch (e) { console.error('query parse error', e); } });
+    return out;
+  },
+
   async _selectAll() {
     const rows = {};
     for (const T of SQLITE_TABLES) rows[T.key] = await this._driver.query('SELECT * FROM ' + T.table);

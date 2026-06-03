@@ -5197,6 +5197,37 @@ const SqliteBackend = {
     this._lastIndex = idx;
   },
 
+  // ---- Phase B: indexed query (read straight from SQLite, not the mirror) ----
+  // query(tableKeyOrName, { where:{col:val}, whereRaw:{clause,params}, order, limit, offset })
+  //   -> Promise<Array<parsed entity>>. Uses the indexed columns (date/status/
+  //   week/store_id) so it stays fast at multi-store / multi-year scale. The
+  //   `order` is developer-controlled and allow-listed (no user input → no
+  //   injection). Returns [] if the table is unknown or the driver isn't open.
+  async query(table, opts) {
+    opts = opts || {};
+    const T = SQLITE_TABLES.find(t => t.table === table || t.key === table);
+    if (!T || !this._driver) return [];
+    let sql = 'SELECT data FROM ' + T.table;
+    const params = [];
+    const where = [];
+    if (opts.where) Object.keys(opts.where).forEach(col => {
+      if (!/^[a-z_]+$/i.test(col)) return;          // guard: only column-name identifiers
+      where.push(col + '=?'); params.push(opts.where[col]);
+    });
+    if (opts.whereRaw && opts.whereRaw.clause) { where.push('(' + opts.whereRaw.clause + ')'); (opts.whereRaw.params || []).forEach(p => params.push(p)); }
+    if (where.length) sql += ' WHERE ' + where.join(' AND ');
+    if (opts.order && /^[a-z_]+\s+(asc|desc)$/i.test(opts.order)) sql += ' ORDER BY ' + opts.order;
+    if (opts.limit != null) sql += ' LIMIT ' + parseInt(opts.limit, 10);
+    if (opts.offset != null) {
+      if (opts.limit == null) sql += ' LIMIT -1';   // SQLite requires a LIMIT before OFFSET
+      sql += ' OFFSET ' + parseInt(opts.offset, 10);
+    }
+    const rows = await this._driver.query(sql, params);
+    const out = [];
+    rows.forEach(r => { try { out.push(JSON.parse(r.data)); } catch (e) { console.error('query parse error', e); } });
+    return out;
+  },
+
   async _selectAll() {
     const rows = {};
     for (const T of SQLITE_TABLES) rows[T.key] = await this._driver.query('SELECT * FROM ' + T.table);
@@ -5555,6 +5586,49 @@ function resolveSnapshot(ref) {
   if (snaps[ref]) { _snapCache[ref] = snaps[ref]; return snaps[ref]; }
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// DataQuery (SQLite Inc.5 / Phase B) — ASYNC indexed reads. On the SQLite
+// backend these hit the indexed columns straight from disk (fast at multi-store
+// / multi-year scale, without holding everything in memory). On localStorage —
+// and at today's scale — they fall back to filtering the in-memory state with
+// the SAME semantics. Callers must `await`. The synchronous render paths keep
+// reading the in-memory mirror (fast already); this layer is the foundation a
+// future lazy-loading pass plugs into when a dataset outgrows memory.
+//
+// where:    { col: value }                 exact match on an indexed column
+// whereRaw: { clause, params, test }        SQL clause (SQLite) + a predicate
+//                                            fn (in-memory) — provide BOTH
+// order:    'col asc' | 'col desc'           indexed-column ordering
+// limit / offset:  paging
+// ---------------------------------------------------------------------------
+function _auditCol(a, col) {
+  if (col === 'week') return (a.year != null && a.week_number != null) ? (a.year + '-' + a.week_number) : null;
+  if (col === 'store_id') return a.store_id || null;
+  return a[col] != null ? a[col] : null;   // id, date, status, template_id
+}
+const DataQuery = {
+  audits(opts) {
+    opts = opts || {};
+    const b = Persistence.backend;
+    if (b.query) return b.query('audits', opts);   // SQLite: indexed read
+    // Fallback: filter the in-memory mirror with matching semantics.
+    let arr = (Store.load().audits || []).slice();
+    if (opts.where) Object.keys(opts.where).forEach(col => { arr = arr.filter(a => _auditCol(a, col) === opts.where[col]); });
+    if (opts.whereRaw && typeof opts.whereRaw.test === 'function') arr = arr.filter(opts.whereRaw.test);
+    if (opts.order) {
+      const m = /^([a-z_]+)\s+(asc|desc)$/i.exec(opts.order);
+      if (m) {
+        const col = m[1], dir = m[2].toLowerCase() === 'desc' ? -1 : 1;
+        arr.sort((x, y) => { const xv = _auditCol(x, col), yv = _auditCol(y, col); return (xv < yv ? -1 : xv > yv ? 1 : 0) * dir; });
+      }
+    }
+    const off = opts.offset || 0;
+    if (opts.limit != null) arr = arr.slice(off, off + opts.limit);
+    else if (off) arr = arr.slice(off);
+    return Promise.resolve(arr);
+  },
+};
 
 // ---------------------------------------------------------------------------
 // PhotoStore (Storage Phase 2) — photos (base64 data URLs) are the bulk of the
@@ -10348,9 +10422,11 @@ function auditsToCsv(audits) {
   }).join(',')).join('\n');
 }
 
-function exportCsv() {
-  const state = Store.load();
-  const submitted = state.audits.filter(a => isFinalized(a));
+async function exportCsv() {
+  // Phase B: pull audits via DataQuery (indexed read on SQLite; in-memory
+  // filter on localStorage) ordered by date. Same result on both backends.
+  const all = await DataQuery.audits({ order: 'date desc' });
+  const submitted = all.filter(a => isFinalized(a));
   if (submitted.length === 0) { toast(tUi('hint.no_audits')); return; }
   const csv = auditsToCsv(submitted);
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

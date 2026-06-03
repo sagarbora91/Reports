@@ -270,6 +270,49 @@ function resolveSnapshot(ref) {
 }
 
 // ---------------------------------------------------------------------------
+// DataQuery (SQLite Inc.5 / Phase B) — ASYNC indexed reads. On the SQLite
+// backend these hit the indexed columns straight from disk (fast at multi-store
+// / multi-year scale, without holding everything in memory). On localStorage —
+// and at today's scale — they fall back to filtering the in-memory state with
+// the SAME semantics. Callers must `await`. The synchronous render paths keep
+// reading the in-memory mirror (fast already); this layer is the foundation a
+// future lazy-loading pass plugs into when a dataset outgrows memory.
+//
+// where:    { col: value }                 exact match on an indexed column
+// whereRaw: { clause, params, test }        SQL clause (SQLite) + a predicate
+//                                            fn (in-memory) — provide BOTH
+// order:    'col asc' | 'col desc'           indexed-column ordering
+// limit / offset:  paging
+// ---------------------------------------------------------------------------
+function _auditCol(a, col) {
+  if (col === 'week') return (a.year != null && a.week_number != null) ? (a.year + '-' + a.week_number) : null;
+  if (col === 'store_id') return a.store_id || null;
+  return a[col] != null ? a[col] : null;   // id, date, status, template_id
+}
+const DataQuery = {
+  audits(opts) {
+    opts = opts || {};
+    const b = Persistence.backend;
+    if (b.query) return b.query('audits', opts);   // SQLite: indexed read
+    // Fallback: filter the in-memory mirror with matching semantics.
+    let arr = (Store.load().audits || []).slice();
+    if (opts.where) Object.keys(opts.where).forEach(col => { arr = arr.filter(a => _auditCol(a, col) === opts.where[col]); });
+    if (opts.whereRaw && typeof opts.whereRaw.test === 'function') arr = arr.filter(opts.whereRaw.test);
+    if (opts.order) {
+      const m = /^([a-z_]+)\s+(asc|desc)$/i.exec(opts.order);
+      if (m) {
+        const col = m[1], dir = m[2].toLowerCase() === 'desc' ? -1 : 1;
+        arr.sort((x, y) => { const xv = _auditCol(x, col), yv = _auditCol(y, col); return (xv < yv ? -1 : xv > yv ? 1 : 0) * dir; });
+      }
+    }
+    const off = opts.offset || 0;
+    if (opts.limit != null) arr = arr.slice(off, off + opts.limit);
+    else if (off) arr = arr.slice(off);
+    return Promise.resolve(arr);
+  },
+};
+
+// ---------------------------------------------------------------------------
 // PhotoStore (Storage Phase 2) — photos (base64 data URLs) are the bulk of the
 // storage footprint and would blow the small ~5 MB localStorage quota. We keep
 // them in IndexedDB (large quota) instead; the audit/CAP state stores small
@@ -5061,9 +5104,11 @@ function auditsToCsv(audits) {
   }).join(',')).join('\n');
 }
 
-function exportCsv() {
-  const state = Store.load();
-  const submitted = state.audits.filter(a => isFinalized(a));
+async function exportCsv() {
+  // Phase B: pull audits via DataQuery (indexed read on SQLite; in-memory
+  // filter on localStorage) ordered by date. Same result on both backends.
+  const all = await DataQuery.audits({ order: 'date desc' });
+  const submitted = all.filter(a => isFinalized(a));
   if (submitted.length === 0) { toast(tUi('hint.no_audits')); return; }
   const csv = auditsToCsv(submitted);
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

@@ -1439,6 +1439,30 @@
     ok('sqlite: default backend remains localStorage', Persistence.backend === LocalStorageBackend, '');
   }
 
+  // ---- 39. DataQuery in-memory fallback (SQLite Inc.5 / Phase B) ----
+  reset();
+  {
+    const st = Store.load();
+    st.audits = [
+      { id: 'd1', date: '2026-01-05', status: 'verified', results: {}, score: { pct: 90, band: 'good' } },
+      { id: 'd2', date: '2026-02-10', status: 'submitted', results: {}, score: { pct: 80, band: 'poor' } },
+      { id: 'd3', date: '2026-03-15', status: 'verified', results: {}, score: { pct: 95, band: 'excellent' } },
+    ];
+    Store.save(st);
+    // localStorage backend has no query() → DataQuery uses the in-memory path.
+    ok('dataquery: localStorage backend has no query()', !Persistence.backend.query, '');
+    const verified = await DataQuery.audits({ where: { status: 'verified' } });
+    eq('dataquery: where status=verified → 2', verified.length, 2);
+    const newest = await DataQuery.audits({ order: 'date desc', limit: 1 });
+    eq('dataquery: order date desc + limit 1 → d3', newest[0].id, 'd3');
+    const oldestFirst = await DataQuery.audits({ order: 'date asc' });
+    eq('dataquery: order date asc → d1 first', oldestFirst[0].id, 'd1');
+    const ranged = await DataQuery.audits({ whereRaw: { test: a => a.date >= '2026-02-01' }, order: 'date asc' });
+    eq('dataquery: whereRaw predicate → 2', ranged.length, 2);
+    const off = await DataQuery.audits({ order: 'date asc', offset: 1 });
+    eq('dataquery: offset 1 skips first', off[0].id, 'd2');
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

@@ -13,7 +13,7 @@ cat qa/shim.js qa/app_bundle.js qa/tests.js > qa/run.js
 node qa/run.js
 ```
 
-Expected tail: `PASS: 337   FAIL: 0   ALL GREEN ✅`
+Expected tail: `PASS: 349   FAIL: 0   ALL GREEN ✅`
 
 ## SQLite backend suite (real SQLite via sql.js)
 
@@ -24,7 +24,7 @@ The SqliteBackend (device-only, off by default) is proven in Node against a
 npm run test:sqlite      # cat shim + bundle + qa/sqlite_tests.js, run it
 ```
 
-Expected tail: `PASS: 31   FAIL: 0   ALL GREEN ✅` (the quarantine / write-failed
+Expected tail: `PASS: 38   FAIL: 0   ALL GREEN ✅` (the quarantine / write-failed
 / verify-failed console lines are the safety mechanisms firing in their test
 scenarios — expected). Covers: round-trip parity with localStorage, catch-all
 scalars, per-row corruption quarantine, diff-upsert statement counts,
