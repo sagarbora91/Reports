@@ -1391,6 +1391,32 @@
     Persistence.backend = realBackend;
   }
 
+  // ---- 37. Persistence async interface (SQLite Inc.1 completion) ----
+  reset();
+  {
+    ok('persist: isReady true after boot tail', Persistence.isReady() === true, '');
+    // saveFlush is the durable-write entry point; on localStorage it returns a
+    // resolved promise and writes synchronously (same as save).
+    const sm = await Users.create({ name: 'FlushU', role: 'SM', pin: '9898' });
+    AuthSession.login(sm.id);
+    const st = Store.load();
+    st.auditor_name = 'flush-test';
+    const p = Store.saveFlush(st);
+    ok('persist: saveFlush returns a thenable', p && typeof p.then === 'function', '');
+    await p;
+    eq('persist: saveFlush persisted synchronously', Store.load().auditor_name, 'flush-test');
+    // flushNow + boot resolve without error on the localStorage backend.
+    await Persistence.flushNow();
+    await Persistence.boot();
+    ok('persist: flushNow + boot resolve cleanly on localStorage', true, '');
+    // Boot-safe load: even if _ready is flipped false, load() falls back to
+    // localStorage and still works (no unhydrated-mirror read).
+    Persistence._ready = false;
+    const safe = Store.load();
+    ok('persist: load() is boot-safe when not ready', safe.auditor_name === 'flush-test', '');
+    Persistence._ready = true;
+  }
+
   // ---- Result ----
   console.log('\n===== QA RESULTS =====');
   console.log('PASS: ' + pass + '   FAIL: ' + fail);

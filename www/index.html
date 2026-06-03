@@ -4991,12 +4991,37 @@ const LocalStorageBackend = {
       throw e;
     }
   },
+  // Uniform interface (so a backend swap needs no call-site branching). For
+  // localStorage these are synchronous under the hood; the Promise is just to
+  // match the async SqliteBackend signature.
+  writePersistedFlush(s) { this.writePersisted(s); return Promise.resolve(); },
+  boot() { return Promise.resolve(); },
+  flushNow() { return Promise.resolve(); },
 };
 
 // The active backend. SQLite (device-only, OFF BY DEFAULT) is selected in a
 // later increment; for now everything uses localStorage exactly as before.
 const Persistence = {
   backend: LocalStorageBackend,
+  _ready: false,        // true once boot() resolves; gates the SQLite async path
+  _migrating: false,    // latch: buffers live writes during a one-time migration
+
+  isReady() { return this._ready; },
+
+  // ASYNC. On device with SQLite enabled, hydrates/migrates; otherwise a no-op
+  // that just marks ready. Wired into the device boot branch in a later
+  // increment. NEVER throws — any backend failure falls back to localStorage.
+  boot(driver) {
+    const b = this.backend;
+    const p = (b.boot ? b.boot(driver) : Promise.resolve());
+    return Promise.resolve(p).catch(e => {
+      console.error('Persistence.boot failed — staying on localStorage', e);
+      this.backend = LocalStorageBackend;
+    }).then(() => { this._ready = true; });
+  },
+
+  // ASYNC, best-effort: ensure pending writes are durable. No-op on localStorage.
+  flushNow() { return this.backend.flushNow ? this.backend.flushNow() : Promise.resolve(); },
 };
 
 const Store = {
@@ -5007,7 +5032,11 @@ const Store = {
 
   load() {
     try {
-      const parsed = Persistence.backend.readPersisted();
+      // Boot-safe: until boot() resolves, read straight from localStorage so a
+      // stray load() during the async hydrate gap can't see an unhydrated
+      // SQLite mirror. (Identical to the active backend while on localStorage.)
+      const backend = Persistence._ready ? Persistence.backend : LocalStorageBackend;
+      const parsed = backend.readPersisted();
       if (!parsed) return Store.empty();
       // Detect version from the raw object BEFORE the merge below masks it.
       const fromVersion = typeof parsed.schema_version === 'number' ? parsed.schema_version : 0;
@@ -5022,6 +5051,12 @@ const Store = {
   save(s) {
     Persistence.backend.writePersisted(s);
   },
+
+  // Durable write for critical actions (submit/verify/CAP/user/template/
+  // settings). On localStorage it's the same synchronous write; on SQLite it
+  // enqueues a flush-tier write synchronously (the durability guarantee).
+  // Callers need not await — the synchronous enqueue is what makes it durable.
+  saveFlush(s) { return Persistence.backend.writePersistedFlush(s); },
 
   empty() {
     return {
@@ -10849,6 +10884,11 @@ if (typeof window !== 'undefined' && window.DEMO_SEED && !localStorage.getItem(S
     console.error('Demo seed failed (likely storage quota):', e);
   }
 }
+
+// Persistence is ready immediately on the localStorage path (the default and
+// the only path in browser/harness). The device SQLite branch — which awaits
+// Persistence.boot() before this point — is wired in a later increment.
+Persistence._ready = true;
 
 I18n.init();
 Templates.ensureSeeded();
