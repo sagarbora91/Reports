@@ -6,7 +6,8 @@
   "scripts": {
     "sync": "cap sync android",
     "open-android": "cap open android",
-    "build-assets": "node scripts/build-assets.mjs"
+    "build-assets": "node scripts/build-assets.mjs",
+    "test:sqlite": "cat qa/shim.js qa/app_bundle.js qa/sqlite_tests.js > qa/sqlite_run.js && node qa/sqlite_run.js"
   },
   "dependencies": {
     "@capacitor/android": "^6.1.2",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^6.1.2",
-    "sharp": "^0.33.5"
+    "sharp": "^0.33.5",
+    "sql.js": "^1.14.1"
   }
 }

@@ -43,3 +43,4 @@ qa/run.js
 qa/gen_run.js
 qa/stress_run.js
 qa/demo_state.json
+qa/sqlite_run.js

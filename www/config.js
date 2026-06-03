@@ -30,6 +30,7 @@ const CONFIG = {
     gpsCacheMs: 5 * 60 * 1000, // reuse a GPS fix for 5 min (don't ping per photo)
     toastMs: 1800,             // how long a toast stays on screen
     photoSettleMs: 250,        // wait for the Android keyboard / camera to settle
+    draftFlushMs: 400,         // SQLite: debounce window coalescing rapid draft writes
   },
 
   // localStorage health.
