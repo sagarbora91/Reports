@@ -2,7 +2,7 @@ name: Build Greetor APK
 
 on:
   push:
-    branches: [main, capacitor]
+    branches: [main, capacitor, sqlite]
     paths:
       - 'greetor/**'
       - '.github/workflows/greetor-apk.yml'
@@ -39,7 +39,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'   # node:sqlite (QA schema gate) needs 22.5+; build is fine on 22
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -52,6 +52,16 @@ jobs:
 
       - name: Install npm dependencies
         run: npm install
+
+      - name: Copy sql.js WASM to www/assets (web/preview engine)
+        run: |
+          mkdir -p www/assets
+          cp node_modules/sql.js/dist/sql-wasm.js   www/assets/sql-wasm.js
+          cp node_modules/sql.js/dist/sql-wasm.wasm www/assets/sql-wasm.wasm
+          ls -lh www/assets/sql-wasm.js www/assets/sql-wasm.wasm
+
+      - name: QA - SQLite schema integrity (node:sqlite)
+        run: node --experimental-sqlite scripts/qa-db-schema.cjs
 
       - name: Install fonts for SVG rasterization
         run: |

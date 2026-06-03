@@ -694,6 +694,14 @@ body.locked { overflow: hidden; }
   <script src="photo.js"></script>
   <script src="dpdp.js"></script>
   <script src="i18n.js"></script>
+  <!-- SQLite Phase 0 - load order matters (no bundler):
+       1) sql.js UMD loader (web/preview engine) -> sets window.initSqlJs; .wasm sits beside it in assets/.
+          On native Android this is harmless/unused (the CapacitorSQLite plugin is used instead).
+       2) db-schema.js - single source of truth for DDL + mappers; MUST come before db.js.
+       3) db.js - the connection layer; MUST come right AFTER db-schema.js. -->
+  <script src="assets/sql-wasm.js"></script>
+  <script src="db-schema.js"></script>
+  <script src="db.js"></script>
   <script>
 "use strict";
 
@@ -3045,6 +3053,31 @@ async function boot() {
   render();
   applyI18n();
   sweepReminders();
+
+  // -- SQLite Phase 0 probe (NON-FATAL, additive) --------------------------
+  // Opens the DB layer and logs status. Phase 0 only: the app still runs on the
+  // existing Store (localStorage + durable file). Any error is swallowed so the
+  // app NEVER breaks. Repo/data-layers move to SQL in Phase 2/3.
+  try {
+    if (window.GreetorDB) {
+      window.GreetorDB.open().then(async function () {
+        var ver = "?";
+        try {
+          var rows = await window.GreetorDB.query("SELECT value FROM meta WHERE key='schema_version'", []);
+          if (rows && rows[0]) ver = rows[0].value;
+        } catch (e) {}
+        console.log("[Phase0] GreetorDB open OK - isNative=" + window.GreetorDB.isNative +
+                    " isEncrypted=" + window.GreetorDB.isEncrypted + " schema_version=" + ver);
+        if (window.GreetorDB.isNative && !window.GreetorDB.isEncrypted) {
+          console.warn("[Phase0] WARNING: native build is NOT encrypted - investigate before Phase 2.");
+        }
+      }).catch(function (e) {
+        console.warn("[Phase0] GreetorDB open failed (non-fatal, app continues on Store):", e && e.message || e);
+      });
+    }
+  } catch (e) {
+    console.warn("[Phase0] GreetorDB probe skipped (non-fatal):", e && e.message || e);
+  }
 
   if (window.SaagarShell && window.SaagarShell.boot) {
     window.SaagarShell.boot({

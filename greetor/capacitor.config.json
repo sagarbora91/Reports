@@ -31,6 +31,11 @@
     "LocalNotifications": {
       "smallIcon": "ic_stat_icon",
       "iconColor": "#c99a2e"
+    },
+    "CapacitorSQLite": {
+      "androidIsEncryption": true,
+      "iosIsEncryption": true,
+      "iosDatabaseLocation": "Library/NoCloud"
     }
   }
 }

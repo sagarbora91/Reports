@@ -14,6 +14,9 @@ ios/
 build/
 dist/
 
+# SQLite web/preview engine — sql.js wasm is CI-generated (npm run copy-wasm), never committed
+greetor/www/assets/
+
 # OS
 .DS_Store
 Thumbs.db
