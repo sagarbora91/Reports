@@ -31,7 +31,7 @@
   "DPDP.maskMobile(9876543210)": "f74c0f6f7a42dc3099ae91d808fd35bed6de2e1855767d6a02b5cc8874a3ffe5",
   "DPDP.maskMobile(invalid)": "f1234d75178d892a133a410355a5a990cf75d2f33eba25d575943d4df632f3a4",
   "DPDP.pruneOldRecords(retention=0)": "d3f9d3fa51bf16331751630fe8b39c117fb5140da4f682c6718cc74cdc6df43e",
-  "DPDP.pruneOldRecords(retention=6)": "d3f9d3fa51bf16331751630fe8b39c117fb5140da4f682c6718cc74cdc6df43e",
+  "DPDP.pruneOldRecords(retention=6)": "605ba39de15e3a2413d26b8bf6e5c081c2cbb98e8e7ed6df5d5b0c870e116629",
   "Footfall.captureCoverage(2500, 3000)": "92da58a87586e34ac4314ae3d1bea472ea2acacf9ca31f872250e820ac776988",
   "Footfall.get(Titan World, 2026-06-03)": "0e7a526059320396832569feeb5a8a1952c6ac2fb8d7b514eef049c1ede6f2dd",
   "Footfall.set(Titan World, 2026-06-03, 150)": "0e7a526059320396832569feeb5a8a1952c6ac2fb8d7b514eef049c1ede6f2dd",

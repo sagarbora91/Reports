@@ -107,8 +107,13 @@ var FIXED_NOW = "2026-06-03T12:00:00.000Z";
 // retention prefs from here (client-side), not the DB. We drive retentionMonths ──
 // per pruneOldRecords case below. ──
 (function installLocalStorage() {
-  if (typeof global.localStorage !== "undefined" && global.localStorage) return;
+  // Force a deterministic in-memory localStorage on EVERY Node version (must match
+  // gen-golden.cjs exactly). Node 22+ ships a flag-gated localStorage that THROWS
+  // without --localstorage-file, and Node 25 defines a non-functional one. The old
+  // early-return guard let a native one win, so DPDP retention silently used the
+  // DEFAULT locally but the REAL value in CI -> DPDP goldens diverged.
   var mem = {};
+  try { delete global.localStorage; } catch (e) {}
   global.localStorage = {
     getItem: function (k) { return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null; },
     setItem: function (k, v) { mem[k] = String(v); },
