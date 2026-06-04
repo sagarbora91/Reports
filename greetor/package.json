@@ -8,7 +8,8 @@
     "open-android": "cap open android",
     "build-assets": "node scripts/build-assets.mjs",
     "copy-wasm": "node scripts/copy-wasm.cjs",
-    "qa-db": "node --experimental-sqlite scripts/qa-db-schema.cjs"
+    "qa-db": "node --experimental-sqlite scripts/qa-db-schema.cjs",
+    "qa-migration": "node --experimental-sqlite scripts/qa-migration.cjs"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "^6.0.2",

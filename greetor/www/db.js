@@ -111,6 +111,63 @@
     return out;
   }
 
+  // ---------------------------------------------------------------------------
+  // Orphaned-keystore corroboration (NATIVE only) — a secret_hash MARKER.
+  //
+  // STEP 0.5 below refuses to start a FRESH empty DB over an existing encrypted
+  // DB file whose SQLCipher secret has vanished (the classic uninstall/reinstall
+  // data-loss trap). Its only signal was isDatabase() (file-exists), which some
+  // plugin builds report unreliably. We add a SECOND, independent signal: when we
+  // first generate the secret we record sha256(secret) as a marker. If that marker
+  // is present on a later open but the secure store now says NO secret is stored,
+  // a secret was provisioned here before and has since been wiped -> orphaned
+  // keystore -> refuse, exactly like STEP 0.5 (now corroborated, not isDatabase()
+  // alone). It is a HASH of a 256-bit random secret (preimage-resistant, not
+  // brute-forceable, and never the secret itself), so the plaintext sidecar copy
+  // is safe. The marker is ALSO written into the encrypted DB meta after open for
+  // forensics. WEB has no secret/SQLCipher, so all of this is skipped there.
+  // ---------------------------------------------------------------------------
+  var SECRET_HASH_KEY = "greetor_secret_hash"; // sidecar (localStorage) marker key
+
+  // sha256 -> hex. Prefers WebCrypto (crypto.subtle); returns null (never throws)
+  // if no digest is available, so a missing primitive degrades to "no corroborating
+  // marker" rather than blocking open. Async (subtle.digest is a Promise).
+  async function sha256Hex(str) {
+    try {
+      var c = root.crypto || root.msCrypto;
+      var subtle = c && c.subtle;
+      if (subtle && typeof subtle.digest === "function" && typeof TextEncoder !== "undefined") {
+        var data = new TextEncoder().encode(str);
+        var digest = await subtle.digest("SHA-256", data);
+        var bytes = new Uint8Array(digest);
+        var hex = "";
+        for (var i = 0; i < bytes.length; i++) hex += (bytes[i] + 0x100).toString(16).slice(1);
+        return hex;
+      }
+    } catch (e) { /* fall through to null */ }
+    return null;
+  }
+
+  // Sidecar marker accessors — best-effort over localStorage (readable WITHOUT
+  // decrypting the DB, which is the whole point: when the keystore is gone we
+  // cannot open the encrypted DB to read meta, so the corroborating marker must
+  // live outside it). Never throw (private mode / quota / no localStorage).
+  function readSecretHashMarker() {
+    try {
+      if (typeof root.localStorage === "undefined" || !root.localStorage) return null;
+      var v = root.localStorage.getItem(SECRET_HASH_KEY);
+      return (typeof v === "string" && v.length) ? v : null;
+    } catch (e) { return null; }
+  }
+  function writeSecretHashMarker(hexHash) {
+    if (!hexHash) return;
+    try {
+      if (typeof root.localStorage !== "undefined" && root.localStorage) {
+        root.localStorage.setItem(SECRET_HASH_KEY, hexHash);
+      }
+    } catch (e) { /* best-effort; the in-DB copy + isSecretStored remain */ }
+  }
+
   // ===========================================================================
   // NATIVE (Android) - @capacitor-community/sqlite v6 + SQLCipher, direct plugin
   // ===========================================================================
@@ -145,6 +202,9 @@
 
   async function openNative() {
     var plugin = nativePlugin();
+    // Set to sha256(secret) on the first-run generation path; written into the
+    // encrypted DB meta after open (STEP 6). Stays null on every later open.
+    var secretHashToStore = null;
 
     // -- STEP 0.5: detect an ORPHANED encrypted DB (uninstall/reinstall). -----
     // SQLCipher passphrases live in the Android secure store; the encrypted DB
@@ -152,7 +212,15 @@
     // but - depending on backup/transfer behaviour - a DB file can survive. If a
     // DB FILE exists but NO secret is stored, generating a fresh secret here
     // would silently start an empty DB over real (unreadable) data. Refuse.
+    //
+    // Two INDEPENDENT signals corroborate "a secret was provisioned here before":
+    //   (1) fileExists  — an on-disk encrypted DB FILE for DB_NAME, and
+    //   (2) hadSecret   — our own sha256(secret) MARKER (sidecar, see above),
+    //                     written when we first generated the secret.
+    // Either one being present while isSecretStored() is false means the keystore
+    // was wiped under existing data — so we refuse to start fresh on EITHER.
     var fileExists = await nativeDatabaseFileExists(plugin);
+    var hadSecret = !!readSecretHashMarker();
 
     // -- STEP 1: ensure an encryption secret exists - exactly ONCE. -----------
     // Re-calling setEncryptionSecret with a different passphrase would orphan
@@ -165,10 +233,13 @@
       throw new Error("Could not check encryption secret store: " + (e && e.message || e));
     }
 
-    if (!stored && fileExists) {
-      // CRITICAL data-loss guard: DB file present, secret gone -> reinstall case.
-      // Do NOT silently start fresh. Phase 4 verified JSON backup/restore is the
-      // recovery valve; surface a clear, actionable error instead.
+    if (!stored && (fileExists || hadSecret)) {
+      // CRITICAL data-loss guard: a secret was provisioned here before (DB file
+      // present and/or our sha256(secret) marker present) but the secure store now
+      // reports NONE -> reinstall/keystore-wipe case. Do NOT silently start fresh.
+      // Phase 4 verified JSON backup/restore is the recovery valve; surface a
+      // clear, actionable error instead. The marker corroborates isDatabase(), so
+      // this fires even when the file-exists probe is unreliable.
       throw new Error(
         "Encrypted database file exists but its encryption secret is missing " +
         "(typically after an app uninstall/reinstall that cleared the secure store). " +
@@ -188,8 +259,13 @@
       // NOTE: setEncryptionSecret on the low-level plugin proxy takes an OPTIONS
       // OBJECT { passphrase } (capSetSecretOptions), NOT a bare string. Verified
       // against @capacitor-community/sqlite v6 definitions.ts.
+      //
+      // We generate into a LOCAL only long enough to (a) hand it to the plugin and
+      // (b) derive its sha256 marker, then drop the reference. The plaintext secret
+      // is never persisted in JS; only its preimage-resistant hash becomes a marker.
+      var newSecret = generatePassphrase();
       try {
-        await plugin.setEncryptionSecret({ passphrase: generatePassphrase() });
+        await plugin.setEncryptionSecret({ passphrase: newSecret });
       } catch (e) {
         throw new Error("Failed to set encryption secret: " + (e && e.message || e));
       }
@@ -201,7 +277,13 @@
       if (!verified) {
         throw new Error("Encryption secret was set but did not persist (secure store write may have failed). Aborting to avoid an unreadable database.");
       }
-      log("encryption secret generated and verified (first run on this device)");
+      // Record the corroborating marker NOW: sha256(secret) into the sidecar
+      // (readable without the DB) so a future keystore-wipe is detectable; remember
+      // it to ALSO write into the encrypted DB meta after open (STEP 6, forensics).
+      secretHashToStore = await sha256Hex(newSecret);
+      writeSecretHashMarker(secretHashToStore);
+      newSecret = null;                         // drop the plaintext secret reference
+      log("encryption secret generated and verified (first run on this device); secret_hash marker recorded");
     }
 
     // -- STEP 2: reconcile JS <-> native connection bookkeeping. --------------
@@ -250,6 +332,24 @@
       [String(SCHEMA_VERSION)]
     );
     await runMigrations();
+
+    // -- STEP 6.5: persist the secret_hash marker INTO the encrypted DB meta on
+    // the first-run generation path (forensic in-DB copy alongside the sidecar).
+    // INSERT OR IGNORE so it is written exactly once and never overwritten. If the
+    // sidecar write earlier failed but this succeeds, backfill the sidecar from
+    // here so the corroborating marker still exists outside the DB next boot.
+    if (secretHashToStore) {
+      try {
+        await nativeRun(
+          "INSERT OR IGNORE INTO meta (key, value) VALUES ('secret_hash', ?)",
+          [secretHashToStore]
+        );
+        if (!readSecretHashMarker()) writeSecretHashMarker(secretHashToStore);
+      } catch (e) {
+        // Non-fatal: the sidecar marker + isSecretStored remain authoritative.
+        warn("could not store secret_hash in DB meta", e && e.message || e);
+      }
+    }
 
     log("native SQLite open (encrypted via SQLCipher), schema applied");
   }
@@ -530,11 +630,26 @@
 
   // transaction(fn): runs fn() between BEGIN and COMMIT, ROLLBACK on throw.
   // fn receives the api so callers can `await tx.run(...)` inside.
+  //
+  // REENTRANT: SQLite has no nested transactions ("cannot start a transaction
+  // within a transaction"). Callers legitimately nest — e.g. Migrate.run and
+  // restore wrap several bulkInsert() calls (each of which is itself a
+  // transaction) in ONE outer transaction for atomicity. So a nested call runs
+  // INLINE (no second BEGIN/COMMIT) and joins the outer txn; only the outermost
+  // BEGINs/COMMITs/ROLLBACKs. A throw anywhere still unwinds to the outer
+  // ROLLBACK, preserving all-or-nothing semantics.
+  var _txnDepth = 0;
   async function transaction(fn) {
     await getReady(); ensureOpen();
+    if (_txnDepth > 0) {                 // already inside a txn → run inline
+      _txnDepth++;
+      try { return await fn(api); }
+      finally { _txnDepth--; }
+    }
     if (isNative) {
       var plugin = _native.plugin, dbn = _native.database;
       await plugin.beginTransaction({ database: dbn });
+      _txnDepth++;
       try {
         var out = await fn(api);
         await plugin.commitTransaction({ database: dbn });
@@ -547,21 +662,20 @@
         // rollback. Swallow deliberately.
         try { await plugin.rollbackTransaction({ database: dbn }); } catch (_) {}
         throw e;
-      }
+      } finally { _txnDepth--; }
     } else {
       _web.run("BEGIN");
       _inWebTxn = true;                 // suppress per-statement persistence
+      _txnDepth++;
       try {
         var res = await fn(api);
         _web.run("COMMIT");
-        _inWebTxn = false;
         persistWebNow();                // persist once for the whole txn
         return res;
       } catch (e2) {
         try { _web.run("ROLLBACK"); } catch (_) {}
-        _inWebTxn = false;
         throw e2;
-      }
+      } finally { _inWebTxn = false; _txnDepth--; }
     }
   }
 

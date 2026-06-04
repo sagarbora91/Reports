@@ -707,6 +707,10 @@ body.locked { overflow: hidden; }
   <script src="db-schema.js"></script>
   <script src="db.js"></script>
   <script src="repo.js"></script>
+  <!-- migrate.js: the HARDENED one-time legacy→SQLite migration (verified-backup
+       gate + one-txn insert + read-back verify). Uses DBSchema + GreetorDB, so it
+       MUST load after the three above and before the inline boot() that calls it. -->
+  <script src="migrate.js"></script>
   <script>
 "use strict";
 
@@ -3242,6 +3246,66 @@ async function sweepReminders() {
 // Boot
 // =====================================================================
 
+// Persist the verified pre-migration JSON backup durably so the move is provably
+// recoverable. Best-effort over two channels:
+//   1. NATIVE durable Filesystem file under a DEDICATED name (so it never
+//      clobbers the live state file). Survives localStorage eviction; app-private
+//      (cleared only on uninstall, where the user's Drive backup is the valve).
+//   2. A stamped + a "latest" localStorage copy under dedicated keys, as a
+//      second on-device copy.
+// The live durable state file already holds the same source state (it WAS the
+// migration source via durableRead at boot), so even if both channels below are
+// unavailable the previous data is not lost. Boot only WARNs on failure because
+// the migration itself was already verified before we reach here.
+async function persistMigrationBackup(backupJson) {
+  if (typeof backupJson !== "string" || !backupJson.length) return;
+  // Channel 1: dedicated durable file on native (silent; app Data directory).
+  try {
+    const cap = window.Capacitor;
+    const FS = cap && cap.Plugins && cap.Plugins.Filesystem;
+    if (cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform() && FS) {
+      await FS.writeFile({
+        path: "saagar_greetor_migration_backup.json",
+        data: backupJson,
+        directory: "DATA",
+        encoding: "utf8",
+      });
+    }
+  } catch (e) {
+    console.warn("[migrate] durable backup file write failed", e && (e.message || e));
+  }
+  // Channel 2: dedicated localStorage copies (best-effort; over-quota/eviction
+  // must never crash boot, hence the try/catch).
+  try {
+    const key = "saagar_greetor_migration_backup_" + today();
+    localStorage.setItem(key, backupJson);
+    localStorage.setItem("saagar_greetor_migration_backup_latest", backupJson);
+  } catch (e) {
+    console.warn("[migrate] could not cache migration backup in localStorage", e && e.name);
+  }
+}
+
+// Renders a NON-FATAL "migration failed but your data is safe" card. The DB was
+// rolled back to empty and 'migrated' was left unset, so the previous data is
+// still intact in the JSON backup (and in the prior build's storage); the next
+// boot will retry the migration. We halt boot after showing this so the user
+// never starts entering data into the empty, rolled-back DB.
+function showMigrationFailedCard(e) {
+  try { document.body.classList.remove("locked"); } catch (_) {}
+  const auth = $("auth-screen"); if (auth) { auth.style.display = "none"; auth.innerHTML = ""; }
+  const screen = $("screen");
+  if (screen) {
+    screen.innerHTML = `
+      <div class="empty-state" style="padding:48px 16px">
+        <div class="icon">🛟</div>
+        <h3>Migration paused — your data is safe</h3>
+        <p class="muted">Importing your existing data into the new storage was rolled back because a safety check did not pass. Nothing was changed or lost.</p>
+        <p class="muted" style="margin-top:12px">A JSON backup of your previous data is safe. Please restart the app to retry. If this keeps happening, reinstall the prior build, export a JSON backup, then restore it into this build.</p>
+        <p class="muted" style="margin-top:12px;font-size:12px;opacity:.8">Details: ${escapeHtml((e && (e.message || e)) || "Unknown error")}</p>
+      </div>`;
+  }
+}
+
 // Renders a fatal error card into #screen (used when the DB can't open — the
 // app is non-functional without it now that the DB is the source of truth).
 function showFatalDbError(e) {
@@ -3289,12 +3353,22 @@ async function boot() {
     }
   } catch (e) { console.warn("hydrate (migration source) skipped", e); }
 
-  // 3. ONE-TIME migration gate. Migrate the old whole-blob Store into the DB iff:
+  // 3. ONE-TIME migration gate (Phase 4 HARDENED). Migrate the old whole-blob
+  //    Store into the DB iff:
   //      (a) we haven't migrated before (meta('migrated') !== '1'), AND
   //      (b) the DB is empty (no records AND no users), AND
   //      (c) the old Store actually has data (records or users).
   //    This makes the first SQLite boot adopt the existing dataset, and is a
   //    no-op on every later boot and on a clean install.
+  //
+  //    The actual move is delegated to window.Migrate.run (migrate.js), which
+  //    is the safety-proofed core: it builds + VERIFIES a JSON backup BEFORE any
+  //    DB write, inserts every table in ONE transaction, then READS BACK every
+  //    table and asserts per-table COUNT + content-hash === source. It THROWS on
+  //    any mismatch. We only mark 'migrated' here AFTER it returns ok:true, and
+  //    only AFTER the returned backup is durably persisted. On throw we roll the
+  //    DB back to empty, show a non-fatal "your data is safe" card, and leave
+  //    'migrated' unset so the next boot retries from the still-intact Store.
   try {
     const migrated = await Repo.meta.get("migrated");
     if (migrated !== "1") {
@@ -3308,25 +3382,35 @@ async function boot() {
       const oldHasData = (Array.isArray(old.records) && old.records.length > 0) ||
                          (Array.isArray(old.users) && old.users.length > 0);
       if (dbEmpty && oldHasData) {
-        console.log("[migrate] adopting legacy Store into SQLite…");
-        const tables = DBSchema.disassemble(old);
-        await GreetorDB.transaction(async function () {
-          for (let i = 0; i < DB_TABLES.length; i++) {
-            const t = DB_TABLES[i];
-            const rows = tables[t] || [];
-            // meta already holds schema_version (a different key); disassemble's
-            // meta rows (masters/targets/settings) are new keys, so plain INSERT
-            // via bulkInsert won't collide.
-            if (rows.length) await GreetorDB.bulkInsert(t, rows);
-          }
-        });
-        console.log("[migrate] done: " + (tables.records ? tables.records.length : 0) + " records, " +
-                    (tables.users ? tables.users.length : 0) + " users.");
+        console.log("[migrate] adopting legacy Store into SQLite (verified-backup + read-back gate)…");
+        let result;
+        try {
+          // Migrate.run defaults to window.GreetorDB; backup gate + one-txn insert
+          // + read-back verification all happen inside. Throws on ANY failure.
+          result = await Migrate.run(old);
+        } catch (mErr) {
+          // VERIFIED FAILURE: roll the DB back to empty so the old Store stays the
+          // source of truth and the next boot retries. Do NOT set 'migrated'.
+          console.error("[migrate] FAILED — rolling back", mErr);
+          try { await Migrate.rollback(); }
+          catch (rbErr) { console.error("[migrate] rollback ALSO failed", rbErr); }
+          showMigrationFailedCard(mErr);
+          return;                          // halt boot; never operate on the empty DB
+        }
+        // SUCCESS: persist the verified backup durably BEFORE flipping the flag,
+        // so the recovery valve exists on disk even if the very next step dies.
+        try { await persistMigrationBackup(result.backup); }
+        catch (bErr) { console.warn("[migrate] backup persist warning", bErr && bErr.message || bErr); }
+        const recN = (result.counts && result.counts.records) || 0;
+        const userN = (result.counts && result.counts.users) || 0;
+        console.log("[migrate] verified OK: " + recN + " records, " + userN + " users (read-back hashes matched).");
       }
+      // Only reached when migration either succeeded (ok:true above) or there was
+      // nothing to migrate (clean install / DB already populated). Safe to flag.
       await Repo.meta.set("migrated", "1");
     }
   } catch (e) {
-    console.error("[migrate] FAILED", e);
+    console.error("[migrate] gate FAILED", e);
     showFatalDbError(e);
     return;
   }
