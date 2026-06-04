@@ -3,16 +3,6 @@
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
-  function getRecs(state) {
-    var auth = (typeof AuthSession !== 'undefined') ? AuthSession.current() : null;
-    var all = (state && state.records) ? state.records : [];
-    var roleRecs = (auth && auth.role === 'GREETOR')
-      ? all.filter(function (r) { return r.createdByUserId === auth.id; })
-      : all;
-    var range = window.reportRange || 'today';
-    return Reports.filterByRange(roleRecs, range, window.reportCustomStart, window.reportCustomEnd);
-  }
-
   function pillClass(leadStatus) {
     var map = { Hot: 'pill-hot', Warm: 'pill-warm', Cold: 'pill-cold', Open: 'pill-open', Converted: 'pill-converted', Closed: 'pill-closed' };
     return map[leadStatus] || 'pill-open';
@@ -45,16 +35,41 @@
 
   // ── render ─────────────────────────────────────────────────────────────────
 
-  function render(state) {
+  async function render() {
     var range = window.reportRange || 'today';
     var auth = (typeof AuthSession !== 'undefined') ? AuthSession.current() : null;
-    var all = (state && state.records) ? state.records : [];
+
+    // Fetch the full record set ONCE (Repo.records.all() returns domain records
+    // in ord == original app-array order, so the pure transforms below see rows
+    // in the exact order the old pure-over-state code did).
+    var all;
+    try {
+      all = await Repo.records.all();
+    } catch (e) {
+      all = [];
+    }
+    if (!Array.isArray(all)) all = [];
+
+    // Role-scope: a GREETOR sees only the records they created on Reports.
     var roleRecs = (auth && auth.role === 'GREETOR')
       ? all.filter(function (r) { return r.createdByUserId === auth.id; })
       : all;
     var recs = Reports.filterByRange(roleRecs, range, window.reportCustomStart, window.reportCustomEnd);
     var resolved = Reports.resolveRange(range, window.reportCustomStart, window.reportCustomEnd);
-    var sum = Reports.summary(recs);
+    var sum = Reports.summaryPure(recs);
+
+    // Pre-fetch the two async inputs the (otherwise sync) blocks below need, so
+    // the chart/targets/leaderboard assembly stays synchronous.
+    var ffTotal = 0;
+    if (window.Footfall && typeof window.Footfall.totalForRange === 'function') {
+      try { ffTotal = await window.Footfall.totalForRange(resolved.startDate, resolved.endDate); }
+      catch (e) { ffTotal = 0; }
+    }
+    var targetsObj = null;
+    if (window.Targets && typeof window.Targets.get === 'function') {
+      try { targetsObj = await window.Targets.get(); }
+      catch (e) { targetsObj = null; }
+    }
 
     var html = '';
 
@@ -96,7 +111,6 @@
 
     // ── True-conversion overlay (audit R12 / denominator) ──
     if (window.Footfall) {
-      var ffTotal = window.Footfall.totalForRange(state, resolved.startDate, resolved.endDate);
       if (ffTotal > 0) {
         var truePct = window.Footfall.trueConversionPct(sum.walkins, sum.conversions, ffTotal);
         var coverage = window.Footfall.captureCoverage(sum.walkins, ffTotal);
@@ -163,10 +177,10 @@
         }
       }
 
-      // Targets attainment
-      if (window.Targets && typeof Targets.attainment === 'function') {
+      // Targets attainment (pure over the role-scoped, period-filtered records)
+      if (window.Targets && typeof Targets.attainmentPure === 'function' && typeof Targets.recordsInPeriodPure === 'function') {
         var uid = (auth && auth.role === 'GREETOR') ? auth.id : null;
-        var att = Targets.attainment(state, period, roleRecs, uid);
+        var att = Targets.attainmentPure(targetsObj, Targets.recordsInPeriodPure(roleRecs, period), period, uid);
         var bar = function (lbl, m) {
           if (!m || !m.target) return '<div class="tiny muted" style="margin-bottom:6px;">' + lbl + ': ' + (m ? m.actual : 0) + ' (no target set)</div>';
           var pct = Math.min(100, m.pct || 0);
@@ -181,10 +195,11 @@
         html += '</div>';
       }
 
-      // Greetor leaderboard (Manager/Owner only)
-      if (window.Targets && typeof Targets.leaderboard === 'function' && auth && auth.role !== 'GREETOR') {
-        var periodRecs = (typeof Targets.recordsInPeriod === 'function') ? Targets.recordsInPeriod(all, period) : all;
-        var lb = Targets.leaderboard(state, periodRecs, period);
+      // Greetor leaderboard (Manager/Owner only) — pure over ALL records in the
+      // period (leaderboard is intentionally NOT role-scoped: managers rank the
+      // whole team).
+      if (window.Targets && typeof Targets.leaderboardPure === 'function' && typeof Targets.recordsInPeriodPure === 'function' && auth && auth.role !== 'GREETOR') {
+        var lb = Targets.leaderboardPure(Targets.recordsInPeriodPure(all, period));
         if (lb && lb.length) {
           html += '<div class="card" style="margin-bottom:12px;">';
           html += '<div style="font-weight:600;margin-bottom:10px;">Greetor leaderboard &middot; ' + (typeof Targets.periodLabel === 'function' ? Targets.periodLabel(period) : period) + '</div>';
@@ -215,7 +230,7 @@
     ];
 
     breakdownFields.forEach(function (bf) {
-      var rows = Reports.breakdown(recs, bf.field);
+      var rows = Reports.breakdownPure(recs, bf.field);
       if (!rows || rows.length === 0) return;
       var capped = rows.slice(0, 8);
       html += '<div class="card" style="margin-bottom:12px;">';
@@ -265,6 +280,10 @@
       });
     }
 
+    // Paint our own target element (contract: each UI module's async render()
+    // writes its own DOM; index.html does `await window.ReportsUI.render()`).
+    var el = (typeof document !== 'undefined') ? document.getElementById('screen') : null;
+    if (el) el.innerHTML = html;
     return html;
   }
 
@@ -287,30 +306,35 @@
     }
 
     if (action === 'r-export-visits' || action === 'r-export-summary') {
-      // Recompute recs (role + range) to match what's shown.
-      // BUGFIX: the data lives in Store.load().records — Store._records and
-      // window._lastState never existed, so exports were always empty.
-      var auth = (typeof AuthSession !== 'undefined') ? AuthSession.current() : null;
-      var st = (typeof Store !== 'undefined' && Store.load) ? Store.load() : null;
-      var all = (st && Array.isArray(st.records)) ? st.records : [];
-      var roleRecs = (auth && auth.role === 'GREETOR')
-        ? all.filter(function (r) { return r.createdByUserId === auth.id; })
-        : all;
-      var range = window.reportRange || 'today';
-      var recs = Reports.filterByRange(roleRecs, range, window.reportCustomStart, window.reportCustomEnd);
+      // Async work runs in an inner IIFE so handleAction stays SYNC-boolean
+      // (the host router does `if (handleAction(...)) return;` — a Promise would
+      // always be truthy and swallow every other click).
+      (async function () {
+        try {
+          var auth = (typeof AuthSession !== 'undefined') ? AuthSession.current() : null;
+          var all = await Repo.records.all();
+          if (!Array.isArray(all)) all = [];
+          // Same role-scope (GREETOR -> own) + range filter the screen shows.
+          var roleRecs = (auth && auth.role === 'GREETOR')
+            ? all.filter(function (r) { return r.createdByUserId === auth.id; })
+            : all;
+          var range = window.reportRange || 'today';
+          var recs = Reports.filterByRange(roleRecs, range, window.reportCustomStart, window.reportCustomEnd);
 
-      if (!recs.length) {
-        if (typeof toast === 'function') toast('No records in this range to export. Pick a wider range.');
-        return true;
-      }
+          if (!recs.length) {
+            if (typeof toast === 'function') toast('No records in this range to export. Pick a wider range.');
+            return;
+          }
 
-      if (action === 'r-export-visits') {
-        var csv = Reports.visitsCSV(recs);
-        shareCSV('saagar_greetor_visits_' + range + '.csv', csv);
-      } else {
-        var csv2 = Reports.dailySummaryCSV(recs);
-        shareCSV('saagar_greetor_summary.csv', csv2);
-      }
+          if (action === 'r-export-visits') {
+            shareCSV('saagar_greetor_visits_' + range + '.csv', Reports.visitsCSVPure(recs));
+          } else {
+            shareCSV('saagar_greetor_summary.csv', Reports.dailySummaryCSVPure(recs));
+          }
+        } catch (e) {
+          if (typeof toast === 'function') toast('Export failed');
+        }
+      })();
       return true;
     }
 

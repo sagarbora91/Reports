@@ -24,8 +24,23 @@
     return typeof window.Customers !== 'undefined';
   }
 
-  function currentState() {
-    return typeof Store !== 'undefined' ? Store.load() : {};
+  // SQLite P3: render() is async (Customers.* are async, DB-backed) and ALWAYS
+  // returns the HTML string. It ALSO self-paints into its OWN element so the
+  // host can use either model:
+  //   • `el.innerHTML = await CustomersUI.render()`   (host assigns)  — or —
+  //   • `await CustomersUI.render(el)` / `await CustomersUI.render()` (self-paint
+  //     into the explicit target, else the host's dedicated #leadsBody).
+  // We deliberately do NOT fall back to #screen: that container is host-owned
+  // and may also hold the Pipeline|Customers toggle, so clobbering it could drop
+  // sibling chrome. With no explicit target and no #leadsBody, render() just
+  // returns the string and lets the host place it.
+  function resolveTarget(target) {
+    if (target && target.nodeType === 1) return target;
+    if (typeof target === 'string') {
+      var byId = document.getElementById(target);
+      if (byId) return byId;
+    }
+    return document.getElementById('leadsBody');
   }
 
   function safeEscape(s) {
@@ -64,13 +79,15 @@
     }).join('');
   }
 
-  function renderList(state) {
+  async function renderList() {
     if (!guardCustomers()) {
       return '<div class="empty-state"><div class="icon">⏳</div><h3>Loading…</h3></div>';
     }
     var search = window._custSearch || '';
     var sort = window._custSort || 'recent';
-    var customers = Customers.list(state, { search: search, sort: sort });
+    // DB-backed, async (NO state arg). Greetors intentionally see ALL customers
+    // (owner decision) — Customers.list applies no role filter and we add none.
+    var customers = await Customers.list({ search: search, sort: sort });
 
     var sortChips = ['recent', 'visits', 'value', 'name'].map(function (s) {
       var label = { recent: 'Recent', visits: 'Visits', value: 'Value', name: 'Name' }[s];
@@ -121,11 +138,12 @@
       '</div>';
   }
 
-  function renderDetail(state, mobile) {
+  async function renderDetail(mobile) {
     if (!guardCustomers()) {
       return '<div class="empty-state"><div class="icon">⏳</div><h3>Loading…</h3></div>';
     }
-    var c = Customers.byMobile(state, mobile);
+    // DB-backed, async (NO state arg).
+    var c = await Customers.byMobile(mobile);
     if (!c) {
       return '<button class="btn btn-ghost" data-action="c-back">← Back</button>' +
         '<div class="empty-state"><div class="icon">🔍</div>' +
@@ -182,44 +200,57 @@
 
   window.CustomersUI = {
 
-    render: function (state) {
+    // ASYNC (SQLite P3). Builds the list or detail HTML from the DB-backed
+    // async data layer, self-paints into its own target element, AND returns the
+    // HTML string so the host can use either model. `target` is optional
+    // (element or id); when omitted it self-paints into #leadsBody if present,
+    // otherwise it only returns the string for the host to place.
+    render: async function (target) {
       var mobile = window.leadsCustomerMobile || '';
-      if (mobile) {
-        return renderDetail(state, mobile);
-      }
-      return renderList(state);
+      var html = mobile ? await renderDetail(mobile) : await renderList();
+      var el = resolveTarget(target);
+      if (el) el.innerHTML = html;
+      return html;
     },
 
-    onSearch: function (val) {
+    // ASYNC: incremental search repaint of just the #custList sublist (no full
+    // re-render, so the search box keeps focus). Bound via oninput in renderList.
+    onSearch: async function (val) {
       window._custSearch = val;
       var el = typeof $ === 'function' ? $('custList') : document.getElementById('custList');
       if (!el) {
-        if (typeof render === 'function') render();
+        if (window.render) window.render();
         return;
       }
       if (!guardCustomers()) { el.innerHTML = '<div class="muted">Loading…</div>'; return; }
-      var state = currentState();
       var sort = window._custSort || 'recent';
-      var customers = Customers.list(state, { search: val, sort: sort });
-      el.innerHTML = buildRows(customers);
+      try {
+        var customers = await Customers.list({ search: val, sort: sort });
+        el.innerHTML = buildRows(customers);
+      } catch (e) {
+        el.innerHTML = '<div class="muted">Could not load customers.</div>';
+      }
     },
 
+    // SYNC + BOOLEAN (locked contract): the host router does
+    // `if (CustomersUI.handleAction(a,ds)) return;` — a Promise would always be
+    // truthy and swallow every click. These are read-only view toggles: set a
+    // window.* var then fire-and-forget the async host render(); return true.
     handleAction: function (action, dataset) {
-      if (!action || !action.startsWith('c-')) return false;
-      var state = currentState();
+      if (!action || action.indexOf('c-') !== 0) return false;
       if (action === 'c-open') {
         window.leadsCustomerMobile = dataset.mobile || '';
-        if (typeof render === 'function') render();
+        if (window.render) window.render();
         return true;
       }
       if (action === 'c-back') {
         window.leadsCustomerMobile = '';
-        if (typeof render === 'function') render();
+        if (window.render) window.render();
         return true;
       }
       if (action === 'c-sort') {
         window._custSort = dataset.sort || 'recent';
-        if (typeof render === 'function') render();
+        if (window.render) window.render();
         return true;
       }
       return false;

@@ -694,14 +694,19 @@ body.locked { overflow: hidden; }
   <script src="photo.js"></script>
   <script src="dpdp.js"></script>
   <script src="i18n.js"></script>
-  <!-- SQLite Phase 0 - load order matters (no bundler):
+  <!-- SQLite - load order matters (no bundler):
        1) sql.js UMD loader (web/preview engine) -> sets window.initSqlJs; .wasm sits beside it in assets/.
           On native Android this is harmless/unused (the CapacitorSQLite plugin is used instead).
        2) db-schema.js - single source of truth for DDL + mappers; MUST come before db.js.
-       3) db.js - the connection layer; MUST come right AFTER db-schema.js. -->
+       3) db.js - the connection layer; MUST come right AFTER db-schema.js.
+       4) repo.js - the single async DB access point (window.Repo); the data layers
+          (loaded above) resolve it LAZILY at call time, so it only needs to exist
+          before any DB call runs. The inline app script below calls Repo.* directly,
+          so repo.js MUST be loaded before it. -->
   <script src="assets/sql-wasm.js"></script>
   <script src="db-schema.js"></script>
   <script src="db.js"></script>
+  <script src="repo.js"></script>
   <script>
 "use strict";
 
@@ -768,6 +773,18 @@ function isValidMobile(raw) { return /^[6-9]\d{9}$/.test(raw); }
 // =====================================================================
 // Storage + migration
 // =====================================================================
+//
+// SQLite Phase 3: the DB (window.Repo / window.GreetorDB) is now the source of
+// truth for records, users, audit log, comms, targets, footfall and masters.
+// The old whole-blob `Store` below is DEMOTED to two jobs only:
+//   1. MIGRATION SOURCE — boot() reads Store.load() once to seed the DB on the
+//      first SQLite boot (disassemble → bulkInsert), then never reads it again.
+//   2. ROLLBACK VALVE — _hydrate/load/bytes stay so a future build can fall back
+//      to the durable file if the DB is unavailable.
+// App logic NO LONGER reads or writes records/auditLog through Store; it goes
+// through Repo + the async data layers. AppState (below) holds the small slice
+// the synchronous render auth-gate needs (users + settings), hydrated from the
+// DB once at boot.
 
 // In-memory canonical serialized state — the real synchronous working copy.
 // The durable Capacitor Filesystem file is the PRIMARY persistence (no ~5MB
@@ -829,6 +846,51 @@ const Store = {
 };
 
 // =====================================================================
+// AppState — small in-memory mirror of the DB slice the SYNCHRONOUS render
+// auth-gate + settings reads need. Hydrated ONCE at boot from the DB
+// (Repo.users.all() + Repo.settings.get()) and refreshed after any
+// user/login/settings mutation. This is what lets render()'s auth gate run
+// synchronously (no await → no flash of the wrong screen) while everything
+// heavier is fetched async.
+// =====================================================================
+const AppState = {
+  users: [],
+  current_user_id: null,
+  my_store: null,
+  reminder_enabled: true,
+};
+
+// Pull the latest users + settings from the DB into AppState. Call after any
+// mutation that changes users or settings, and once at boot. Never throws —
+// a failed refresh leaves the prior AppState in place.
+async function refreshAppState() {
+  try {
+    const [users, settings] = await Promise.all([
+      Repo.users.all(),
+      Repo.settings.get(),
+    ]);
+    AppState.users = Array.isArray(users) ? users : [];
+    const s = settings || {};
+    AppState.current_user_id = s.current_user_id != null ? s.current_user_id : null;
+    AppState.my_store = s.my_store != null ? s.my_store : null;
+    AppState.reminder_enabled = s.reminder_enabled !== false;
+  } catch (e) {
+    console.warn("refreshAppState failed", e && e.message || e);
+  }
+}
+
+// Persist the settings slice of AppState back to the DB (meta('settings')).
+// Keeps the exact {current_user_id, my_store, reminder_enabled} shape
+// DBSchema.disassemble writes so backup/restore round-trips unchanged.
+async function saveSettings() {
+  await Repo.settings.set({
+    current_user_id: AppState.current_user_id,
+    my_store: AppState.my_store,
+    reminder_enabled: AppState.reminder_enabled !== false,
+  });
+}
+
+// =====================================================================
 // Auth — PBKDF2 PIN, users, roles, lockout
 // =====================================================================
 
@@ -848,12 +910,21 @@ function randomSalt() {
   return Array.from(a).map(b => b.toString(16).padStart(2,"0")).join("");
 }
 
+// Users — READS are SYNC over AppState.users (hydrated from the DB at boot and
+// after every mutation). The optional first arg is accepted for backward-compat
+// with old call sites that passed a state object, but it is IGNORED: AppState is
+// always the source. MUTATIONS are async (Repo.users.*) then refresh AppState.
 const Users = {
-  listAll(s)    { return s.users.slice(); },
-  listActive(s) { return s.users.filter(u => u.is_active); },
-  byId(s, id)   { return s.users.find(u => u.id === id) || null; },
+  listAll()    { return AppState.users.slice(); },
+  listActive() { return AppState.users.filter(u => u.is_active); },
+  byId(id) {
+    // Tolerate the legacy (state, id) call shape: if the first arg is an object
+    // (old `state`), the real id is the second arg.
+    if (id === undefined && (typeof arguments[0] === "string" || arguments[0] == null)) id = arguments[0];
+    else if (typeof arguments[0] === "object" && arguments[0] !== null) id = arguments[1];
+    return AppState.users.find(u => u.id === id) || null;
+  },
   async create({ name, role, pin }) {
-    const state = Store.load();
     const salt = randomSalt();
     const u = {
       id: uuid(), name, role,
@@ -861,49 +932,47 @@ const Users = {
       created_at: new Date().toISOString(),
       is_active: true,
     };
-    state.users.push(u);
-    Store.save(state);
+    await Repo.users.insert(u);
+    await refreshAppState();
     return u;
   },
   async changePin(userId, newPin) {
-    const state = Store.load();
-    const u = Users.byId(state, userId);
+    const u = Users.byId(userId);
     if (!u) return false;
-    u.pin_salt = randomSalt();
-    u.pin_hash = await hashPin(newPin, u.pin_salt);
-    Store.save(state);
+    const salt = randomSalt();
+    const hash = await hashPin(newPin, salt);
+    await Repo.users.update(userId, { pin_salt: salt, pin_hash: hash });
+    await refreshAppState();
     return true;
   },
-  setActive(userId, active) {
-    const state = Store.load();
-    const u = Users.byId(state, userId);
-    if (!u) return;
-    u.is_active = !!active;
-    Store.save(state);
+  async setActive(userId, active) {
+    await Repo.users.update(userId, { is_active: !!active });
+    await refreshAppState();
   },
-  remove(userId) {
-    const state = Store.load();
-    state.users = state.users.filter(u => u.id !== userId);
-    Store.save(state);
+  async remove(userId) {
+    await Repo.users["delete"](userId);
+    await refreshAppState();
   },
 };
 
+// AuthSession.current() is SYNC (reads AppState) so the render auth-gate never
+// awaits. login/logout persist the current_user_id to meta('settings') via
+// Repo, then refresh AppState so the gate sees the change immediately.
 const AuthSession = {
-  current(s) {
-    s = s || Store.load();
-    if (!s.current_user_id) return null;
-    const u = Users.byId(s, s.current_user_id);
+  current() {
+    if (!AppState.current_user_id) return null;
+    const u = Users.byId(AppState.current_user_id);
     return (u && u.is_active) ? u : null;
   },
-  login(userId) {
-    const s = Store.load();
-    s.current_user_id = userId;
-    Store.save(s);
+  async login(userId) {
+    AppState.current_user_id = userId;
+    await saveSettings();
+    await refreshAppState();
   },
-  logout() {
-    const s = Store.load();
-    s.current_user_id = null;
-    Store.save(s);
+  async logout() {
+    AppState.current_user_id = null;
+    await saveSettings();
+    await refreshAppState();
   },
 };
 
@@ -938,23 +1007,27 @@ window.canSafe = canSafe;
 // Audit log — immutable record of every data action (esp. deletes).
 // Append-only; never edited or cleared from the UI. Owner-only to view.
 // =====================================================================
-const AUDIT_MAX = 5000;
-function logAudit(action, summary, detail) {
-  const state = Store.load();
-  if (!Array.isArray(state.auditLog)) state.auditLog = [];
-  const auth = AuthSession.current(state);
-  state.auditLog.unshift({
-    id: uuid(),
-    at: new Date().toISOString(),
-    userId: auth ? auth.id : null,
-    userName: auth ? auth.name : "system",
-    role: auth ? auth.role : "",
-    action: action,                 // create|edit|delete|convert|stage|user|pin
-    summary: summary || "",
-    detail: detail || null,         // e.g. deleted-record snapshot, old→new stage
-  });
-  if (state.auditLog.length > AUDIT_MAX) state.auditLog.length = AUDIT_MAX;
-  Store.save(state);
+// logAudit — ASYNC, DB-backed (Repo.auditLog.insert appends a row, ord ascending;
+// the viewer reads newest-first). Builds id/at + who from AuthSession.current().
+// Wrapped in try/catch so an audit-write failure NEVER breaks the calling handler
+// (the data mutation it records has already happened). Callers fire-and-forget it
+// (no await needed) inside their async IIFE; awaiting is also safe.
+async function logAudit(action, summary, detail) {
+  try {
+    const auth = AuthSession.current();
+    await Repo.auditLog.insert({
+      id: uuid(),
+      at: new Date().toISOString(),
+      userId: auth ? auth.id : null,
+      userName: auth ? auth.name : "system",
+      role: auth ? auth.role : "",
+      action: action,                 // create|edit|delete|convert|stage|user|pin
+      summary: summary || "",
+      detail: detail || null,         // e.g. deleted-record snapshot, old→new stage
+    });
+  } catch (e) {
+    console.warn("logAudit failed (non-fatal)", e && e.message || e);
+  }
 }
 window.logAudit = logAudit;
 
@@ -980,7 +1053,7 @@ window.onLocaleSet = function (loc) {
   window.I18n.setLocale(loc);
   applyI18n();
   toast("Language: " + (loc === "mr" ? "मराठी" : "English"));
-  render();
+  if (window.render) window.render();   // fire-and-forget (render is async now)
 };
 window.onRetentionSet = function (val) {
   if (!window.DPDP) return;
@@ -1229,29 +1302,40 @@ window._custSearch = "";
 window._custSort = "recent";
 
 // =====================================================================
-// Render — top-level
+// Render — top-level (ASYNC, concurrency-token guarded)
 // =====================================================================
+//
+// SQLite Phase 3: render() is async. The auth gate at the very top stays
+// SYNCHRONOUS (reads AppState, no await) so there is never a flash of the wrong
+// screen. Everything after the gate fetches data from the DB (Repo / async data
+// layers); a monotonically-increasing token (_rt) makes a slower in-flight
+// render abandon its paint if a newer render() has started in the meantime
+// (rapid screen switches / inline onchange handlers).
+let _rt = 0;
+// Tracks the screen whose content is currently painted, so the loading skeleton
+// only shows on real navigation (currentScreen change), not in-screen re-renders.
+let _lastPainted = null;
 
-function render() {
-  const state = Store.load();
+async function render() {
+  const my = ++_rt;
 
-  // Auth gate
-  if (state.users.length === 0) {
+  // ── SYNC auth gate (AppState only — no await, no flash) ──
+  if (AppState.users.length === 0) {
     showAuthScreen(renderFirstTimeSetup());
     return;
   }
-  const auth = AuthSession.current(state);
+  const auth = AuthSession.current();
   if (!auth) {
-    showAuthScreen(renderLoginScreen(state));
+    showAuthScreen(renderLoginScreen());
     return;
   }
 
   hideAuthScreen();
   $("userInitials").textContent = initials(auth.name);
 
-  // Wizard auto-fills "my store" if set
-  if (currentScreen === "capture" && !Wizard.data.store && state.my_store) {
-    Wizard.data.store = state.my_store;
+  // Wizard auto-fills "my store" if set (sync — AppState)
+  if (currentScreen === "capture" && !Wizard.data.store && AppState.my_store) {
+    Wizard.data.store = AppState.my_store;
   }
   // Wizard auto-fills greetor name with current user
   if (currentScreen === "capture" && !Wizard.data.greetor) {
@@ -1259,43 +1343,94 @@ function render() {
   }
 
   const screen = $("screen");
-  if (currentScreen === "capture")       screen.innerHTML = renderCapture(state, auth);
-  else if (currentScreen === "reports")  screen.innerHTML = window.ReportsUI ? window.ReportsUI.render(state) : "<p class='muted'>Loading…</p>";
-  else if (currentScreen === "auditlog") screen.innerHTML = renderAuditLog(state);
-  else if (currentScreen === "targets")  screen.innerHTML = renderTargets(state);
-  else if (currentScreen === "comms") {
-    screen.innerHTML = (window.commsView === "log")
-      ? (window.CommsUI ? window.CommsUI.renderLog(state) : "")
-      : (window.CommsUI ? window.CommsUI.renderTemplates(state) : "");
-  }
-  else if (currentScreen === "leads")    screen.innerHTML = renderLeads(state, auth);
-  else if (currentScreen === "settings") screen.innerHTML = renderSettings(state, auth);
-  else if (currentScreen === "masters") {
-    const homeView = (window.mastersView || "home") === "home";
-    const backBar = homeView
-      ? `<button class="btn btn-ghost" style="padding:10px 0;margin-bottom:4px" data-action="goto-settings">← Settings</button>`
-      : "";
-    screen.innerHTML = backBar + (window.MastersUI ? window.MastersUI.render(state) : "<p class='muted'>Masters not loaded.</p>");
-  }
 
-  // Bottom nav active (masters / audit log / comms are children of settings)
+  // Bottom nav active + Back arrow can be set immediately (sync) — do it before
+  // the await so the chrome updates without waiting on data.
   const navScreen = (currentScreen === "masters" || currentScreen === "auditlog" || currentScreen === "comms" || currentScreen === "targets") ? "settings" : currentScreen;
   document.querySelectorAll(".bnav-btn").forEach(b =>
     b.classList.toggle("active", b.dataset.screen === navScreen)
   );
-
-  // Topbar Back arrow — shown on any drill-down, hidden on the Capture home (step 1).
   const back = $("topbarBack");
-  if (back) {
-    back.hidden = (currentScreen === "capture" && Wizard.step === 1);
+  if (back) back.hidden = (currentScreen === "capture" && Wizard.step === 1);
+
+  // Loading skeleton: only when NAVIGATING to a different screen (not on an
+  // in-screen re-render like a chip tap or wizard step), so the common path
+  // never flickers. Cleared by the paint below.
+  if (currentScreen !== _lastPainted) {
+    screen.innerHTML = `<div class="card"><p class="muted">Loading…</p></div>`;
+  }
+
+  // ── per-screen async render ──
+  // Screens that paint their OWN DOM element (the UI modules + Leads dispatcher)
+  // are awaited directly; screens whose HTML we build here await their data,
+  // re-check the token, then set screen.innerHTML.
+  try {
+    if (currentScreen === "capture") {
+      const html = await renderCapture(auth);
+      if (my !== _rt) return;
+      screen.innerHTML = html;
+    } else if (currentScreen === "reports") {
+      // Contract: XUI.render() is async and self-paints its own target (#screen).
+      // Defensively also paint a returned HTML string if the module returns one.
+      if (window.ReportsUI) {
+        const out = await window.ReportsUI.render();
+        if (my !== _rt) return;
+        if (typeof out === "string" && out) screen.innerHTML = out;
+      } else { screen.innerHTML = "<p class='muted'>Loading…</p>"; }
+    } else if (currentScreen === "auditlog") {
+      const html = await renderAuditLog();
+      if (my !== _rt) return;
+      screen.innerHTML = html;
+    } else if (currentScreen === "targets") {
+      const html = await renderTargets();
+      if (my !== _rt) return;
+      screen.innerHTML = html;
+    } else if (currentScreen === "comms") {
+      if (window.CommsUI) {
+        const out = (window.commsView === "log")
+          ? await window.CommsUI.renderLog()
+          : await window.CommsUI.renderTemplates();
+        if (my !== _rt) return;
+        if (typeof out === "string" && out) screen.innerHTML = out;
+      } else { screen.innerHTML = ""; }
+    } else if (currentScreen === "leads") {
+      await renderLeads(auth);
+    } else if (currentScreen === "settings") {
+      const html = await renderSettings(auth);
+      if (my !== _rt) return;
+      screen.innerHTML = html;
+    } else if (currentScreen === "masters") {
+      const homeView = (window.mastersView || "home") === "home";
+      const backBar = homeView
+        ? `<button class="btn btn-ghost" style="padding:10px 0;margin-bottom:4px" data-action="goto-settings">← Settings</button>`
+        : "";
+      if (window.MastersUI) {
+        // Contract: MastersUI.render() self-paints #screen (and may return HTML).
+        // Handle both, then prepend the back bar.
+        const out = await window.MastersUI.render();
+        if (my !== _rt) return;
+        if (typeof out === "string" && out) screen.innerHTML = out;
+        if (backBar) screen.innerHTML = backBar + screen.innerHTML;
+      } else {
+        screen.innerHTML = backBar + "<p class='muted'>Masters not loaded.</p>";
+      }
+    }
+    if (my !== _rt) return;
+    _lastPainted = currentScreen;
+  } catch (e) {
+    if (my !== _rt) return;
+    console.error("render failed", e);
+    screen.innerHTML = "<div class='empty-state'><div class='icon'>⚠️</div><h3>Something went wrong</h3><p class='muted'>Please try again.</p></div>";
+    _lastPainted = null;   // force a fresh skeleton on the next attempt
   }
 }
+window.render = render;
 
-function switchScreen(name) {
+async function switchScreen(name) {
   currentScreen = name;
   // Switching away from capture mid-wizard keeps the draft (Wizard.data) so the
   // user can return to it. Saving / reset clears it.
-  render();
+  await render();
 }
 
 // Single source of truth for "go back one level". Used by both the topbar
@@ -1371,8 +1506,8 @@ function renderFirstTimeSetup() {
   return "";
 }
 
-function renderLoginScreen(state) {
-  const active = Users.listActive(state);
+function renderLoginScreen() {
+  const active = Users.listActive();
   const selected = window._loginUserId || (active[0] && active[0].id);
   const locked = LoginGuard.isLocked();
   return `
@@ -1457,13 +1592,13 @@ async function onPinComplete() {
         return;
       }
       const u = await Users.create({ name: window._setupOwnerName, role: "OWNER", pin });
-      AuthSession.login(u.id);
+      await AuthSession.login(u.id);
       window._setupOwnerName = null;
       window._setupPin = null;
       window._setupStage = null;
       PinBuf.reset();
       toast("Welcome, " + u.name);
-      render();
+      await render();
       return;
     }
   }
@@ -1471,15 +1606,14 @@ async function onPinComplete() {
   const select = document.getElementById("loginUser");
   const userId = select ? select.value : window._loginUserId;
   if (!userId) return;
-  const state = Store.load();
-  const u = Users.byId(state, userId);
+  const u = Users.byId(userId);
   if (!u) return;
   const ok = await verifyPin(pin, u.pin_salt, u.pin_hash);
   LoginGuard.register(ok);
   if (ok) {
-    AuthSession.login(u.id);
+    await AuthSession.login(u.id);
     PinBuf.reset();
-    render();
+    await render();
   } else {
     PinBuf.value = "";
     const err = $("loginErr");
@@ -1513,13 +1647,13 @@ function renderWizardHead(step) {
   `;
 }
 
-function renderCapture(state, auth) {
+async function renderCapture(auth) {
   const step = Wizard.step;
   let body = "";
-  if (step === 1) body = renderStep1(state);
-  else if (step === 2) body = renderStep2(state);
-  else if (step === 3) body = renderStep3(state);
-  else if (step === 4) body = renderStep4(state);
+  if (step === 1) body = await renderStep1();
+  else if (step === 2) body = await renderStep2();
+  else if (step === 3) body = await renderStep3();
+  else if (step === 4) body = await renderStep4();
 
   const isLast = step === 4;
   const nextLabel = isLast ? (editingRecordId ? "Update" : "Save") : "Next →";
@@ -1549,11 +1683,12 @@ function renderCapture(state, auth) {
 // Minimal walk-in: store + reason, everything else defaulted, NO mobile.
 // Lifts capture rate without the full wizard; attributed to the greetor so the
 // leaderboard stays fair. (audit R12 — denominator)
-function quickCaptureModal() {
-  const state = Store.load();
-  const stores = Masters.storeNames(state);
-  const reasons = Masters.reasonsTop(state);
-  const qStore = window._quickStore || state.my_store || stores[0] || "";
+async function quickCaptureModal() {
+  const [stores, reasons] = await Promise.all([
+    Masters.storeNames(),
+    Masters.reasonsTop(),
+  ]);
+  const qStore = window._quickStore || AppState.my_store || stores[0] || "";
   const qReason = window._quickReason || "";
   openModal(`
     <h2>⚡ Quick log</h2>
@@ -1577,11 +1712,11 @@ function quickCaptureModal() {
   `);
 }
 
-function quickSave() {
-  const state = Store.load();
-  const auth = AuthSession.current(state);
+async function quickSave() {
+  const auth = AuthSession.current();
   if (!auth) { toast("Sign in first"); return; }
-  const store = window._quickStore || state.my_store || Masters.storeNames(state)[0] || "";
+  const stores = await Masters.storeNames();
+  const store = window._quickStore || AppState.my_store || stores[0] || "";
   const reason = window._quickReason || "";
   if (!store || !reason) { showRequiredPopup(["Store", "Reason"].filter(f => (f === "Store" ? !store : !reason))); return; }
   const now = new Date().toISOString();
@@ -1597,14 +1732,13 @@ function quickSave() {
     followUp: "No", leadStatus: "Open", followDate: "", followTime: "",
     photos: [], consent_at: "", quick: true,
   };
-  state.records.unshift(rec);
-  Store.save(state);
+  await Repo.records.insert(rec);
   logAudit("create", "Quick log — " + store + " · " + reason, { recordId: rec.recordId, quick: true });
   window._quickStore = null;
   window._quickReason = null;
   closeModal();
   toast("Quick walk-in logged.");
-  render();
+  await render();
 }
 
 function chipGroup(name, options, selected, opts) {
@@ -1615,8 +1749,12 @@ function chipGroup(name, options, selected, opts) {
   ).join("")}</div>`;
 }
 
-function renderStep1(state) {
+async function renderStep1() {
   const d = Wizard.data;
+  const [storeNames, sources] = await Promise.all([
+    Masters.storeNames(),
+    Masters.globalList("sources"),
+  ]);
   // Quick time chips: now / 15m / 30m / 1h ago
   const tMinus = (mins) => {
     const dt = new Date(); dt.setMinutes(dt.getMinutes() - mins);
@@ -1631,8 +1769,8 @@ function renderStep1(state) {
   return `
     <div class="field">
       <label class="field-label required">Store</label>
-      ${chipGroup("store", Masters.storeNames(state), d.store)}
-      ${state.my_store ? `<p class="field-hint">Default is your store — change here for a one-off entry.</p>` : `<p class="field-hint">Pick a store. Set "my store" in Settings to skip this each time.</p>`}
+      ${chipGroup("store", storeNames, d.store)}
+      ${AppState.my_store ? `<p class="field-hint">Default is your store — change here for a one-off entry.</p>` : `<p class="field-hint">Pick a store. Set "my store" in Settings to skip this each time.</p>`}
     </div>
 
     <div class="field">
@@ -1650,13 +1788,14 @@ function renderStep1(state) {
 
     <div class="field">
       <label class="field-label">Walk-in source</label>
-      ${chipGroup("source", Masters.globalList(state, "sources"), d.source)}
+      ${chipGroup("source", sources, d.source)}
     </div>
   `;
 }
 
-function renderStep2(state) {
+async function renderStep2() {
   const d = Wizard.data;
+  const customerTypes = await Masters.globalList("customerTypes");
   return `
     <div class="field">
       <label class="field-label required" for="mobileInput">Mobile number</label>
@@ -1675,7 +1814,7 @@ function renderStep2(state) {
 
     <div class="field">
       <label class="field-label">Customer type</label>
-      ${chipGroup("customerType", Masters.globalList(state, "customerTypes"), d.customerType)}
+      ${chipGroup("customerType", customerTypes, d.customerType)}
     </div>
 
     <div class="field" style="background:var(--amber-pale);border:1px solid #f4c674">
@@ -1691,14 +1830,21 @@ function renderStep2(state) {
   `;
 }
 
-function renderStep3(state) {
+async function renderStep3() {
   const d = Wizard.data;
-  const categories = Masters.categories(state, d.store);
+  const categories = await Masters.categories(d.store);
   if (!d.store || !categories.length) {
     return `<div class="field"><p class="muted">Pick a store in step 1 first.</p></div>`;
   }
-  const subCats = d.category ? Masters.subCategories(state, d.store, d.category) : [];
-  const brands = Masters.brands(state, d.store);
+  const [subCats, brands, defaultBrand, forWhoms, occasions, budgets, timelines] = await Promise.all([
+    d.category ? Masters.subCategories(d.store, d.category) : Promise.resolve([]),
+    Masters.brands(d.store),
+    Masters.defaultBrand(d.store),
+    Masters.globalList("forWhoms"),
+    Masters.globalList("occasions"),
+    Masters.globalList("budgets"),
+    Masters.globalList("timelines"),
+  ]);
 
   return `
     <div class="field">
@@ -1714,35 +1860,38 @@ function renderStep3(state) {
 
     <div class="field">
       <label class="field-label required">Brand</label>
-      ${chipGroup("brand", brands, d.brand || Masters.defaultBrand(state, d.store))}
+      ${chipGroup("brand", brands, d.brand || defaultBrand)}
     </div>
 
     <div class="field">
       <label class="field-label">For whom</label>
-      ${chipGroup("gender", Masters.globalList(state, "forWhoms"), d.gender)}
+      ${chipGroup("gender", forWhoms, d.gender)}
     </div>
 
     <div class="field">
       <label class="field-label">Occasion</label>
-      ${chipGroup("occasion", Masters.globalList(state, "occasions"), d.occasion)}
+      ${chipGroup("occasion", occasions, d.occasion)}
     </div>
 
     <div class="field">
       <label class="field-label">Budget</label>
-      ${chipGroup("budget", Masters.globalList(state, "budgets"), d.budget)}
+      ${chipGroup("budget", budgets, d.budget)}
     </div>
 
     <div class="field">
       <label class="field-label">Buying timeline</label>
-      ${chipGroup("urgency", Masters.globalList(state, "timelines"), d.urgency)}
+      ${chipGroup("urgency", timelines, d.urgency)}
     </div>
   `;
 }
 
-function renderStep4(state) {
+async function renderStep4() {
   const d = Wizard.data;
-  const reasonsTop = Masters.reasonsTop(state);
-  const reasonsAll = Masters.reasonsAll(state);
+  const [reasonsTop, reasonsAll, leadStatuses] = await Promise.all([
+    Masters.reasonsTop(),
+    Masters.reasonsAll(),
+    Masters.globalList("leadStatuses"),
+  ]);
   const moreOpen = !!window._reasonsMoreOpen || (d.reason && reasonsTop.indexOf(d.reason) === -1);
   const visibleReasons = moreOpen ? reasonsAll : reasonsTop;
   const staff = loadStaff();
@@ -1795,7 +1944,7 @@ function renderStep4(state) {
     ${d.followUp === "Yes" ? `
     <div class="field">
       <label class="field-label">Lead status</label>
-      ${chipGroup("leadStatus", Masters.globalList(state, "leadStatuses").filter(s => s !== "Converted" && s !== "Closed"), d.leadStatus)}
+      ${chipGroup("leadStatus", leadStatuses.filter(s => s !== "Converted" && s !== "Closed"), d.leadStatus)}
       <p class="field-hint">Converted &amp; Closed are set via the Convert button on Leads (records sale value + logs the conversion).</p>
     </div>
 
@@ -1817,14 +1966,16 @@ function renderStep4(state) {
 // TODAY screen
 // =====================================================================
 
-function renderToday(state, auth) {
+async function renderToday(auth) {
   const todayStr = today();
-  const todayRecs = state.records.filter(r => r.visitDate === todayStr);
+  const all = await Repo.records.all();
+  const todayRecs = all.filter(r => r.visitDate === todayStr);
   const myRecs = auth.role === "GREETOR"
     ? todayRecs.filter(r => r.createdByUserId === auth.id)
     : todayRecs;
-  const hotCount = state.records.filter(r => r.leadStatus === "Hot").length;
-  const followCount = state.records.filter(r => r.followUp === "Yes" && !["Converted","Closed"].includes(r.leadStatus)).length;
+  // Hot / follow counts stay computed over ALL records (not scoped) — preserved exactly.
+  const hotCount = all.filter(r => r.leadStatus === "Hot").length;
+  const followCount = all.filter(r => r.followUp === "Yes" && !["Converted","Closed"].includes(r.leadStatus)).length;
 
   return `
     <div class="today-hero">
@@ -1894,7 +2045,12 @@ function renderEntryCard(r, auth) {
 // LEADS screen — Pipeline | Customers toggle, dispatches to UI modules
 // =====================================================================
 
-function renderLeads(state, auth) {
+// renderLeads — paints #screen with the Pipeline|Customers toggle + an empty
+// #leadsBody container, then hands #leadsBody to the chosen UI module which
+// self-paints into it (Phase-3 contract: XUI.render(target) is async, fetches
+// via the DB-backed data layers, paints its own element). GREETOR sees ALL
+// leads + customers (owner decision) — no role filter applied here.
+async function renderLeads(auth) {
   const view = window.leadsView || "pipeline";
   const inCustomerDetail = view === "customers" && window.leadsCustomerMobile;
   const toggle = inCustomerDetail ? "" : `
@@ -1902,15 +2058,17 @@ function renderLeads(state, auth) {
       <button class="chip ${view === "pipeline" ? "selected" : ""}" data-action="leads-view" data-view="pipeline">Pipeline</button>
       <button class="chip ${view === "customers" ? "selected" : ""}" data-action="leads-view" data-view="customers">Customers</button>
     </div>`;
-  let body;
-  if (view === "customers") body = window.CustomersUI ? window.CustomersUI.render(state) : "<p class='muted'>Loading…</p>";
-  else body = window.PipelineUI ? window.PipelineUI.render(state) : "<p class='muted'>Loading…</p>";
-  return toggle + body;
+  const screen = $("screen");
+  screen.innerHTML = toggle + `<div id="leadsBody"><p class="muted">Loading…</p></div>`;
+  if (view === "customers") {
+    if (window.CustomersUI) await window.CustomersUI.render("leadsBody");
+  } else {
+    if (window.PipelineUI) await window.PipelineUI.render("leadsBody");
+  }
 }
 
-function openConvertModal(recordId) {
-  const state = Store.load();
-  const r = state.records.find(x => x.recordId === recordId);
+async function openConvertModal(recordId) {
+  const r = await Repo.records.byId(recordId);
   if (!r) return;
   openModal(`
     <h2>Convert to sale</h2>
@@ -1939,27 +2097,27 @@ function auditBadge(action) {
 // =====================================================================
 // TARGETS editor screen (Owner/Manager)
 // =====================================================================
-window.onTargetSet = function (period, metric, value) {
+window.onTargetSet = async function (period, metric, value) {
   if (!window.Targets) return;
-  const s = Store.load();
-  window.Targets.setStoreTarget(s, period, metric, Number(value) || 0);
-  Store.save(s);
-  toast("Target saved");
+  try {
+    await window.Targets.setStoreTarget(period, metric, Number(value) || 0);
+    toast("Target saved");
+  } catch (e) { console.error(e); toast("Couldn't save target."); }
 };
 
 // Denominator (audit R12): Manager enters end-of-day footfall estimate per
 // store/day. Feeds the true-conversion line on Reports; never the leaderboard.
-window.onFootfallSet = function (store, value) {
+window.onFootfallSet = async function (store, value) {
   if (!window.Footfall || !store) return;
-  const s = Store.load();
-  const me = AuthSession.current(s);
-  window.Footfall.set(s, store, today(), value, me ? { id: me.id, name: me.name } : null);
-  Store.save(s);
-  toast("Footfall saved — " + (Number(value) || 0) + " for " + store);
+  try {
+    const me = AuthSession.current();
+    await window.Footfall.set(store, today(), value, me ? { id: me.id, name: me.name } : null);
+    toast("Footfall saved — " + (Number(value) || 0) + " for " + store);
+  } catch (e) { console.error(e); toast("Couldn't save footfall."); }
 };
 
-function renderTargets(state) {
-  const t = (window.Targets ? window.Targets.get(state) : { store: {} }) || { store: {} };
+async function renderTargets() {
+  const t = (window.Targets ? await window.Targets.get() : { store: {} }) || { store: {} };
   const sv = (period, metric) => {
     const p = (t.store && t.store[period]) || {};
     return p[metric] != null ? p[metric] : "";
@@ -1988,8 +2146,11 @@ function renderTargets(state) {
   `;
 }
 
-function renderAuditLog(state) {
-  const log = Array.isArray(state.auditLog) ? state.auditLog : [];
+async function renderAuditLog() {
+  // Repo.auditLog.all() returns rows ORDER BY ord (oldest-first append order);
+  // the viewer wants newest-first, so reverse a copy for display.
+  const all = await Repo.auditLog.all();
+  const log = (Array.isArray(all) ? all : []).slice().reverse();
   const rows = log.length
     ? log.map(e => {
         const when = new Date(e.at);
@@ -2015,9 +2176,9 @@ function renderAuditLog(state) {
   `;
 }
 
-function exportAuditLogCSV() {
-  const state = Store.load();
-  const log = Array.isArray(state.auditLog) ? state.auditLog : [];
+async function exportAuditLogCSV() {
+  const all = await Repo.auditLog.all();
+  const log = (Array.isArray(all) ? all : []).slice().reverse();   // newest-first, like the viewer
   const esc = (v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
   const header = ["timestamp", "user", "role", "action", "summary"].map(esc).join(",");
   const rows = log.map(e => [e.at, e.userName, e.role, e.action, e.summary].map(esc).join(","));
@@ -2037,8 +2198,25 @@ function exportAuditLogCSV() {
   URL.revokeObjectURL(url);
 }
 
-function renderSettings(state, auth) {
+async function renderSettings(auth) {
   const staff = loadStaff();
+  // Prefetch the DB-backed bits up front (sync AppState reads stay inline).
+  const storeNames = await Masters.storeNames();
+  let auditCount = 0, recCount = 0;
+  try {
+    const [ac, rc] = await Promise.all([
+      Repo.query("SELECT COUNT(*) AS c FROM audit_log", []),
+      Repo.query("SELECT COUNT(*) AS c FROM records", []),
+    ]);
+    auditCount = (ac && ac[0] && ac[0].c != null) ? Number(ac[0].c) : 0;
+    recCount = (rc && rc[0] && rc[0].c != null) ? Number(rc[0].c) : 0;
+  } catch (e) { /* counts are informational */ }
+  // Footfall for the manager's store (async). Resolve the store first.
+  const ffStore = AppState.my_store || storeNames[0] || "";
+  let ffToday = {};
+  if ((canEditMasters(auth) && window.Footfall) && ffStore) {
+    try { ffToday = (await window.Footfall.get(ffStore, today())) || {}; } catch (e) { ffToday = {}; }
+  }
   return `
     <div class="settings-section">
       <h3>My account</h3>
@@ -2056,7 +2234,7 @@ function renderSettings(state, auth) {
     <div class="settings-section">
       <h3>My store</h3>
       <p>Set your default store — Capture wizard pre-fills it.</p>
-      ${chipGroup("my_store", ["(none)"].concat(Masters.storeNames(state)), state.my_store || "(none)", { action: "set-my-store" })}
+      ${chipGroup("my_store", ["(none)"].concat(storeNames), AppState.my_store || "(none)", { action: "set-my-store" })}
     </div>
 
     ${canEditMasters(auth) ? `
@@ -2068,9 +2246,9 @@ function renderSettings(state, auth) {
 
     ${canManageUsers(auth) ? `
     <div class="settings-section">
-      <h3>Users <span class="muted tiny">(${state.users.length})</span></h3>
+      <h3>Users <span class="muted tiny">(${AppState.users.length})</span></h3>
       <p>Add Managers and Greetors. Each gets their own PIN.</p>
-      ${Users.listAll(state).map(u => `
+      ${Users.listAll().map(u => `
         <div class="user-row">
           <div class="info">
             <div class="name">${escapeHtml(u.name)} <span class="role-pill ${u.is_active ? u.role : "inactive"}">${u.is_active ? roleLabel(u.role) : "INACTIVE"}</span></div>
@@ -2087,7 +2265,7 @@ function renderSettings(state, auth) {
     <div class="settings-section">
       <h3>Audit log</h3>
       <p>Every create, edit, delete and conversion — who did it and when. Deleted entries keep a full snapshot. Append-only.</p>
-      <button class="btn btn-secondary btn-full" data-action="open-audit-log">View audit log${(state.auditLog && state.auditLog.length) ? " (" + state.auditLog.length + ")" : ""}</button>
+      <button class="btn btn-secondary btn-full" data-action="open-audit-log">View audit log${auditCount ? " (" + auditCount + ")" : ""}</button>
     </div>` : ""}
 
     ${canEditMasters(auth) ? `
@@ -2098,8 +2276,6 @@ function renderSettings(state, auth) {
     </div>` : ""}
 
     ${canEditMasters(auth) && window.Footfall ? (() => {
-      const ffStore = state.my_store || (window.Masters ? Masters.storeNames(state)[0] : "");
-      const ffToday = ffStore ? (window.Footfall.get(state, ffStore, today()) || {}) : {};
       return `
     <div class="settings-section">
       <h3>Today's footfall</h3>
@@ -2138,11 +2314,8 @@ function renderSettings(state, auth) {
       <div style="background:var(--amber-pale);border:1px solid #f4c674;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;line-height:1.5;color:#6a4a00">
         <strong>⚠ Before the next big update:</strong> the upcoming signed version installs fresh and <strong>erases on-device data</strong>. Tap <em>Back up now</em> first (and after every busy day) — then <em>Restore</em> on the new build.
       </div>
-      <p>${state.records.length} entry(ies) on this device. A full backup is one JSON file — restore it after reinstalling to bring back everything (entries, users, masters, audit log).</p>
-      ${(() => {
-        const mb = (Store.bytes() / 1024 / 1024);
-        return `<p class="tiny muted" style="margin:-4px 0 10px">Data stored: <strong>${mb.toFixed(2)} MB</strong> · saved to a durable file (no fixed size limit; bounded by device storage).</p>`;
-      })()}
+      <p>${recCount} entry(ies) on this device. A full backup is one JSON file — restore it after reinstalling to bring back everything (entries, users, masters, audit log).</p>
+      <p class="tiny muted" style="margin:-4px 0 10px">Stored in an encrypted on-device database (no fixed size limit; bounded by device storage).</p>
       <button class="btn btn-primary btn-full" data-action="backup-json">Back up now (save to Drive)</button>
       <div class="spacer-8"></div>
       <button class="btn btn-secondary btn-full" data-action="restore-json">Restore from backup file</button>
@@ -2224,12 +2397,11 @@ function openModal(html) {
 }
 function closeModal() { $("modal-root").innerHTML = ""; }
 
-function dedupMatchesFor(mobile) {
+async function dedupMatchesFor(mobile) {
   if (!isValidMobile(mobile)) return [];
   const cutoff = Date.now() - DEDUP_DAYS * 24*60*60*1000;
-  const state = Store.load();
-  return state.records.filter(r => {
-    if (r.mobile !== mobile) return false;
+  const recs = await Repo.records.byMobile(mobile);   // uses idx_records_mobile
+  return recs.filter(r => {
     if (editingRecordId && r.recordId === editingRecordId) return false;
     const t = new Date(r.createdAt || `${r.visitDate}T${r.visitTime || "00:00"}`).getTime();
     return !isNaN(t) && t >= cutoff;
@@ -2280,8 +2452,7 @@ function addUserModal() {
 }
 
 function userMenuModal(userId) {
-  const state = Store.load();
-  const u = Users.byId(state, userId);
+  const u = Users.byId(userId);
   if (!u) return;
   openModal(`
     <h2>${escapeHtml(u.name)}</h2>
@@ -2317,8 +2488,7 @@ function changePinModal() {
 }
 
 function resetPinModal(userId) {
-  const state = Store.load();
-  const u = Users.byId(state, userId);
+  const u = Users.byId(userId);
   if (!u) return;
   openModal(`
     <h2>Reset PIN for ${escapeHtml(u.name)}</h2>
@@ -2340,9 +2510,8 @@ function resetPinModal(userId) {
 // Save / edit / delete
 // =====================================================================
 
-function saveRecord() {
-  const state = Store.load();
-  const auth = AuthSession.current(state);
+async function saveRecord() {
+  const auth = AuthSession.current();
   if (!auth) { toast("Sign in first"); return; }
   const d = Wizard.data;
   if (!stepIsValid(4, d) || !stepIsValid(3, d) || !stepIsValid(2, d) || !stepIsValid(1, d)) {
@@ -2350,7 +2519,9 @@ function saveRecord() {
     return;
   }
   const now = new Date().toISOString();
-  const existing = editingRecordId ? state.records.find(r => r.recordId === editingRecordId) : null;
+  // Fetch the existing record from the DB (preserves createdAt/createdBy/consent
+  // and lets upsert keep its original ord so app-order never reshuffles).
+  const existing = editingRecordId ? await Repo.records.byId(editingRecordId) : null;
   const rec = {
     recordId: existing ? existing.recordId : uid(),
     createdAt: existing ? existing.createdAt : now,
@@ -2386,13 +2557,14 @@ function saveRecord() {
       ? ((existing && existing.consent_at) || new Date().toISOString())
       : "",
   };
+  // Preserve saleValue/convertedAt on an edit (the wizard never touches them;
+  // upsert writes the whole row, so carry them over from the existing record).
   if (existing) {
-    const i = state.records.findIndex(r => r.recordId === existing.recordId);
-    state.records[i] = rec;
-  } else {
-    state.records.unshift(rec);
+    if (existing.saleValue != null) rec.saleValue = existing.saleValue;
+    if (existing.convertedAt) rec.convertedAt = existing.convertedAt;
   }
-  Store.save(state);
+  // upsert keeps an existing row's ord (no reshuffle) and appends a new one.
+  await Repo.records.upsert(rec);
 
   const who = rec.customerName || rec.mobile || "walk-in";
   logAudit(existing ? "edit" : "create",
@@ -2422,16 +2594,15 @@ function saveRecord() {
   Wizard.reset();
   if (existing) {
     toast("Updated — " + who + fu + ".");
-    switchScreen("reports");
+    await switchScreen("reports");
   } else {
     toast("Saved — " + who + fu + ".");
-    switchScreen("capture");
+    await switchScreen("capture");
   }
 }
 
-function editRecord(recordId) {
-  const state = Store.load();
-  const r = state.records.find(x => x.recordId === recordId);
+async function editRecord(recordId) {
+  const r = await Repo.records.byId(recordId);
   if (!r) return;
   editingRecordId = recordId;
   Wizard.reset(r);
@@ -2441,17 +2612,15 @@ function editRecord(recordId) {
   Wizard.data.photos = Array.isArray(r.photos) ? r.photos.map(p => Object.assign({}, p)) : [];
   // Map persisted consent_at → wizard's consent checkbox state.
   Wizard.data.consent = r.consent_at ? "yes" : "";
-  switchScreen("capture");
+  await switchScreen("capture");
 }
 
-function deleteRecord(recordId) {
+async function deleteRecord(recordId) {
   if (!confirm("Delete this entry?")) return;
-  const state = Store.load();
   // Snapshot the record BEFORE deletion so the audit log keeps a full,
   // recoverable copy — nothing silently vanishes.
-  const snapshot = state.records.find(r => r.recordId === recordId) || null;
-  state.records = state.records.filter(r => r.recordId !== recordId);
-  Store.save(state);
+  const snapshot = await Repo.records.byId(recordId);
+  await Repo.records["delete"](recordId);
   // Audit fix #4 (DPDP): delete the watermarked photo files too — otherwise
   // face/product photos outlive the record and orphan files accumulate in
   // the app's Data dir past the retention window.
@@ -2470,12 +2639,11 @@ function deleteRecord(recordId) {
     window.SaagarShell.cancelFollowupReminder(recordId);
   }
   toast("Entry deleted.");
-  render();
+  await render();
 }
 
-function waCustomer(recordId) {
-  const state = Store.load();
-  const r = state.records.find(x => x.recordId === recordId);
+async function waCustomer(recordId) {
+  const r = await Repo.records.byId(recordId);
   if (!r || !/^\d{10}$/.test(r.mobile)) return;
   const storeLabel = r.store || "our store";
   const name = (r.customerName || "").trim();
@@ -2487,8 +2655,48 @@ function waCustomer(recordId) {
 }
 
 // =====================================================================
-// Backup / restore (full state)
+// Backup / restore (full state) — DB is the source of truth now.
 // =====================================================================
+
+// Tables we own, in the shape DBSchema.assemble/disassemble expects. Used by the
+// backup (assemble) and restore/migration (disassemble + bulkInsert) paths.
+const DB_TABLES = ["records", "users", "audit_log", "comms_log", "comms_templates", "footfall", "meta"];
+
+// Read every table as RAW rows (ORDER BY ord where the table carries it) and run
+// DBSchema.assemble to rebuild the whole-state object — the exact shape the old
+// Store.load() returned, so the backup JSON (saagar_greetor_v2) is unchanged.
+// NOTE: we use raw Repo.query here (NOT the mapped Repo.* accessors) because
+// DBSchema.assemble maps rows→domain itself; passing mapped objects would
+// double-map and corrupt the encoding.
+async function assembleStateFromDB() {
+  const [records, users, audit_log, comms_log, comms_templates, footfall, meta] = await Promise.all([
+    Repo.query("SELECT * FROM records ORDER BY ord", []),
+    Repo.query("SELECT * FROM users ORDER BY ord", []),
+    Repo.query("SELECT * FROM audit_log ORDER BY ord", []),
+    Repo.query("SELECT * FROM comms_log ORDER BY ord", []),
+    Repo.query("SELECT * FROM comms_templates ORDER BY ord", []),
+    Repo.query("SELECT * FROM footfall", []),
+    Repo.query("SELECT * FROM meta", []),
+  ]);
+  return DBSchema.assemble({ records, users, audit_log, comms_log, comms_templates, footfall, meta });
+}
+
+// Replace the DB contents with `state` (a whole-state object). Runs inside ONE
+// transaction: TRUNCATE every owned table, then bulkInsert the disassembled rows.
+// Used by restore and (with an empty DB) the first-boot migration.
+async function loadStateIntoDB(state) {
+  const tables = DBSchema.disassemble(state);
+  await GreetorDB.transaction(async function () {
+    for (let i = 0; i < DB_TABLES.length; i++) {
+      await Repo.run("DELETE FROM " + DB_TABLES[i], []);
+    }
+    for (let i = 0; i < DB_TABLES.length; i++) {
+      const t = DB_TABLES[i];
+      const rows = tables[t] || [];
+      if (rows.length) await GreetorDB.bulkInsert(t, rows);
+    }
+  });
+}
 
 async function backupJson() {
   const payload = {
@@ -2496,7 +2704,7 @@ async function backupJson() {
     _version: 2,
     _exported_at: new Date().toISOString(),
     app: "Saagar Greetor",
-    state: Store.load(),
+    state: await assembleStateFromDB(),
     staff: loadStaff(),
   };
   const json = JSON.stringify(payload, null, 2);
@@ -2525,33 +2733,40 @@ function restoreJson() {
       const parsed = JSON.parse(text);
       if (parsed && parsed._format === "saagar_greetor_v2" && parsed.state) {
         if (!confirm("Replace current data with this backup?")) return;
-        const st = parsed.state;
+        // Truncate every owned table and bulk-load the backup's rows (one txn).
+        await loadStateIntoDB(parsed.state);
         // Re-seed all seedable modules so a backup that predates a feature
         // (targets, footfall, comms) still yields a working app immediately —
-        // otherwise Reports' targets card silently breaks (audit R7).
-        if (window.Masters) window.Masters.ensureSeeded(st);
-        if (window.Comms) window.Comms.ensureSeeded(st);
-        if (window.Targets) window.Targets.ensureSeeded(st);
-        if (window.Footfall) window.Footfall.ensureSeeded(st);
-        Store.save(st);
+        // otherwise Reports' targets card silently breaks (audit R7). These are
+        // async + DB-backed now and idempotent (no-op when already present).
+        if (window.Masters) await window.Masters.ensureSeeded();
+        if (window.Comms) await window.Comms.ensureSeeded();
+        if (window.Targets) await window.Targets.ensureSeeded();
+        if (window.Footfall) await window.Footfall.ensureSeeded();
         if (parsed.staff) saveStaff(parsed.staff);
+        await refreshAppState();           // settings/users came from the backup
+        await Repo.meta.set("migrated", "1"); // a restored DB is already migrated
         toast("Backup restored.");
-        render();
+        await render();
         return;
       }
-      // Legacy bare-array
+      // Legacy bare-array of records → wrap in a minimal state and load it.
       if (Array.isArray(parsed)) {
         if (!confirm(`Restore ${parsed.length} legacy records?`)) return;
-        const s = Store.load(); s.records = parsed;
-        if (window.Masters) window.Masters.ensureSeeded(s);
-        if (window.Comms) window.Comms.ensureSeeded(s);
-        Store.save(s);
+        await loadStateIntoDB({
+          users: [], current_user_id: null, my_store: null,
+          records: parsed, reminder_enabled: true, auditLog: [],
+        });
+        if (window.Masters) await window.Masters.ensureSeeded();
+        if (window.Comms) await window.Comms.ensureSeeded();
+        await refreshAppState();
+        await Repo.meta.set("migrated", "1");
         toast("Legacy records restored.");
-        render();
+        await render();
         return;
       }
       toast("Unknown backup format.");
-    } catch (e) { toast("Could not read backup."); }
+    } catch (e) { console.error(e); toast("Could not read backup."); }
   });
   input.click();
 }
@@ -2570,7 +2785,7 @@ document.addEventListener("click", async (e) => {
 
   // Bottom nav
   const nav = e.target.closest(".bnav-btn");
-  if (nav) { switchScreen(nav.dataset.screen); return; }
+  if (nav) { await switchScreen(nav.dataset.screen); return; }
 
   // Modal backdrop
   if (e.target.matches("[data-modal-backdrop]")) { closeModal(); return; }
@@ -2585,15 +2800,15 @@ document.addEventListener("click", async (e) => {
   }
   if (action === "open-masters") {
     window.mastersView = "home";
-    switchScreen("masters");
+    await switchScreen("masters");
     return;
   }
-  if (action === "goto-settings") { switchScreen("settings"); return; }
+  if (action === "goto-settings") { await switchScreen("settings"); return; }
   if (action === "go-back") { goBack(); return; }
-  if (action === "go-home") { switchScreen("capture"); return; }
+  if (action === "go-home") { await switchScreen("capture"); return; }
   if (action === "open-targets") {
     if (!canEditMasters(AuthSession.current())) { toast("Owner/Manager only."); return; }
-    switchScreen("targets");
+    await switchScreen("targets");
     return;
   }
   if (action === "dpdp-purge-now") {
@@ -2601,19 +2816,19 @@ document.addEventListener("click", async (e) => {
     const months = window.DPDP.getRetentionMonths();
     if (!months) { toast("Set a retention window first."); return; }
     if (!confirm("Purge records older than " + months + " months? This cannot be undone (logged to audit).")) return;
-    const s = Store.load();
-    const res = window.DPDP.runBootPurge(s);
-    if (res && res.purged > 0) Store.save(s);
-    toast("Purged " + (res ? res.purged : 0) + " record(s).");
-    render();
+    try {
+      const res = await window.DPDP.runBootPurge();
+      toast("Purged " + (res ? res.purged : 0) + " record(s).");
+    } catch (err) { console.error(err); toast("Purge failed."); }
+    await render();
     return;
   }
   if (action === "open-audit-log") {
     if (!canManageUsers(AuthSession.current())) { toast("Owner only."); return; }
-    switchScreen("auditlog");
+    await switchScreen("auditlog");
     return;
   }
-  if (action === "export-audit-log") { exportAuditLogCSV(); return; }
+  if (action === "export-audit-log") { await exportAuditLogCSV(); return; }
 
   // Leads tab — delegate customer/pipeline actions to their UI modules
   if (action.indexOf("c-") === 0) {
@@ -2628,16 +2843,16 @@ document.addEventListener("click", async (e) => {
   // Communication — templates/log screens are host-routed; the rest delegate.
   if (action === "cm-open-templates") {
     if (!canEditMasters(AuthSession.current())) { toast("Owner/Manager only."); return; }
-    window.commsView = "templates"; switchScreen("comms"); return;
+    window.commsView = "templates"; await switchScreen("comms"); return;
   }
-  if (action === "cm-open-log") { window.commsView = "log"; switchScreen("comms"); return; }
+  if (action === "cm-open-log") { window.commsView = "log"; await switchScreen("comms"); return; }
   if (action.indexOf("cm-") === 0) {
     if (window.CommsUI && window.CommsUI.handleAction(action, a.dataset)) return;
   }
   if (action === "leads-view") {
     window.leadsView = a.dataset.view;
     window.leadsCustomerMobile = "";
-    render();
+    await render();
     return;
   }
   if (action === "call-customer") {
@@ -2647,25 +2862,27 @@ document.addEventListener("click", async (e) => {
   }
   if (action === "open-convert") {
     if (!can("manageLeads")) { toast("Only Owner/Manager can convert a lead."); return; }
-    openConvertModal(a.dataset.id);
+    await openConvertModal(a.dataset.id);
     return;
   }
   if (action === "save-convert") {
     const val = $("convertValue") ? $("convertValue").value : "";
-    const s = Store.load();
-    const conv = s.records.find(r => r.recordId === a.dataset.id);
-    Customers.convertToSale(s, a.dataset.id, val);
-    Store.save(s);
-    logAudit("convert",
-      "Converted to sale — " + ((conv && (conv.customerName || conv.mobile)) || "walk-in") +
-      (Number(val) ? " · " + Customers.formatINR(val) : ""),
-      { recordId: a.dataset.id, saleValue: Number(val) || 0 });
-    closeModal();
-    toast("Marked as converted" + (Number(val) ? " · " + Customers.formatINR(val) : ""));
-    if (window.SaagarShell && window.SaagarShell.cancelFollowupReminder) {
-      window.SaagarShell.cancelFollowupReminder(a.dataset.id);
-    }
-    render();
+    const id = a.dataset.id;
+    a.disabled = true;                          // prevent double-submit during awaits
+    try {
+      const conv = await Repo.records.byId(id);
+      await Customers.convertToSale(id, val);   // async, DB-backed (no state arg)
+      logAudit("convert",
+        "Converted to sale — " + ((conv && (conv.customerName || conv.mobile)) || "walk-in") +
+        (Number(val) ? " · " + Customers.formatINR(val) : ""),
+        { recordId: id, saleValue: Number(val) || 0 });
+      closeModal();
+      toast("Marked as converted" + (Number(val) ? " · " + Customers.formatINR(val) : ""));
+      if (window.SaagarShell && window.SaagarShell.cancelFollowupReminder) {
+        window.SaagarShell.cancelFollowupReminder(id);
+      }
+      await render();
+    } catch (err) { console.error(err); a.disabled = false; toast("Couldn't convert."); }
     return;
   }
 
@@ -2677,25 +2894,25 @@ document.addEventListener("click", async (e) => {
     window._setupOwnerName = name;
     window._setupStage = "pin";
     PinBuf.reset();
-    render();
+    await render();
     return;
   }
 
   // ===== Auth actions =====
   if (action === "logout") {
     if (!confirm("Sign out?")) return;
-    AuthSession.logout();
+    await AuthSession.logout();
     PinBuf.reset();
     window._loginUserId = null;
-    render();
+    await render();
     return;
   }
   if (action === "user-pill") {
     // Quick tap for sign-out from main UI
     if (!confirm("Sign out?")) return;
-    AuthSession.logout();
+    await AuthSession.logout();
     PinBuf.reset();
-    render();
+    await render();
     return;
   }
 
@@ -2705,22 +2922,22 @@ document.addEventListener("click", async (e) => {
   // ===== Wizard =====
   if (action === "set-wizard") {
     Wizard.set(a.dataset.field, a.dataset.value);
-    render();
+    await render();
     return;
   }
   if (action === "reasons-more") {
     window._reasonsMoreOpen = true;
-    render();
+    await render();
     return;
   }
-  if (action === "open-quick") { window._quickStore = null; window._quickReason = null; quickCaptureModal(); return; }
+  if (action === "open-quick") { window._quickStore = null; window._quickReason = null; await quickCaptureModal(); return; }
   if (action === "quick-pick") {
     if (a.dataset.field === "store") window._quickStore = a.dataset.value;
     else if (a.dataset.field === "reason") window._quickReason = a.dataset.value;
-    quickCaptureModal();
+    await quickCaptureModal();
     return;
   }
-  if (action === "quick-save") { quickSave(); return; }
+  if (action === "quick-save") { await quickSave(); return; }
   if (action === "add-photo") {
     if (!window.Photo) { toast("Camera not available."); return; }
     toast("Opening camera…");
@@ -2728,7 +2945,7 @@ document.addEventListener("click", async (e) => {
     if (ref) {
       if (!Array.isArray(Wizard.data.photos)) Wizard.data.photos = [];
       Wizard.data.photos.push(ref);
-      render();
+      await render();
     }
     return;
   }
@@ -2739,12 +2956,12 @@ document.addEventListener("click", async (e) => {
       const ref = arr[i];
       if (window.Photo && window.Photo.remove) { try { window.Photo.remove(ref); } catch (_) {} }
       arr.splice(i, 1);
-      render();
+      await render();
     }
     return;
   }
   if (action === "wizard-back") {
-    if (Wizard.step > 1) Wizard.goto(Wizard.step - 1);
+    if (Wizard.step > 1) { Wizard.step -= 1; await render(); }
     return;
   }
   if (action === "wizard-next") {
@@ -2753,16 +2970,17 @@ document.addEventListener("click", async (e) => {
       showRequiredPopup(miss);
       return;
     }
-    // Step 2 → check dedup once mobile is entered
+    // Step 2 → check dedup once mobile is entered (async: queries by mobile).
     if (Wizard.step === 2) {
-      const matches = dedupMatchesFor(Wizard.data.mobile);
+      const matches = await dedupMatchesFor(Wizard.data.mobile);
       if (matches.length && !window._dedupSeen) {
         window._dedupSeen = Wizard.data.mobile;
         showDedupModal(matches);
         return;
       }
     }
-    Wizard.goto(Wizard.step + 1);
+    Wizard.step += 1;
+    await render();
     return;
   }
   if (action === "wizard-reset") {
@@ -2771,7 +2989,7 @@ document.addEventListener("click", async (e) => {
     Wizard.reset();
     window._dedupSeen = null;
     window._reasonsMoreOpen = false;
-    render();
+    await render();
     return;
   }
   if (action === "save-record") {
@@ -2780,18 +2998,21 @@ document.addEventListener("click", async (e) => {
     for (let st = 1; st <= 4; st++) {
       const miss = missingFields(st, Wizard.data);
       if (miss.length) {
-        if (Wizard.step !== st) Wizard.goto(st);
+        if (Wizard.step !== st) { Wizard.step = st; await render(); }
         showRequiredPopup(miss);
         return;
       }
     }
     // DPDP: block save if mobile + follow-up but no explicit consent.
     if (Wizard.data.mobile && Wizard.data.followUp === "Yes" && Wizard.data.consent !== "yes") {
-      if (Wizard.step !== 2) Wizard.goto(2);
+      if (Wizard.step !== 2) { Wizard.step = 2; await render(); }
       showRequiredPopup(["Customer consent (DPDP) — tick the consent box in step 2"]);
       return;
     }
-    saveRecord();
+    a.disabled = true;                          // prevent double-submit
+    try {
+      await saveRecord();
+    } catch (err) { console.error(err); a.disabled = false; toast("Couldn't save."); return; }
     window._dedupSeen = null;
     window._reasonsMoreOpen = false;
     return;
@@ -2799,44 +3020,44 @@ document.addEventListener("click", async (e) => {
   if (action === "goto-capture") {
     editingRecordId = null;
     Wizard.reset();
-    switchScreen("capture");
+    await switchScreen("capture");
     return;
   }
   if (action === "dedup-continue-new") {
     closeModal();
-    Wizard.goto(Wizard.step + 1);
+    Wizard.step += 1;
+    await render();
     return;
   }
   if (action === "dedup-open-existing") {
     closeModal();
-    editRecord(a.dataset.id);
+    await editRecord(a.dataset.id);
     return;
   }
 
   // ===== Entry actions (edit/delete gated; greetors can't) =====
   if (action === "edit-entry") {
     if (!can("editAny")) { toast("Only Owner/Manager can edit entries."); return; }
-    editRecord(a.dataset.id);
+    await editRecord(a.dataset.id);
     return;
   }
   if (action === "delete-entry") {
     if (!can("deleteAny")) { toast("Only Owner/Manager can delete entries."); return; }
-    deleteRecord(a.dataset.id);
+    await deleteRecord(a.dataset.id);
     return;
   }
   if (action === "wa-customer") {
     if (window.CommsUI && window.CommsUI.openSendSheet) window.CommsUI.openSendSheet(a.dataset.id);
-    else waCustomer(a.dataset.id);
+    else await waCustomer(a.dataset.id);
     return;
   }
 
   // ===== Settings =====
   if (action === "set-my-store") {
-    const state = Store.load();
-    state.my_store = a.dataset.value === "(none)" ? null : a.dataset.value;
-    Store.save(state);
-    toast(state.my_store ? `Default store: ${state.my_store}` : "Default store cleared.");
-    render();
+    AppState.my_store = a.dataset.value === "(none)" ? null : a.dataset.value;
+    await saveSettings();
+    toast(AppState.my_store ? `Default store: ${AppState.my_store}` : "Default store cleared.");
+    await render();
     return;
   }
   if (action === "import-staff") {
@@ -2851,7 +3072,7 @@ document.addEventListener("click", async (e) => {
         if (!confirm(`Import ${cros.length} staff from this backup? Replaces existing list.`)) return;
         saveStaff({ cros, imported_at: new Date().toISOString() });
         toast(`Imported ${cros.length} staff.`);
-        render();
+        await render();
       } catch (err) { toast(err.message || "Could not read backup."); }
     });
     input.click();
@@ -2861,16 +3082,20 @@ document.addEventListener("click", async (e) => {
     if (!confirm("Clear imported staff list?")) return;
     saveStaff({ cros: [], imported_at: null });
     toast("Staff list cleared.");
-    render();
+    await render();
     return;
   }
-  if (action === "backup-json") { backupJson(); return; }
+  if (action === "backup-json") { await backupJson(); return; }
   if (action === "restore-json") { restoreJson(); return; }
   if (action === "erase-all") {
     if (!confirm("Erase ALL data on this device — users, entries, staff? This cannot be undone.")) return;
-    localStorage.removeItem(STATE_KEY);
-    localStorage.removeItem(LEGACY_RECORDS_KEY);
-    localStorage.removeItem(STAFF_KEY);
+    // Wipe the DB (truncate every owned table) AND the legacy caches, then reload
+    // into a clean first-run. Clearing 'migrated' lets a future restore re-gate.
+    try {
+      await loadStateIntoDB({ users: [], current_user_id: null, my_store: null, records: [], reminder_enabled: true, auditLog: [] });
+      await Repo.meta.set("migrated", "");
+    } catch (err) { console.error("erase DB", err); }
+    try { localStorage.removeItem(STATE_KEY); localStorage.removeItem(LEGACY_RECORDS_KEY); localStorage.removeItem(STAFF_KEY); } catch (_) {}
     location.reload();
     return;
   }
@@ -2903,11 +3128,14 @@ document.addEventListener("click", async (e) => {
     if (name.length < 2) { toast("Name too short."); return; }
     if (!/^\d{4}$/.test(pin)) { toast("PIN must be 4 digits."); return; }
     if (pin !== pinc) { toast("PINs don't match."); return; }
-    await Users.create({ name, role, pin });
-    logAudit("user", "Added user — " + name + " (" + roleLabel(role) + ")");
-    closeModal();
-    toast(`${name} added as ${roleLabel(role)}.`);
-    render();
+    a.disabled = true;
+    try {
+      await Users.create({ name, role, pin });
+      logAudit("user", "Added user — " + name + " (" + roleLabel(role) + ")");
+      closeModal();
+      toast(`${name} added as ${roleLabel(role)}.`);
+      await render();
+    } catch (err) { console.error(err); a.disabled = false; toast("Couldn't add user."); }
     return;
   }
 
@@ -2917,39 +3145,42 @@ document.addEventListener("click", async (e) => {
     const np = $("resetPinNew").value, npc = $("resetPinC").value;
     if (!/^\d{4}$/.test(np)) { toast("PIN must be 4 digits."); return; }
     if (np !== npc) { toast("PINs don't match."); return; }
-    const _ru = Users.byId(Store.load(), a.dataset.id);
-    await Users.changePin(a.dataset.id, np);
-    logAudit("pin", "Reset PIN for " + (_ru ? _ru.name : "user"));
-    closeModal();
-    toast("PIN reset.");
+    const _ru = Users.byId(a.dataset.id);
+    a.disabled = true;
+    try {
+      await Users.changePin(a.dataset.id, np);
+      logAudit("pin", "Reset PIN for " + (_ru ? _ru.name : "user"));
+      closeModal();
+      toast("PIN reset.");
+    } catch (err) { console.error(err); a.disabled = false; toast("Couldn't reset PIN."); }
     return;
   }
   if (action === "user-deactivate") {
-    const _du = Users.byId(Store.load(), a.dataset.id);
-    Users.setActive(a.dataset.id, false);
+    const _du = Users.byId(a.dataset.id);
+    await Users.setActive(a.dataset.id, false);
     logAudit("user", "Deactivated user — " + (_du ? _du.name : "user"));
     closeModal();
     toast("User deactivated.");
-    render();
+    await render();
     return;
   }
   if (action === "user-activate") {
-    const _au = Users.byId(Store.load(), a.dataset.id);
-    Users.setActive(a.dataset.id, true);
+    const _au = Users.byId(a.dataset.id);
+    await Users.setActive(a.dataset.id, true);
     logAudit("user", "Activated user — " + (_au ? _au.name : "user"));
     closeModal();
     toast("User activated.");
-    render();
+    await render();
     return;
   }
   if (action === "user-remove") {
     if (!confirm("Remove this user? Their entries stay, but they can't sign in again.")) return;
-    const _xu = Users.byId(Store.load(), a.dataset.id);
-    Users.remove(a.dataset.id);
+    const _xu = Users.byId(a.dataset.id);
+    await Users.remove(a.dataset.id);
     logAudit("user", "Removed user — " + (_xu ? _xu.name : "user"));
     closeModal();
     toast("User removed.");
-    render();
+    await render();
     return;
   }
 });
@@ -2999,10 +3230,10 @@ document.addEventListener("change", (e) => {
 // =====================================================================
 // Sweep follow-up reminders for all open leads on every boot
 // =====================================================================
-function sweepReminders() {
+async function sweepReminders() {
   if (!window.SaagarShell || !window.SaagarShell.scheduleFollowupReminder) return;
-  const state = Store.load();
-  state.records.forEach(r => {
+  const records = await Repo.records.all();
+  records.forEach(r => {
     try { window.SaagarShell.scheduleFollowupReminder(r); } catch (_) {}
   });
 }
@@ -3011,11 +3242,41 @@ function sweepReminders() {
 // Boot
 // =====================================================================
 
+// Renders a fatal error card into #screen (used when the DB can't open — the
+// app is non-functional without it now that the DB is the source of truth).
+function showFatalDbError(e) {
+  try { document.body.classList.remove("locked"); } catch (_) {}
+  const auth = $("auth-screen"); if (auth) { auth.style.display = "none"; auth.innerHTML = ""; }
+  const screen = $("screen");
+  if (screen) {
+    screen.innerHTML = `
+      <div class="empty-state" style="padding:48px 16px">
+        <div class="icon">⚠️</div>
+        <h3>Couldn't open the database</h3>
+        <p class="muted">${escapeHtml((e && (e.message || e)) || "Unknown error")}</p>
+        <p class="muted" style="margin-top:12px">Please restart the app. If this keeps happening, reinstall the previous build, export a JSON backup, then restore into this build.</p>
+      </div>`;
+  }
+}
+
 async function boot() {
-  // 1. Hydrate the in-memory canonical state. PREFER the durable Filesystem
-  //    file (uncapped, most complete) over the localStorage cache — so once
-  //    the cache hits its ~5MB quota and stops updating, the file still
-  //    carries the full, current dataset.
+  // 1. Open the DB — FATAL now (the DB is the source of truth). On failure show
+  //    an error card and stop; do NOT fall back to the old Store silently.
+  try {
+    await GreetorDB.open();
+    console.log("[GreetorDB] open OK — isNative=" + GreetorDB.isNative + " isEncrypted=" + GreetorDB.isEncrypted);
+    if (GreetorDB.isNative && !GreetorDB.isEncrypted) {
+      console.warn("[GreetorDB] WARNING: native build is NOT encrypted — investigate.");
+    }
+  } catch (e) {
+    console.error("[GreetorDB] FATAL open failure", e);
+    showFatalDbError(e);
+    return;
+  }
+
+  // 2. Hydrate the OLD Store from the durable file / localStorage cache — this is
+  //    the MIGRATION SOURCE only (never written back to in app logic). Prefer the
+  //    durable Filesystem file (uncapped, most complete) over the localStorage cache.
   try {
     let hydrated = false;
     if (window.SaagarShell && window.SaagarShell.durableRead) {
@@ -3026,58 +3287,73 @@ async function boot() {
       const raw = localStorage.getItem(STATE_KEY);
       if (raw) Store._hydrate(raw);
     }
-  } catch (e) { console.warn("hydrate skipped", e); }
+  } catch (e) { console.warn("hydrate (migration source) skipped", e); }
 
-  // 2. Seed editable masters/comms once (idempotent); also primes the file.
-  if (window.Masters || window.Comms || window.Targets || window.Footfall) {
-    const _s = Store.load();
-    if (window.Masters) window.Masters.ensureSeeded(_s);
-    if (window.Comms) window.Comms.ensureSeeded(_s);
-    if (window.Targets) window.Targets.ensureSeeded(_s);
-    if (window.Footfall) window.Footfall.ensureSeeded(_s);
-    Store.save(_s);
-  }
-
-  // DPDP retention: prune records past the configured cutoff (no-op if 0).
-  if (window.DPDP && window.DPDP.runBootPurge) {
-    try {
-      const _s = Store.load();
-      const res = window.DPDP.runBootPurge(_s);
-      if (res && res.purged > 0) {
-        Store.save(_s);
-        console.log("DPDP: purged " + res.purged + " record(s) older than " + res.cutoff);
-      }
-    } catch (e) { console.warn("retention purge skipped", e); }
-  }
-
-  render();
-  applyI18n();
-  sweepReminders();
-
-  // -- SQLite Phase 0 probe (NON-FATAL, additive) --------------------------
-  // Opens the DB layer and logs status. Phase 0 only: the app still runs on the
-  // existing Store (localStorage + durable file). Any error is swallowed so the
-  // app NEVER breaks. Repo/data-layers move to SQL in Phase 2/3.
+  // 3. ONE-TIME migration gate. Migrate the old whole-blob Store into the DB iff:
+  //      (a) we haven't migrated before (meta('migrated') !== '1'), AND
+  //      (b) the DB is empty (no records AND no users), AND
+  //      (c) the old Store actually has data (records or users).
+  //    This makes the first SQLite boot adopt the existing dataset, and is a
+  //    no-op on every later boot and on a clean install.
   try {
-    if (window.GreetorDB) {
-      window.GreetorDB.open().then(async function () {
-        var ver = "?";
-        try {
-          var rows = await window.GreetorDB.query("SELECT value FROM meta WHERE key='schema_version'", []);
-          if (rows && rows[0]) ver = rows[0].value;
-        } catch (e) {}
-        console.log("[Phase0] GreetorDB open OK - isNative=" + window.GreetorDB.isNative +
-                    " isEncrypted=" + window.GreetorDB.isEncrypted + " schema_version=" + ver);
-        if (window.GreetorDB.isNative && !window.GreetorDB.isEncrypted) {
-          console.warn("[Phase0] WARNING: native build is NOT encrypted - investigate before Phase 2.");
-        }
-      }).catch(function (e) {
-        console.warn("[Phase0] GreetorDB open failed (non-fatal, app continues on Store):", e && e.message || e);
-      });
+    const migrated = await Repo.meta.get("migrated");
+    if (migrated !== "1") {
+      const [dbRecRows, dbUserRows] = await Promise.all([
+        Repo.query("SELECT COUNT(*) AS c FROM records", []),
+        Repo.query("SELECT COUNT(*) AS c FROM users", []),
+      ]);
+      const dbEmpty = ((dbRecRows[0] && Number(dbRecRows[0].c)) || 0) === 0 &&
+                      ((dbUserRows[0] && Number(dbUserRows[0].c)) || 0) === 0;
+      const old = Store.load();
+      const oldHasData = (Array.isArray(old.records) && old.records.length > 0) ||
+                         (Array.isArray(old.users) && old.users.length > 0);
+      if (dbEmpty && oldHasData) {
+        console.log("[migrate] adopting legacy Store into SQLite…");
+        const tables = DBSchema.disassemble(old);
+        await GreetorDB.transaction(async function () {
+          for (let i = 0; i < DB_TABLES.length; i++) {
+            const t = DB_TABLES[i];
+            const rows = tables[t] || [];
+            // meta already holds schema_version (a different key); disassemble's
+            // meta rows (masters/targets/settings) are new keys, so plain INSERT
+            // via bulkInsert won't collide.
+            if (rows.length) await GreetorDB.bulkInsert(t, rows);
+          }
+        });
+        console.log("[migrate] done: " + (tables.records ? tables.records.length : 0) + " records, " +
+                    (tables.users ? tables.users.length : 0) + " users.");
+      }
+      await Repo.meta.set("migrated", "1");
     }
   } catch (e) {
-    console.warn("[Phase0] GreetorDB probe skipped (non-fatal):", e && e.message || e);
+    console.error("[migrate] FAILED", e);
+    showFatalDbError(e);
+    return;
   }
+
+  // 4. Seed editable masters/comms/targets/footfall once (async, DB-backed,
+  //    idempotent — no-op when already present, e.g. right after a migration).
+  try {
+    if (window.Masters) await window.Masters.ensureSeeded();
+    if (window.Comms) await window.Comms.ensureSeeded();
+    if (window.Targets) await window.Targets.ensureSeeded();
+    if (window.Footfall) await window.Footfall.ensureSeeded();
+  } catch (e) { console.warn("ensureSeeded skipped", e); }
+
+  // 5. Hydrate AppState (users + settings) from the DB so the sync auth gate works.
+  await refreshAppState();
+
+  // 6. DPDP retention: prune records past the configured cutoff (no-op if 0).
+  //    runBootPurge is async + DB-backed now and logs its own audit event.
+  try {
+    const res = await DPDP.runBootPurge();
+    if (res && res.purged > 0) console.log("DPDP: purged " + res.purged + " record(s) older than " + res.cutoff);
+  } catch (e) { console.warn("retention purge skipped", e); }
+
+  // 7. First paint + i18n + reminder sweep.
+  await render();
+  applyI18n();
+  await sweepReminders();
 
   if (window.SaagarShell && window.SaagarShell.boot) {
     window.SaagarShell.boot({

@@ -13,7 +13,7 @@
     return m && /^\d{10}$/.test(String(m).trim());
   }
 
-  function renderCard(record, state) {
+  function renderCard(record) {
     var name = escapeHtml(record.customerName || 'Unnamed');
     var mobile = escapeHtml(String(record.mobile || ''));
     var store = escapeHtml(record.store || '');
@@ -69,16 +69,40 @@
       '</div>';
   }
 
-  function findRecord(state, recordId) {
-    var records = (state && state.entries) ? state.entries : [];
-    for (var i = 0; i < records.length; i++) {
-      if (records[i].recordId === recordId) return records[i];
+  // SQLite P3: render() is async (Customers.* are async, DB-backed) and ALWAYS
+  // returns the HTML string. It ALSO self-paints into its OWN element so the
+  // host can use either model:
+  //   • `el.innerHTML = await PipelineUI.render()`   (host assigns)  — or —
+  //   • `await PipelineUI.render(el)` / `await PipelineUI.render()` (self-paint
+  //     into the explicit target, else the host's dedicated #leadsBody).
+  // We deliberately do NOT fall back to #screen: that container is host-owned
+  // and may also hold the Pipeline|Customers toggle, so clobbering it could drop
+  // sibling chrome. With no explicit target and no #leadsBody, render() just
+  // returns the string and lets the host place it.
+  function resolveTarget(target) {
+    if (target && target.nodeType === 1) return target;
+    if (typeof target === 'string') {
+      var byId = document.getElementById(target);
+      if (byId) return byId;
     }
-    return null;
+    return document.getElementById('leadsBody');
   }
 
   var PipelineUI = {
-    render: function (state) {
+    // ASYNC (SQLite P3). Fetches the pipeline from the DB-backed async data
+    // layer, builds the HTML, self-paints into its own target element, AND
+    // returns the HTML string so the host can use either model. `target` is
+    // optional (element or id); when omitted it self-paints into #leadsBody if
+    // present, otherwise it only returns the string for the host to place.
+    // Greetors intentionally see ALL leads (owner decision) — no role filter.
+    render: async function (target) {
+      var html = await PipelineUI._buildHtml();
+      var el = resolveTarget(target);
+      if (el) el.innerHTML = html;
+      return html;
+    },
+
+    _buildHtml: async function () {
       if (typeof window.Customers === 'undefined') {
         return '<p class="muted" style="padding:24px">Loading…</p>';
       }
@@ -93,7 +117,7 @@
         window.pipelineCollapsed['Closed'] = true;
       }
 
-      var pipeline = window.Customers.pipeline(state);
+      var pipeline = await window.Customers.pipeline();
 
       // Check total records
       var totalRecords = 0;
@@ -144,7 +168,7 @@
             html += '<div class="muted tiny" style="padding:8px 12px">No leads in this stage</div>';
           } else {
             records.forEach(function (r) {
-              html += renderCard(r, state);
+              html += renderCard(r);
             });
           }
         }
@@ -155,6 +179,12 @@
       return html;
     },
 
+    // SYNC + BOOLEAN (locked contract): the host router does
+    // `if (PipelineUI.handleAction(a,ds)) return;` — a Promise is always truthy
+    // and would swallow every click. Read-only view toggles set a window.* var
+    // then fire-and-forget the async host render(). Mutating actions run their
+    // awaits inside an INNER async IIFE (with try/catch + toast) and return true
+    // synchronously.
     handleAction: function (action, dataset) {
       if (typeof action !== 'string' || action.indexOf('p-') !== 0) return false;
 
@@ -165,18 +195,24 @@
         if (!stage) return false;
         if (typeof window.pipelineCollapsed === 'undefined') window.pipelineCollapsed = {};
         window.pipelineCollapsed[stage] = !window.pipelineCollapsed[stage];
-        render();
+        if (window.render) window.render();
         return true;
       }
 
       if (action === 'p-move') {
         var id = dataset.id;
         if (!id) return false;
-        var s = Store.load();
-        var record = findRecord(s, id);
-        if (!record) return false;
-        var stages = window.Customers.pipelineStages(s);
-        openModal(renderMoveModal(id, record.leadStatus || '', stages));
+        // Fetch the record + stages from the DB (async), then open the modal.
+        (async function () {
+          try {
+            var record = await window.Repo.records.byId(id);
+            if (!record) { if (typeof toast === 'function') toast('Record not found'); return; }
+            var stages = await window.Customers.pipelineStages();
+            openModal(renderMoveModal(id, record.leadStatus || '', stages));
+          } catch (e) {
+            if (typeof toast === 'function') toast('Could not open lead');
+          }
+        }());
         return true;
       }
 
@@ -188,6 +224,7 @@
         // modal so saleValue + convertedAt + audit event are always recorded
         // together. Without this, p-set-stage was a third writer of Converted
         // that left saleValue empty and per-greetor revenue undercounted.
+        // (This branch is pure DOM — keep it synchronous.)
         if (newStage === 'Converted') {
           closeModal();
           // Defer to the host's open-convert (it renders the modal and the
@@ -200,29 +237,39 @@
           document.body.removeChild(b);
           return true;
         }
-        var s2 = Store.load();
-        var rec2 = (s2.records || []).filter(function (r) { return r.recordId === id2; })[0];
-        var fromStage = rec2 ? (rec2.leadStatus || 'Open') : '';
-        window.Customers.setStage(s2, id2, newStage);
-        Store.save(s2);
-        if (window.logAudit) {
-          window.logAudit('stage',
-            'Moved lead ' + ((rec2 && (rec2.customerName || rec2.mobile)) || '') +
-            ' from ' + fromStage + ' to ' + newStage,
-            { recordId: id2, from: fromStage, to: newStage });
-        }
-        // Audit fix #2: re-evaluate the OS follow-up reminder on every stage
-        // change. shouldHaveReminder() auto-cancels for Converted/Closed, so
-        // dead leads stop pinging staff at 9 AM.
-        if (window.SaagarShell && window.SaagarShell.scheduleFollowupReminder) {
-          var updated = (Store.load().records || []).filter(function (r) { return r.recordId === id2; })[0];
-          if (updated) {
-            try { window.SaagarShell.scheduleFollowupReminder(updated); } catch (_) {}
+        // Non-Converted stage change: do all the async DB work inside an inner
+        // IIFE, then await the host re-render. Returns true synchronously below.
+        (async function () {
+          try {
+            var rec2 = await window.Repo.records.byId(id2);
+            var fromStage = rec2 ? (rec2.leadStatus || 'Open') : '';
+            // setStage is async + DB-backed (NO state arg, NO Store.save).
+            await window.Customers.setStage(id2, newStage);
+            if (window.logAudit) {
+              // logAudit is host-owned; await it defensively in case the host
+              // migrated it to async (DB-backed Repo.auditLog.insert).
+              var p = window.logAudit('stage',
+                'Moved lead ' + ((rec2 && (rec2.customerName || rec2.mobile)) || '') +
+                ' from ' + fromStage + ' to ' + newStage,
+                { recordId: id2, from: fromStage, to: newStage });
+              if (p && typeof p.then === 'function') await p;
+            }
+            // Audit fix #2: re-evaluate the OS follow-up reminder on every stage
+            // change. shouldHaveReminder() auto-cancels for Converted/Closed, so
+            // dead leads stop pinging staff at 9 AM. Re-fetch the updated row.
+            if (window.SaagarShell && window.SaagarShell.scheduleFollowupReminder) {
+              var updated = await window.Repo.records.byId(id2);
+              if (updated) {
+                try { await window.SaagarShell.scheduleFollowupReminder(updated); } catch (_) {}
+              }
+            }
+            closeModal();
+            if (window.render) await window.render();
+            if (typeof toast === 'function') toast('Moved to ' + newStage);
+          } catch (e) {
+            if (typeof toast === 'function') toast('Could not move lead');
           }
-        }
-        closeModal();
-        render();
-        toast('Moved to ' + newStage);
+        }());
         return true;
       }
 

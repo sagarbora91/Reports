@@ -13,13 +13,14 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  function getRecord(recordId) {
-    var state = Store.load();
-    var recs = (state && state.records) ? state.records : [];
-    for (var i = 0; i < recs.length; i++) {
-      if (recs[i].recordId === recordId) return recs[i];
+  // ASYNC now: records live in the DB-backed records table, reached via Repo.
+  // Returns the domain record (Repo maps recordId) or null.
+  async function getRecord(recordId) {
+    try {
+      return await window.Repo.records.byId(recordId);
+    } catch (e) {
+      return null;
     }
-    return null;
   }
 
   function todayStr() {
@@ -29,9 +30,15 @@
     return d.getFullYear() + '-' + mm + '-' + dd;
   }
 
-  function storeOptions(state) {
-    var names = (window.Masters && typeof window.Masters.storeNames === 'function')
-      ? window.Masters.storeNames(state) : [];
+  // ASYNC now: Masters.storeNames() is async with no state arg. Returns the
+  // <option> markup string (resolved) for the store <select>.
+  async function storeOptions() {
+    var names = [];
+    try {
+      if (window.Masters && typeof window.Masters.storeNames === 'function') {
+        names = await window.Masters.storeNames();
+      }
+    } catch (e) { names = []; }
     if (!Array.isArray(names)) names = [];
     var html = '<option value="">— any store —</option>';
     names.forEach(function (n) {
@@ -61,13 +68,12 @@
   var PLACEHOLDER_HINT = 'Available: {name} {store} {reason} {brand} {category} {date} {followDate}';
 
   /* ── openSendSheet ───────────────────────────────────────────── */
-  function openSendSheet(recordId) {
+  async function openSendSheet(recordId) {
     window._cmRid = recordId;
-    var rec = getRecord(recordId);
+    var rec = await getRecord(recordId);
     if (!rec) { toast('Record not found'); return; }
 
-    var state = Store.load();
-    var templates = Comms.applicableTemplates(state, rec);
+    var templates = await Comms.applicableTemplates(rec);
     var pickedId = window._cmTpl || (templates.length ? templates[0].id : '');
     var pickedTpl = null;
     for (var i = 0; i < templates.length; i++) {
@@ -115,7 +121,7 @@
   }
 
   /* ── template editor modal ───────────────────────────────────── */
-  function templateEditorModal(state, prefill, saveAction, saveDataAttr) {
+  async function templateEditorModal(prefill, saveAction, saveDataAttr) {
     prefill = prefill || {};
     var scope = prefill.scope || 'general';
 
@@ -124,13 +130,15 @@
       return '<button class="chip' + sel + '" data-action="cm-tpl-scope" data-scope="' + s + '" style="min-height:44px;">' + s + '</button>';
     }).join('');
 
+    var storeOpts = await storeOptions();
+
     var html = '<h2 style="margin:0 0 12px;">' + (prefill.id ? 'Edit Template' : 'Add Template') + '</h2>'
       + '<div class="field"><label class="field-label">Name *</label>'
       + '<input id="cmTplName" type="text" value="' + esc(prefill.name || '') + '" placeholder="Template name" style="width:100%;min-height:44px;"></div>'
       + '<div class="field"><label class="field-label">Scope</label>'
       + '<div class="chip-group" id="cmTplScopeGroup">' + scopeChips + '</div></div>'
       + '<div class="field"><label class="field-label">Store</label>'
-      + '<select id="cmTplStore" style="width:100%;min-height:44px;">' + storeOptions(state) + '</select></div>'
+      + '<select id="cmTplStore" style="width:100%;min-height:44px;">' + storeOpts + '</select></div>'
       + '<div class="field"><label class="field-label">Reason</label>'
       + '<input id="cmTplReason" type="text" value="' + esc(prefill.reason || '') + '" placeholder="e.g. Watch Service" style="width:100%;min-height:44px;"></div>'
       + '<div class="field"><label class="field-label">Message text *</label>'
@@ -170,8 +178,10 @@
   }
 
   /* ── renderTemplates ─────────────────────────────────────────── */
-  function renderTemplates(state) {
-    var templates = Comms.rawTemplates(state);
+  // ASYNC now: fetches templates via the DB-backed data layer, then paints into
+  // its own target (#screen) and ALSO returns the HTML (host awaits this).
+  async function renderTemplates() {
+    var templates = await Comms.rawTemplates();
     var rows = '';
 
     if (!templates || !templates.length) {
@@ -200,7 +210,7 @@
       });
     }
 
-    return '<div style="padding:0 16px 80px;">'
+    var out = '<div style="padding:0 16px 80px;">'
       + '<div class="row-spread" style="align-items:center;padding:16px 0 8px;">'
       + '<h2 style="margin:0;">Message Templates</h2>'
       + '<button class="btn btn-primary" data-action="cm-add-template" style="min-height:44px;">+ Add</button>'
@@ -208,20 +218,28 @@
       + '<p class="muted tiny" style="margin-bottom:12px;">' + esc(PLACEHOLDER_HINT) + '</p>'
       + '<div class="settings-section">' + rows + '</div>'
       + '</div>';
+    var el = document.getElementById('screen');
+    if (el) el.innerHTML = out;
+    return out;
   }
 
   /* ── renderLog ───────────────────────────────────────────────── */
-  function renderLog(state) {
+  // ASYNC now: fetches the (role-scoped) log via the DB-backed data layer, then
+  // paints into its own target (#screen) and ALSO returns the HTML.
+  async function renderLog() {
     // Audit R3 (DPDP / anti-poaching): scope is now enforced in the data layer
     // via opts.auth so the per-record log path is safe too. A GREETOR sees only
     // their own sent messages; Manager/Owner see all.
     var auth = (typeof AuthSession !== 'undefined') ? AuthSession.current() : null;
-    var entries = Comms.log(state, { auth: auth });
+    var entries = await Comms.log({ auth: auth });
     if (!entries || !entries.length) {
-      return '<div style="padding:16px 16px 80px;">'
+      var empty = '<div style="padding:16px 16px 80px;">'
         + '<h2 style="margin:0 0 16px;">Message Log</h2>'
         + '<div class="empty-state"><div class="icon">💬</div><h3>No messages sent yet</h3></div>'
         + '</div>';
+      var elEmpty = document.getElementById('screen');
+      if (elEmpty) elEmpty.innerHTML = empty;
+      return empty;
     }
 
     var cards = entries.map(function (e) {
@@ -237,10 +255,13 @@
         + '</div>';
     }).join('');
 
-    return '<div style="padding:0 16px 80px;">'
+    var outLog = '<div style="padding:0 16px 80px;">'
       + '<h2 style="margin:0;padding:16px 0 12px;">Message Log</h2>'
       + cards
       + '</div>';
+    var elLog = document.getElementById('screen');
+    if (elLog) elLog.innerHTML = outLog;
+    return outLog;
   }
 
   /* ── handleAction ────────────────────────────────────────────── */
@@ -250,95 +271,112 @@
     if (action === 'cm-pick-template') {
       window._cmTpl = dataset.id;
       window._cmRid = dataset.rid || window._cmRid;
-      openSendSheet(window._cmRid);
+      // openSendSheet is async; fire-and-forget (it re-renders the modal itself).
+      Promise.resolve(openSendSheet(window._cmRid)).catch(function () {});
       return true;
     }
 
     if (action === 'cm-channel') {
       window._cmChannel = dataset.ch;
-      openSendSheet(window._cmRid);
+      Promise.resolve(openSendSheet(window._cmRid)).catch(function () {});
       return true;
     }
 
     if (action === 'cm-send') {
+      // Capture DOM + sync state NOW (before any await — the modal is still up).
       var msgEl = document.getElementById('cmMsg');
       var msg = msgEl ? msgEl.value : '';
       var rid = dataset.rid || window._cmRid;
-      var rec = getRecord(rid);
-      if (!rec) { toast('Record not found'); return true; }
-      var mobile = rec.mobile || '';
       var ch = window._cmChannel || 'whatsapp';
-      var url = ch === 'sms' ? Comms.smsUrl(mobile, msg) : Comms.waUrl(mobile, msg);
-      if (!url) { toast('No valid mobile'); return true; }
-
-      // find template name
-      var tplName = '';
-      if (window._cmTpl) {
-        var s0 = Store.load();
-        var allTpls = Comms.rawTemplates(s0);
-        for (var i = 0; i < allTpls.length; i++) {
-          if (allTpls[i].id === window._cmTpl) { tplName = allTpls[i].name; break; }
-        }
-      }
-
+      var tplId = window._cmTpl || '';
       var auth = (typeof AuthSession !== 'undefined' && AuthSession.current) ? AuthSession.current() : {};
-      var entry = {
-        byUserId: auth.id || '',
-        byName: auth.name || '',
-        channel: ch,
-        recordId: rid,
-        mobile: mobile,
-        customerName: rec.customerName || '',
-        templateId: window._cmTpl || '',
-        templateName: tplName,
-        text: msg
-      };
-      var s = Store.load();
-      Comms.logMessage(s, entry);
-      Store.save(s);
-      closeModal();
-      if (ch === 'sms') {
-        window.location.href = url;
-      } else {
-        window.open(url, '_blank', 'noopener');
-      }
-      toast('Opening ' + ch);
+      (async function () {
+        try {
+          var rec = await getRecord(rid);
+          if (!rec) { toast('Record not found'); return; }
+          var mobile = rec.mobile || '';
+          var url = ch === 'sms' ? Comms.smsUrl(mobile, msg) : Comms.waUrl(mobile, msg);
+          if (!url) { toast('No valid mobile'); return; }
+
+          // find template name
+          var tplName = '';
+          if (tplId) {
+            var allTpls = await Comms.rawTemplates();
+            for (var i = 0; i < allTpls.length; i++) {
+              if (allTpls[i].id === tplId) { tplName = allTpls[i].name; break; }
+            }
+          }
+
+          var entry = {
+            byUserId: (auth && auth.id) || '',
+            byName: (auth && auth.name) || '',
+            channel: ch,
+            recordId: rid,
+            mobile: mobile,
+            customerName: rec.customerName || '',
+            templateId: tplId,
+            templateName: tplName,
+            text: msg
+          };
+          await Comms.logMessage(entry);
+          closeModal();
+          if (ch === 'sms') {
+            window.location.href = url;
+          } else {
+            window.open(url, '_blank', 'noopener');
+          }
+          toast('Opening ' + ch);
+          if (window.render) await window.render();
+        } catch (e) {
+          toast('Send failed');
+        }
+      })();
       return true;
     }
 
     if (action === 'cm-open-templates') {
       window.commsView = 'templates';
-      render();
+      if (window.render) window.render();
       return true;
     }
 
     if (action === 'cm-add-template') {
-      var sa = Store.load();
-      templateEditorModal(sa, {}, 'cm-save-template', '');
+      // templateEditorModal is async (it fetches store names); fire-and-forget.
+      Promise.resolve(templateEditorModal({}, 'cm-save-template', '')).catch(function () {});
       return true;
     }
 
     if (action === 'cm-save-template') {
       var fields = gatherTemplateFields();
-      var sc = Store.load();
-      var tpl = Comms.addTemplate(sc, fields);
-      if (!tpl) { toast('Name and text required'); return true; }
-      Store.save(sc);
-      closeModal();
-      render();
-      toast('Template added');
+      (async function () {
+        try {
+          var tpl = await Comms.addTemplate(fields);
+          if (!tpl) { toast('Name and text required'); return; }
+          closeModal();
+          toast('Template added');
+          if (window.render) await window.render();
+        } catch (e) {
+          toast('Save failed');
+        }
+      })();
       return true;
     }
 
     if (action === 'cm-edit-template') {
-      var se = Store.load();
-      var all = Comms.rawTemplates(se);
-      var found = null;
-      for (var j = 0; j < all.length; j++) {
-        if (all[j].id === dataset.id) { found = all[j]; break; }
-      }
-      if (!found) { toast('Template not found'); return true; }
-      templateEditorModal(se, found, 'cm-update-template', 'data-id="' + esc(found.id) + '"');
+      var editId = dataset.id;
+      (async function () {
+        try {
+          var all = await Comms.rawTemplates();
+          var found = null;
+          for (var j = 0; j < all.length; j++) {
+            if (all[j].id === editId) { found = all[j]; break; }
+          }
+          if (!found) { toast('Template not found'); return; }
+          await templateEditorModal(found, 'cm-update-template', 'data-id="' + esc(found.id) + '"');
+        } catch (e) {
+          toast('Could not open template');
+        }
+      })();
       return true;
     }
 
@@ -355,52 +393,72 @@
 
     if (action === 'cm-update-template') {
       var upFields = gatherTemplateFields();
-      var su = Store.load();
-      var ok = Comms.updateTemplate(su, dataset.id, upFields);
-      if (!ok) { toast('Update failed'); return true; }
-      Store.save(su);
-      closeModal();
-      render();
-      toast('Template updated');
+      var upId = dataset.id;
+      (async function () {
+        try {
+          var ok = await Comms.updateTemplate(upId, upFields);
+          if (!ok) { toast('Update failed'); return; }
+          closeModal();
+          toast('Template updated');
+          if (window.render) await window.render();
+        } catch (e) {
+          toast('Update failed');
+        }
+      })();
       return true;
     }
 
     if (action === 'cm-toggle-template') {
-      var st = Store.load();
-      Comms.toggleTemplate(st, dataset.id);
-      Store.save(st);
-      render();
+      var tgId = dataset.id;
+      (async function () {
+        try {
+          await Comms.toggleTemplate(tgId);
+          if (window.render) await window.render();
+        } catch (e) {
+          toast('Toggle failed');
+        }
+      })();
       return true;
     }
 
     if (action === 'cm-remove-template') {
       if (!confirm('Remove this template?')) return true;
-      var sr = Store.load();
-      Comms.removeTemplate(sr, dataset.id);
-      Store.save(sr);
-      render();
-      toast('Template removed');
+      var rmId = dataset.id;
+      (async function () {
+        try {
+          await Comms.removeTemplate(rmId);
+          toast('Template removed');
+          if (window.render) await window.render();
+        } catch (e) {
+          toast('Remove failed');
+        }
+      })();
       return true;
     }
 
     if (action === 'cm-open-log') {
       window.commsView = 'log';
-      render();
+      if (window.render) window.render();
       return true;
     }
 
     if (action === 'cm-end-of-day') {
       var auth2 = (typeof AuthSession !== 'undefined' && AuthSession.current) ? AuthSession.current() : {};
-      var sl = Store.load();
-      var summary = Comms.endOfDaySummary(sl, todayStr(), auth2 && auth2.role, auth2 && auth2.id);
-      var eodHtml = '<h2 style="margin:0 0 12px;">End-of-Day Summary</h2>'
-        + '<div class="field"><textarea id="cmEod" rows="10" readonly style="width:100%;min-height:160px;resize:vertical;">' + esc(summary) + '</textarea></div>'
-        + '<div class="modal-actions">'
-        + '<button class="btn btn-primary" data-action="cm-send-eod" style="min-height:44px;">Send to Manager (WhatsApp)</button>'
-        + '<button class="btn btn-secondary" data-action="cm-copy-eod" style="min-height:44px;">Copy</button>'
-        + '<button class="btn btn-ghost" data-action="modal-cancel" style="min-height:44px;">Close</button>'
-        + '</div>';
-      openModal(eodHtml);
+      (async function () {
+        try {
+          var summary = await Comms.endOfDaySummary(todayStr(), auth2 && auth2.role, auth2 && auth2.id);
+          var eodHtml = '<h2 style="margin:0 0 12px;">End-of-Day Summary</h2>'
+            + '<div class="field"><textarea id="cmEod" rows="10" readonly style="width:100%;min-height:160px;resize:vertical;">' + esc(summary) + '</textarea></div>'
+            + '<div class="modal-actions">'
+            + '<button class="btn btn-primary" data-action="cm-send-eod" style="min-height:44px;">Send to Manager (WhatsApp)</button>'
+            + '<button class="btn btn-secondary" data-action="cm-copy-eod" style="min-height:44px;">Copy</button>'
+            + '<button class="btn btn-ghost" data-action="modal-cancel" style="min-height:44px;">Close</button>'
+            + '</div>';
+          openModal(eodHtml);
+        } catch (e) {
+          toast('Could not build summary');
+        }
+      })();
       return true;
     }
 

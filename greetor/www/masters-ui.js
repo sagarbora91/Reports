@@ -1,8 +1,16 @@
 /**
  * masters-ui.js — Saagar Greetor Masters Editor UI
  * Defines window.MastersUI. Loaded as a plain <script> tag (not a module).
- * Depends at call-time on: window.Masters, Store, render, toast,
+ * Depends at call-time on: window.Masters, window.Repo, render, toast,
  * openModal, closeModal, escapeHtml, $ (id→element)
+ *
+ * SQLite Phase 3: render() is ASYNC and reads the masters config from the DB
+ * (await Repo.masters.get()) instead of the old whole-blob Store. handleAction()
+ * STAYS a SYNCHRONOUS boolean-returning function — every mutation runs its
+ * await chain inside an inner async IIFE (fetch masters → call the sync
+ * in-place mutator from masters.js → Repo.masters.set → await window.render())
+ * and returns true synchronously so the host router (which does
+ * `if (handleAction(...)) return;`) is not swallowed by a truthy Promise.
  */
 (function () {
   'use strict';
@@ -249,8 +257,11 @@
   }
 
   /* ── Main render ─────────────────────────────────────────── */
+  // Sync, pure-over-state dispatcher. `state` is { masters } built by the async
+  // render() wrapper from Repo.masters.get(). The view sub-renderers are the
+  // EXACT same sync functions as before — only the data source changed.
   function renderMasters(state) {
-    if (typeof Store === 'undefined' || typeof window.Masters === 'undefined') {
+    if (typeof window.Masters === 'undefined') {
       return '<p class="muted" style="padding:24px;text-align:center;">Loading masters…</p>';
     }
     var view = window.mastersView || 'home';
@@ -265,55 +276,82 @@
   }
 
   /* ── handleAction ────────────────────────────────────────── */
+  // STAYS SYNC + returns BOOLEAN. The host router does
+  // `if (window.MastersUI.handleAction(a, ds)) return;` — returning a Promise
+  // would be truthy and swallow every other click, so async work runs inside an
+  // inner IIFE (runMutation below) and we `return true` synchronously.
+  //
+  // runMutation: fetch masters from the DB, hand a { masters } state object to
+  // the SYNC in-place mutator from masters.js (unchanged — it mutates
+  // s.masters), persist via Repo.masters.set, then await the host render. `apply`
+  // returns false to signal a validation failure (duplicate/empty) so we toast
+  // the failure message and DO NOT persist. okMsg is toasted on success.
+  function runMutation(apply, okMsg, failMsg) {
+    (async function () {
+      try {
+        var s = { masters: await window.Repo.masters.get() };
+        var result = apply(window.Masters, s);
+        if (result === false) {
+          if (failMsg && typeof toast === 'function') toast(failMsg);
+          return;
+        }
+        await window.Repo.masters.set(s.masters);
+        if (window.render) await window.render();
+        if (okMsg && typeof toast === 'function') toast(okMsg);
+      } catch (e) {
+        if (typeof toast === 'function') toast('Could not save: ' + (e && e.message ? e.message : e));
+      }
+    }());
+  }
+
   function handleAction(action, dataset) {
     if (action.indexOf('m-') !== 0) return false;
 
-    /* Navigation */
+    /* Navigation (read-only view toggles — fire-and-forget render) */
     if (action === 'm-open') {
       window.mastersView = dataset.view || 'home';
-      if (typeof render === 'function') render();
+      if (window.render) window.render();
       return true;
     }
     if (action === 'm-pick-store') {
       window.mastersStore = dataset.store;
-      if (typeof render === 'function') render();
+      if (window.render) window.render();
       return true;
     }
 
-    /* Guard: need Store + Masters */
-    if (typeof Store === 'undefined' || typeof window.Masters === 'undefined') {
+    /* Guard: need Repo + Masters */
+    if (!window.Repo || typeof window.Masters === 'undefined') {
       if (typeof toast === 'function') toast('Not ready yet.');
       return true;
     }
-
-    var M = window.Masters;
-    var s = Store.load();
 
     /* --- Global list actions --- */
     if (action === 'm-add-global') {
       var val = readInput('mNewItem');
       if (!val) { toast('Enter a name first.'); return true; }
-      var ok = safe(function () { return M.addGlobal(s, dataset.type, val); }, null);
-      if (!ok) { toast('Already exists or empty.'); return true; }
-      Store.save(s); render(); toast('Added.');
+      runMutation(function (M, s) {
+        return M.addGlobal(s, dataset.type, val) ? undefined : false;
+      }, 'Added.', 'Already exists or empty.');
       return true;
     }
     if (action === 'm-rename-global') {
       var newName = prompt('Rename to:');
       if (!newName || !newName.trim()) return true;
-      var ok2 = safe(function () { return M.renameGlobal(s, dataset.type, dataset.id, newName.trim()); }, null);
-      if (!ok2) { toast('Could not rename.'); return true; }
-      Store.save(s); render(); toast('Renamed.');
+      runMutation(function (M, s) {
+        M.renameGlobal(s, dataset.type, dataset.id, newName.trim());
+      }, 'Renamed.');
       return true;
     }
     if (action === 'm-toggle-global') {
-      safe(function () { M.toggleGlobal(s, dataset.type, dataset.id); }, null);
-      Store.save(s); render();
+      runMutation(function (M, s) {
+        M.toggleGlobal(s, dataset.type, dataset.id);
+      });
       return true;
     }
     if (action === 'm-toggle-reason-top') {
-      safe(function () { M.toggleReasonTop(s, dataset.id); }, null);
-      Store.save(s); render();
+      runMutation(function (M, s) {
+        M.toggleReasonTop(s, dataset.id);
+      });
       return true;
     }
 
@@ -321,22 +359,23 @@
     if (action === 'm-add-store') {
       var sval = readInput('mNewItem');
       if (!sval) { toast('Enter a store name.'); return true; }
-      var ok3 = safe(function () { return M.addStore(s, sval); }, null);
-      if (!ok3) { toast('Already exists or empty.'); return true; }
-      Store.save(s); render(); toast('Store added.');
+      runMutation(function (M, s) {
+        return M.addStore(s, sval) ? undefined : false;
+      }, 'Store added.', 'Already exists or empty.');
       return true;
     }
     if (action === 'm-rename-store') {
       var sname = prompt('Rename store to:');
       if (!sname || !sname.trim()) return true;
-      var ok4 = safe(function () { return M.renameStore(s, dataset.id, sname.trim()); }, null);
-      if (!ok4) { toast('Could not rename.'); return true; }
-      Store.save(s); render(); toast('Renamed.');
+      runMutation(function (M, s) {
+        return M.renameStore(s, dataset.id, sname.trim()) ? undefined : false;
+      }, 'Renamed.', 'Could not rename.');
       return true;
     }
     if (action === 'm-toggle-store') {
-      safe(function () { M.toggleStore(s, dataset.id); }, null);
-      Store.save(s); render();
+      runMutation(function (M, s) {
+        M.toggleStore(s, dataset.id);
+      });
       return true;
     }
 
@@ -344,28 +383,30 @@
     if (action === 'm-add-brand') {
       var bval = readInput('mNewBrand');
       if (!bval) { toast('Enter a brand name.'); return true; }
-      var ok5 = safe(function () { return M.addBrand(s, dataset.store, bval); }, null);
-      if (!ok5) { toast('Already exists or empty.'); return true; }
-      Store.save(s); render(); toast('Brand added.');
+      runMutation(function (M, s) {
+        return M.addBrand(s, dataset.store, bval) ? undefined : false;
+      }, 'Brand added.', 'Already exists or empty.');
       return true;
     }
     if (action === 'm-rename-brand') {
       var bname = prompt('Rename brand to:');
       if (!bname || !bname.trim()) return true;
       // dataset.type holds the store name for brands
-      var ok6 = safe(function () { return M.renameBrand(s, dataset.type, dataset.id, bname.trim()); }, null);
-      if (!ok6) { toast('Could not rename.'); return true; }
-      Store.save(s); render(); toast('Renamed.');
+      runMutation(function (M, s) {
+        M.renameBrand(s, dataset.type, dataset.id, bname.trim());
+      }, 'Renamed.');
       return true;
     }
     if (action === 'm-toggle-brand') {
-      safe(function () { M.toggleBrand(s, dataset.type, dataset.id); }, null);
-      Store.save(s); render();
+      runMutation(function (M, s) {
+        M.toggleBrand(s, dataset.type, dataset.id);
+      });
       return true;
     }
     if (action === 'm-set-default-brand') {
-      safe(function () { M.setDefaultBrand(s, dataset.store, dataset.id); }, null);
-      Store.save(s); render(); toast('Default brand set.');
+      runMutation(function (M, s) {
+        M.setDefaultBrand(s, dataset.store, dataset.id);
+      }, 'Default brand set.');
       return true;
     }
 
@@ -373,23 +414,24 @@
     if (action === 'm-add-category') {
       var cval = readInput('mNewCategory');
       if (!cval) { toast('Enter a category name.'); return true; }
-      var ok7 = safe(function () { return M.addCategory(s, dataset.store, cval); }, null);
-      if (!ok7) { toast('Already exists or empty.'); return true; }
-      Store.save(s); render(); toast('Category added.');
+      runMutation(function (M, s) {
+        return M.addCategory(s, dataset.store, cval) ? undefined : false;
+      }, 'Category added.', 'Already exists or empty.');
       return true;
     }
     if (action === 'm-rename-category') {
       var cname = prompt('Rename category to:');
       if (!cname || !cname.trim()) return true;
       // dataset.type = store name
-      var ok8 = safe(function () { return M.renameCategory(s, dataset.type, dataset.id, cname.trim()); }, null);
-      if (!ok8) { toast('Could not rename.'); return true; }
-      Store.save(s); render(); toast('Renamed.');
+      runMutation(function (M, s) {
+        M.renameCategory(s, dataset.type, dataset.id, cname.trim());
+      }, 'Renamed.');
       return true;
     }
     if (action === 'm-toggle-category') {
-      safe(function () { M.toggleCategory(s, dataset.type, dataset.id); }, null);
-      Store.save(s); render();
+      runMutation(function (M, s) {
+        M.toggleCategory(s, dataset.type, dataset.id);
+      });
       return true;
     }
 
@@ -398,9 +440,9 @@
       var subInputId = 'mNewSub_' + dataset.catid;
       var subval = readInput(subInputId);
       if (!subval) { toast('Enter a sub-category name.'); return true; }
-      var ok9 = safe(function () { return M.addSub(s, dataset.store, dataset.catid, subval); }, null);
-      if (!ok9) { toast('Already exists or empty.'); return true; }
-      Store.save(s); render(); toast('Sub-category added.');
+      runMutation(function (M, s) {
+        return M.addSub(s, dataset.store, dataset.catid, subval) ? undefined : false;
+      }, 'Sub-category added.', 'Already exists or empty.');
       return true;
     }
     if (action === 'm-rename-sub') {
@@ -409,45 +451,49 @@
       // dataset.type = "storeName|catId"
       var parts = (dataset.type || '').split('|');
       var storePart = parts[0]; var catPart = parts[1];
-      var ok10 = safe(function () { return M.renameSub(s, storePart, catPart, dataset.id, subname.trim()); }, null);
-      if (!ok10) { toast('Could not rename.'); return true; }
-      Store.save(s); render(); toast('Renamed.');
+      runMutation(function (M, s) {
+        M.renameSub(s, storePart, catPart, dataset.id, subname.trim());
+      }, 'Renamed.');
       return true;
     }
     if (action === 'm-toggle-sub') {
       var parts2 = (dataset.type || '').split('|');
-      safe(function () { M.toggleSub(s, parts2[0], parts2[1], dataset.id); }, null);
-      Store.save(s); render();
+      runMutation(function (M, s) {
+        M.toggleSub(s, parts2[0], parts2[1], dataset.id);
+      });
       return true;
     }
 
-    /* --- Export --- */
+    /* --- Export --- (read-only DB fetch; no mutation/render) */
     if (action === 'm-export') {
-      var exported = safe(function () { return M.export(s); }, null);
-      if (!exported) { toast('Export failed.'); return true; }
-      var jsonStr = JSON.stringify(exported, null, 2);
-      var today = new Date().toISOString().slice(0, 10);
-      var filename = 'saagar_greetor_masters_' + today + '.json';
-      try {
-        var blob = new Blob([jsonStr], { type: 'application/json' });
-        var file = new File([blob], filename, { type: 'application/json' });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          navigator.share({ files: [file], title: 'Saagar Greetor Masters' });
-        } else {
-          var url = URL.createObjectURL(blob);
-          var a = document.createElement('a');
-          a.href = url; a.download = filename;
-          document.body.appendChild(a); a.click();
-          setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
-          toast('Exported.');
+      (async function () {
+        try {
+          var s = { masters: await window.Repo.masters.get() };
+          var exported = safe(function () { return window.Masters.export(s); }, null);
+          if (!exported) { if (typeof toast === 'function') toast('Export failed.'); return; }
+          var jsonStr = JSON.stringify(exported, null, 2);
+          var today = new Date().toISOString().slice(0, 10);
+          var filename = 'saagar_greetor_masters_' + today + '.json';
+          var blob = new Blob([jsonStr], { type: 'application/json' });
+          var file = new File([blob], filename, { type: 'application/json' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({ files: [file], title: 'Saagar Greetor Masters' });
+          } else {
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click();
+            setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+            if (typeof toast === 'function') toast('Exported.');
+          }
+        } catch (e) {
+          if (typeof toast === 'function') toast('Export error: ' + (e && e.message ? e.message : e));
         }
-      } catch (e) {
-        toast('Export error: ' + e.message);
-      }
+      }());
       return true;
     }
 
-    /* --- Import --- */
+    /* --- Import --- (parse file → M.import mutates s.masters → persist) */
     if (action === 'm-import') {
       var input = document.createElement('input');
       input.type = 'file'; input.accept = '.json,application/json';
@@ -458,16 +504,18 @@
         if (!f) { document.body.removeChild(input); return; }
         var reader = new FileReader();
         reader.onload = function (e) {
-          try {
-            var parsed = JSON.parse(e.target.result);
-            var s2 = Store.load();
-            M.import(s2, parsed);
-            Store.save(s2);
-            render();
-            toast('Masters imported.');
-          } catch (err) {
-            toast('Import failed: ' + err.message);
-          }
+          (async function () {
+            try {
+              var parsed = JSON.parse(e.target.result);
+              var s2 = { masters: await window.Repo.masters.get() };
+              window.Masters.import(s2, parsed);
+              await window.Repo.masters.set(s2.masters);
+              if (window.render) await window.render();
+              if (typeof toast === 'function') toast('Masters imported.');
+            } catch (err) {
+              if (typeof toast === 'function') toast('Import failed: ' + (err && err.message ? err.message : err));
+            }
+          }());
           document.body.removeChild(input);
         };
         reader.readAsText(f);
@@ -482,8 +530,20 @@
 
   /* ── Expose ──────────────────────────────────────────────── */
   window.MastersUI = {
-    render: function (state) {
-      return safe(function () { return renderMasters(state); }, '');
+    // ASYNC (SQLite P3): fetch the masters config from the DB, build the legacy
+    // { masters } state shape the sync view sub-renderers expect, then return
+    // the HTML string. The host (index.html) `await`s this and assigns it to
+    // the screen element (with its own Back bar prepended). The `state` arg the
+    // host still passes is ignored — masters comes from Repo now.
+    render: async function (state) {
+      if (!window.Repo) return '<p class="muted" style="padding:24px;text-align:center;">Loading masters…</p>';
+      var masters;
+      try {
+        masters = await window.Repo.masters.get();
+      } catch (e) {
+        return '<p class="muted" style="padding:24px;text-align:center;">Could not load masters.</p>';
+      }
+      return safe(function () { return renderMasters({ masters: masters }); }, '');
     },
     handleAction: function (action, dataset) {
       return safe(function () { return handleAction(action, dataset); }, false);
