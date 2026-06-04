@@ -1,15 +1,20 @@
 /* gen-golden.cjs — capture the GOLDEN outputs of the CURRENT (sync,
- * state/records-based) Reports + Customers data layers on the real 2,612-row
- * seed, BEFORE they are rewritten to async SQL. The later diff-harness re-runs
- * the SAME (layer, fn, inputs) matrix against the REWRITTEN async layers (over
- * Repo + node:sqlite via sqlite-node-adapter.cjs) and asserts every output is
- * byte-identical to what this file recorded. Byte-identity is the ONLY hard
- * requirement of SQLite Phase 2, so this fixture is the contract.
+ * state/records-based) data layers on the real 2,612-row seed, BEFORE they are
+ * rewritten to async SQL. The later diff-harness re-runs the SAME (layer, fn,
+ * inputs) matrix against the REWRITTEN async layers (over Repo + node:sqlite via
+ * sqlite-node-adapter.cjs) and asserts every output is byte-identical to what
+ * this file recorded. Byte-identity is the ONLY hard requirement of the SQLite
+ * migration, so this fixture is the contract.
+ *
+ * Phase 2  captured Reports + Customers.
+ * Phase 2b ADDS the remaining 5 layers: Comms, Targets, Footfall, Masters, DPDP
+ *          (the existing Reports/Customers captures below are kept verbatim).
  *
  * IMPORTANT: this script requires the CURRENT modules AS-IS (pure functions over
- * arrays/state). It must be run on the pre-rewrite tree to mint the golden file.
+ * arrays/state). The orchestrator runs it with ALL layers temporarily restored
+ * to their sync form, so every captured fn here is the sync/state version.
  * Output: greetor/scripts/qa-fixtures/golden-datalayers.json
- *         { "<Layer>.<fn>(<inputsLabel>)": "<canonical-json-or-raw-string>", ... }
+ *         { "<Layer>.<fn>(<inputsLabel>)": "<sha256-of-canonical-or-raw>", ... }
  *
  * Run (from repo root OR greetor/):
  *     node greetor/scripts/gen-golden.cjs
@@ -19,17 +24,19 @@
  * so the rewrite's harness can pin the same clock):
  *   - Date is FROZEN to FIXED_NOW for the whole run. The current layers call
  *     new Date() lazily inside functions (todayStr / monthStart / addDays /
- *     daysBetween / setStage / convertToSale), so freezing before any call is
- *     sufficient and total. FIXED_NOW is the seed's newest visit day at noon UTC
- *     — chosen so 'today'/'month' ranges and lastVisitAgoDays match a real demo
- *     "now" (the seed was generated with today === its max visitDate).
+ *     daysBetween / setStage / convertToSale / logMessage / footfall.set /
+ *     cutoffDate), so freezing before any call is sufficient and total. FIXED_NOW
+ *     is the seed's newest visit day at noon UTC — chosen so 'today'/'month'
+ *     ranges and lastVisitAgoDays match a real demo "now".
  *   - 'all' range is treated as the UNFILTERED record set (the spec's
  *     "no filter, all records in DB"); resolveRange has no 'all' key, so we must
  *     NOT route it through filterByRange (which would fall back to 'today').
- *   - Mutating cases (setStage / convertToSale) run on a DEEP CLONE of the seed
- *     so cases never contaminate each other and the original seed is provably
- *     untouched; we record the resulting record state, the touched recordId, and
- *     a proof that exactly one record changed.
+ *   - Mutating cases (setStage / convertToSale / Comms.logMessage / Footfall.set
+ *     / DPDP.pruneOldRecords) run on a DEEP CLONE of the seed so cases never
+ *     contaminate each other and the original seed is provably untouched.
+ *   - DPDP reads retention prefs from localStorage (client-side, NOT the DB). We
+ *     install a tiny in-memory localStorage stub and set the retention before
+ *     each pruneOldRecords case; the diff-harness installs the SAME stub.
  */
 "use strict";
 
@@ -82,18 +89,45 @@ var FIXED_NOW = "2026-06-03T12:00:00.000Z";
   global.Date = FrozenDate;
 })();
 
+// ── in-memory localStorage stub (DPDP retention prefs live client-side) ──────
+// dpdp.js reads/writes localStorage; Node has none. The diff-harness installs an
+// identical stub, so DPDP.getRetentionMonths()/setPrefs round-trip the same way
+// on both sides. We drive retentionMonths explicitly per pruneOldRecords case.
+(function installLocalStorage() {
+  if (typeof global.localStorage !== "undefined" && global.localStorage) return;
+  var mem = {};
+  global.localStorage = {
+    getItem: function (k) { return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null; },
+    setItem: function (k, v) { mem[k] = String(v); },
+    removeItem: function (k) { delete mem[k]; },
+    clear: function () { mem = {}; }
+  };
+})();
+
 // ── load CURRENT modules (order matters: Masters before Customers/Reports; ──
 // Customers before Reports because Reports.formatINR delegates to Customers). ──
 require(path.join(WWW, "masters.js"));     // Customers.pipelineStages -> Masters.globalList
 require(path.join(WWW, "customers.js"));
 require(path.join(WWW, "reports.js"));
+require(path.join(WWW, "comms.js"));       // window.Comms
+require(path.join(WWW, "targets.js"));     // window.Targets
+require(path.join(WWW, "footfall.js"));    // window.Footfall
+require(path.join(WWW, "dpdp.js"));        // window.DPDP
 require(path.join(WWW, "seed-data.js"));   // window.DEMO_SEED
 
 var Reports = global.Reports;
 var Customers = global.Customers;
+var Comms = global.Comms;
+var Targets = global.Targets;
+var Footfall = global.Footfall;
+var Masters = global.Masters;
+var DPDP = global.DPDP;
 var SEED = global.DEMO_SEED;
 
 if (!Reports || !Customers) throw new Error("Reports/Customers did not load — check www module order.");
+if (!Comms || !Targets || !Footfall || !Masters || !DPDP) {
+  throw new Error("A Phase-2b layer did not load (Comms/Targets/Footfall/Masters/DPDP).");
+}
 if (!SEED || !Array.isArray(SEED.records) || SEED.records.length < 2000) {
   throw new Error("seed-data.js did not load a full DEMO_SEED (records=" + (SEED && SEED.records ? SEED.records.length : 0) + ")");
 }
@@ -329,6 +363,228 @@ captureMutation(
   function (state, id) { Customers.convertToSale(state, id, 0); }
 );
 
+// #####################################################################
+// ##  PHASE 2b — Comms / Targets / Footfall / Masters / DPDP         ##
+// ##  All captured from the CURRENT sync (state-based) layers.        ##
+// #####################################################################
+
+// ── deterministic Phase-2b targets picked from the seed (so the harness can ──
+// recompute the same ones from the key label). ──
+var PERIOD_DAILY = "daily";
+// a userId that has records on the seed's 'today' (FIXED_NOW date)
+var TODAY_STR = "2026-06-03";
+function firstTodayUserId() {
+  for (var i = 0; i < SEED.records.length; i++) {
+    var r = SEED.records[i];
+    if (r && r.visitDate === TODAY_STR && r.createdByUserId != null && r.createdByUserId !== "") {
+      return String(r.createdByUserId);
+    }
+  }
+  return "";
+}
+var TODAY_USER = firstTodayUserId();
+// a recordId that has comms_log entries (for Comms.log(recordId=...))
+function firstRecordIdWithLog() {
+  var log = Array.isArray(SEED.commsLog) ? SEED.commsLog : [];
+  for (var i = 0; i < log.length; i++) {
+    if (log[i] && log[i].recordId != null && log[i].recordId !== "") return String(log[i].recordId);
+  }
+  return "";
+}
+var LOG_RECORD_ID = firstRecordIdWithLog();
+// a byUserId that appears in comms_log (for Comms.log GREETOR role-scope)
+function firstLogUserId() {
+  var log = Array.isArray(SEED.commsLog) ? SEED.commsLog : [];
+  for (var i = 0; i < log.length; i++) {
+    if (log[i] && log[i].byUserId != null && log[i].byUserId !== "") return String(log[i].byUserId);
+  }
+  return "";
+}
+var LOG_USER_ID = firstLogUserId();
+// a (store,date) footfall pair that EXISTS in the seed (for Footfall.get read)
+function firstFootfallEntry() {
+  var ff = (SEED.footfall && SEED.footfall.entries) || {};
+  var keys = Object.keys(ff);
+  return keys.length ? ff[keys[0]] : null;
+}
+var FF_SEED = firstFootfallEntry();
+
+// drop the volatile, uid()-generated id so logMessage is reproducible (both the
+// old sync layer and the rewrite generate a RANDOM id; every OTHER field —
+// at(frozen), channel, recordId, … — is deterministic and IS compared).
+function normLogEntry(e) {
+  if (!e || typeof e !== "object") return e;
+  var out = {};
+  Object.keys(e).forEach(function (k) { if (k !== "id") out[k] = e[k]; });
+  return out;
+}
+
+// ── Comms.ensureSeeded — read-back the templates AFTER ensureSeeded. On the ──
+// already-seeded snapshot this is a no-op; we capture the resulting template ──
+// set (names+scopes+active, id-stripped) so the harness asserts the SAME set ──
+// over Repo.commsTemplates.all(). (Seed ids are random; compare by shape.) ──
+function tmplShape(t) {
+  return { name: t.name, scope: t.scope, store: t.store != null ? t.store : "", reason: t.reason != null ? t.reason : "", text: t.text, active: !!t.active };
+}
+(function commsEnsureSeeded() {
+  var clone = deepClone(SEED);
+  Comms.ensureSeeded(clone);
+  var tmpls = (clone.commsTemplates || []).map(tmplShape);
+  put("Comms.ensureSeeded()", { count: tmpls.length, templates: tmpls });
+})();
+
+// ── Comms.applicableTemplates — two records (one matching a reason template, ──
+// one matching none). Pure filter over state.commsTemplates. id-stripped shape. ──
+[
+  ["reason=Price too high, store=Tanishq Jewellery", { store: "Tanishq Jewellery", reason: "Price too high" }],
+  ["reason=, store=Helios", { store: "Helios", reason: "" }]
+].forEach(function (c) {
+  var label = c[0], rec = c[1];
+  var out = Comms.applicableTemplates(SEED, rec).map(tmplShape);
+  put("Comms.applicableTemplates(" + label + ")", out);
+});
+
+// ── Comms.fillTemplate — pure substitution (no {date} token so it's clock- ──
+// independent and fully deterministic). ──
+put(
+  "Comms.fillTemplate(text=Hello {name}, visit {store} for {category})",
+  Comms.fillTemplate("Hello {name}, visit {store} for {category}",
+    { customerName: "Rajesh", store: "Titan World", category: "Smart Watches" })
+);
+
+// ── Comms.logMessage — MUTATING (unshift into commsLog). Capture the returned ──
+// entry (id-stripped) + the resulting log length. Run on a clone. ──
+(function commsLogMessage() {
+  var clone = deepClone(SEED);
+  if (!Array.isArray(clone.commsLog)) clone.commsLog = [];
+  var entry = {
+    byUserId: "u1", byName: "Greetor1", channel: "WhatsApp", recordId: "r1",
+    mobile: "9876543210", customerName: "Rajesh", templateId: "t1",
+    templateName: "Thank you", text: "Hello Rajesh"
+  };
+  var before = clone.commsLog.length;
+  var ret = Comms.logMessage(clone, entry);
+  put("Comms.logMessage(entry=u1/WhatsApp/r1)", {
+    returned: normLogEntry(ret),
+    countBefore: before,
+    countAfter: clone.commsLog.length
+  });
+})();
+
+// ── Comms.log — by recordId (read) and by GREETOR role-scope (read). ──
+put("Comms.log(recordId=" + LOG_RECORD_ID + ")",
+  Comms.log(SEED, { recordId: LOG_RECORD_ID }).map(normLogEntry));
+put("Comms.log(auth GREETOR id=" + LOG_USER_ID + ")",
+  Comms.log(SEED, { auth: { role: "GREETOR", id: LOG_USER_ID } }).map(normLogEntry));
+
+// ── Comms.endOfDaySummary — full day (MANAGER) + greetor-scoped. Multiline ──
+// string; stored raw. formatINR delegates to Customers.formatINR (loaded). ──
+put("Comms.endOfDaySummary(date=" + TODAY_STR + ", MANAGER)",
+  Comms.endOfDaySummary(SEED, TODAY_STR, "MANAGER", null));
+put("Comms.endOfDaySummary(date=" + TODAY_STR + ", GREETOR, userId=" + TODAY_USER + ")",
+  Comms.endOfDaySummary(SEED, TODAY_STR, "GREETOR", TODAY_USER));
+
+// ── Targets.ensureSeeded — read-back targets AFTER ensureSeeded (no-op on the ──
+// already-seeded snapshot). Capture the resulting targets object. ──
+(function targetsEnsureSeeded() {
+  var clone = deepClone(SEED);
+  Targets.ensureSeeded(clone);
+  put("Targets.ensureSeeded()", Targets.get(clone));
+})();
+
+// ── Targets.setStoreTarget — MUTATING. Set daily.walkins=50, read back the ──
+// whole targets object. Run on a clone. ──
+(function targetsSetStore() {
+  var clone = deepClone(SEED);
+  Targets.setStoreTarget(clone, "daily", "walkins", 50);
+  put("Targets.setStoreTarget(daily, walkins, 50)", Targets.get(clone));
+})();
+
+// ── Targets.recordsInPeriod — daily + weekly windows (frozen clock). ──
+put("Targets.recordsInPeriod(daily)", Targets.recordsInPeriod(SEED.records, "daily"));
+put("Targets.recordsInPeriod(weekly)", Targets.recordsInPeriod(SEED.records, "weekly"));
+
+// ── Targets.attainment — store level (userId=null) + greetor level. Uses the ──
+// seed's existing targets. ──
+put("Targets.attainment(daily, store)", Targets.attainment(SEED, "daily", SEED.records, null));
+put("Targets.attainment(daily, userId=" + TODAY_USER + ")",
+  Targets.attainment(SEED, "daily", SEED.records, TODAY_USER));
+
+// ── Targets.leaderboard — daily + weekly aggregation (multi-field sort). ──
+put("Targets.leaderboard(daily)", Targets.leaderboard(SEED, SEED.records, "daily"));
+put("Targets.leaderboard(weekly)", Targets.leaderboard(SEED, SEED.records, "weekly"));
+
+// ── Footfall.set — MUTATING (Titan World, today, 150). Read back the entry. ──
+var FF_USER = { id: "u1", name: "Greetor1" };
+(function footfallSet() {
+  var clone = deepClone(SEED);
+  Footfall.set(clone, "Titan World", TODAY_STR, 150, FF_USER);
+  put("Footfall.set(Titan World, " + TODAY_STR + ", 150)", Footfall.get(clone, "Titan World", TODAY_STR));
+})();
+
+// ── Footfall.get — read back the JUST-SET entry on a clone (self-contained so ──
+// it doesn't depend on the seed having a Titan World|today row). ──
+(function footfallGet() {
+  var clone = deepClone(SEED);
+  Footfall.set(clone, "Titan World", TODAY_STR, 150, FF_USER);
+  put("Footfall.get(Titan World, " + TODAY_STR + ")", Footfall.get(clone, "Titan World", TODAY_STR));
+})();
+
+// ── Footfall.totalForRange — all-stores week (read-only over seed footfall) ──
+// and one-store/one-day reflecting the just-set 150 (mutating clone). ──
+put("Footfall.totalForRange(2026-05-28, " + TODAY_STR + ", all)",
+  Footfall.totalForRange(SEED, "2026-05-28", TODAY_STR, null));
+(function footfallTotalStore() {
+  var clone = deepClone(SEED);
+  Footfall.set(clone, "Titan World", TODAY_STR, 150, FF_USER);
+  put("Footfall.totalForRange(" + TODAY_STR + ", " + TODAY_STR + ", Titan World)",
+    Footfall.totalForRange(clone, TODAY_STR, TODAY_STR, "Titan World"));
+})();
+
+// ── Footfall pure ratio helpers (no DB; fully deterministic). ──
+put("Footfall.trueConversionPct(2500, 100, 3000)", Footfall.trueConversionPct(2500, 100, 3000));
+put("Footfall.captureCoverage(2500, 3000)", Footfall.captureCoverage(2500, 3000));
+
+// ── Masters.ensureSeeded — read-back masters AFTER ensureSeeded (no-op on the ──
+// already-seeded snapshot). Capture the resulting masters object (canon, so ──
+// the random uid()s inside are compared verbatim — both sides read the SAME ──
+// committed seed masters from meta, so they match). ──
+(function mastersEnsureSeeded() {
+  var clone = deepClone(SEED);
+  Masters.ensureSeeded(clone);
+  put("Masters.ensureSeeded()", clone.masters);
+})();
+
+// ── Masters read accessors — exact lists from the seed masters. ──
+put("Masters.storeNames(false)", Masters.storeNames(SEED, false));
+put("Masters.globalList(leadStatuses, false)", Masters.globalList(SEED, "leadStatuses", false));
+put("Masters.globalList(budgets)", Masters.globalList(SEED, "budgets", false));
+put("Masters.reasonsTop()", Masters.reasonsTop(SEED));
+put("Masters.reasonsAll()", Masters.reasonsAll(SEED));
+put("Masters.categories(Titan World, false)", Masters.categories(SEED, "Titan World", false));
+put("Masters.subCategories(Titan World, Smart Watches)", Masters.subCategories(SEED, "Titan World", "Smart Watches"));
+put("Masters.brands(Helios)", Masters.brands(SEED, "Helios"));
+put("Masters.defaultBrand(Tanishq Jewellery)", Masters.defaultBrand(SEED, "Tanishq Jewellery"));
+put("Masters.defaultBrand(Helios)", Masters.defaultBrand(SEED, "Helios"));
+
+// ── DPDP.pruneOldRecords — MUTATING. retention=6 (cutoff = FIXED_NOW - 6mo) ──
+// and retention=0 (disabled). Drive retentionMonths via the localStorage stub. ──
+// Capture the {purged, kept, cutoff} return triple. Run on a clone. ──
+(function dpdpPrune6() {
+  DPDP.setPrefs({ retentionMonths: 6 });
+  var clone = deepClone(SEED);
+  put("DPDP.pruneOldRecords(retention=6)", DPDP.pruneOldRecords(clone));
+})();
+(function dpdpPrune0() {
+  DPDP.setPrefs({ retentionMonths: 0 });
+  var clone = deepClone(SEED);
+  put("DPDP.pruneOldRecords(retention=0)", DPDP.pruneOldRecords(clone));
+})();
+
+// ── DPDP.maskMobile — pure (valid + invalid). ──
+put("DPDP.maskMobile(9876543210)", DPDP.maskMobile("9876543210"));
+put("DPDP.maskMobile(invalid)", DPDP.maskMobile("invalid"));
+
 // ── write fixture (stable key order for a clean, reviewable diff) ──
 var ordered = {};
 Object.keys(golden).sort().forEach(function (k) { ordered[k] = golden[k]; });
@@ -344,6 +600,8 @@ console.log("  keys: " + Object.keys(ordered).length);
 console.log("  FIXED_NOW (frozen clock): " + FIXED_NOW);
 console.log("  seed: records=" + SEED.records.length +
   " validMobiles(1-visit)=" + mob1 + " (repeat)=" + mob3);
+console.log("  phase-2b targets: todayUser=" + TODAY_USER + " logRecordId=" + LOG_RECORD_ID +
+  " logUserId=" + LOG_USER_ID);
 Object.keys(ordered).forEach(function (k) {
   var v = ordered[k];
   console.log("  - " + k + "  [" + v.length + " chars]");

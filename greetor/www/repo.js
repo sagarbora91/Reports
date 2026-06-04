@@ -1,8 +1,9 @@
-/* repo.js — Saagar Greetor data-access layer (SQLite Phase 2).
+/* repo.js — Saagar Greetor data-access layer (SQLite Phase 2 + 2b).
  *
- * THE single DB access point for the data layers (reports.js, customers.js, …).
- * Data layers NEVER touch window.GreetorDB directly — they go through window.Repo
- * so they can run unchanged in Node by injecting a test adapter via Repo.setDb().
+ * THE single DB access point for the data layers (reports.js, customers.js,
+ * comms.js, targets.js, footfall.js, masters.js, dpdp.js, …). Data layers NEVER
+ * touch window.GreetorDB directly — they go through window.Repo so they can run
+ * unchanged in Node by injecting a test adapter via Repo.setDb().
  *
  * Two responsibilities, nothing more:
  *   1. An INJECTABLE db handle. Defaults to window.GreetorDB; Repo.setDb(handle)
@@ -65,6 +66,27 @@
   async function exec(sql)          { return db().exec(sql); }
   async function transaction(fn)    { return db().transaction(fn); }
 
+  // ── shared INSERT/REPLACE helpers ───────────────────────────────────────────
+  function insertSql(table, cols) {
+    var ph = cols.map(function () { return "?"; }).join(",");
+    return "INSERT INTO " + table + " (" + cols.join(",") + ") VALUES (" + ph + ")";
+  }
+  function replaceSql(table, cols) {
+    var ph = cols.map(function () { return "?"; }).join(",");
+    return "INSERT OR REPLACE INTO " + table + " (" + cols.join(",") + ") VALUES (" + ph + ")";
+  }
+  function valuesFor(row, cols) {
+    return cols.map(function (c) { var v = row[c]; return v === undefined ? null : v; });
+  }
+
+  // Next ord value for any table that carries an `ord` integer (append at the end
+  // of current app-order). COALESCE handles an empty table (-> 0).
+  async function nextOrdFor(table) {
+    var rows = await query("SELECT COALESCE(MAX(ord), -1) AS m FROM " + table, []);
+    var m = (rows && rows[0] && rows[0].m != null) ? Number(rows[0].m) : -1;
+    return m + 1;
+  }
+
   // ── records ───────────────────────────────────────────────────────────────
   // Record PK is recordId (TEXT, app-generated) and rows carry an `ord` integer
   // that reproduces the original array order. ORDER BY ord everywhere a stable
@@ -89,12 +111,10 @@
     return rows.map(S.rowToRecord);
   }
 
-  // Next ord value (append at the end of current app-order). COALESCE handles an
-  // empty table (-> 0). Kept as a helper so insert/upsert agree on placement.
+  // Next ord value (append at the end of current app-order). Kept as a named
+  // helper so insert/upsert agree on placement (delegates to nextOrdFor).
   async function nextOrd() {
-    var rows = await query("SELECT COALESCE(MAX(ord), -1) AS m FROM records", []);
-    var m = (rows && rows[0] && rows[0].m != null) ? Number(rows[0].m) : -1;
-    return m + 1;
+    return nextOrdFor("records");
   }
 
   function recCols(S) {
@@ -103,18 +123,6 @@
     return (S.REC_COLS && S.REC_COLS.length)
       ? S.REC_COLS
       : Object.keys(S.recordToRow({}, 0));
-  }
-
-  function insertSql(table, cols) {
-    var ph = cols.map(function () { return "?"; }).join(",");
-    return "INSERT INTO " + table + " (" + cols.join(",") + ") VALUES (" + ph + ")";
-  }
-  function replaceSql(table, cols) {
-    var ph = cols.map(function () { return "?"; }).join(",");
-    return "INSERT OR REPLACE INTO " + table + " (" + cols.join(",") + ") VALUES (" + ph + ")";
-  }
-  function valuesFor(row, cols) {
-    return cols.map(function (c) { var v = row[c]; return v === undefined ? null : v; });
   }
 
   async function recordsInsert(recordObj) {
@@ -170,6 +178,17 @@
     return S.rowToRecord(row);
   }
 
+  // DISTINCT non-empty reasons, ascending (used by aggregate helpers that need
+  // the set of reasons seen in records). Mirrors a SQL DISTINCT + ORDER BY; the
+  // data layers that need a specific JS tie-break fetch rows instead.
+  async function recordsReasonsDistinct() {
+    var rows = await query(
+      "SELECT DISTINCT reason FROM records WHERE reason IS NOT NULL AND reason != '' ORDER BY reason",
+      []
+    );
+    return rows.map(function (r) { return r.reason; });
+  }
+
   // ── users ─────────────────────────────────────────────────────────────────
   async function usersAll() {
     var S = schema();
@@ -187,6 +206,31 @@
 
   async function metaSet(key, value) {
     await run("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", [key, value]);
+  }
+
+  // ── meta-backed config singletons (targets / masters) ──────────────────────
+  // These live in the meta KV table as JSON strings (key 'targets' / 'masters'),
+  // exactly as DBSchema.disassemble writes them. The accessors parse on read and
+  // stringify on write so the data layers deal in plain objects. A missing key,
+  // a JSON 'null', or unparseable value all resolve to null (the data layer's
+  // ensureSeeded then writes the default), matching the old `state.targets ==
+  // null` / `!state.masters.version` checks.
+  function parseMeta(raw) {
+    if (raw == null) return null;
+    try { return JSON.parse(raw); } catch (e) { return null; }
+  }
+
+  async function targetsGet() {
+    return parseMeta(await metaGet("targets"));
+  }
+  async function targetsSet(obj) {
+    await metaSet("targets", JSON.stringify(obj != null ? obj : null));
+  }
+  async function mastersGet() {
+    return parseMeta(await metaGet("masters"));
+  }
+  async function mastersSet(obj) {
+    await metaSet("masters", JSON.stringify(obj != null ? obj : null));
   }
 
   // ── footfall (composite PK store,date) ─────────────────────────────────────
@@ -207,6 +251,108 @@
     );
   }
 
+  // SUM(count) over an inclusive [startDate, endDate] window, optionally scoped
+  // to one store. COALESCE -> 0 for an empty range (SUM of no rows is NULL). The
+  // store filter is OMITTED entirely when no store is given (rather than relying
+  // on a `? IS NULL` guard) so binding stays unambiguous and the result is a
+  // plain integer — byte-identical to footfall.js's loop over entries.
+  async function footfallTotalForRange(startDate, endDate, store) {
+    var rows;
+    if (store) {
+      rows = await query(
+        "SELECT COALESCE(SUM(count), 0) AS t FROM footfall WHERE date >= ? AND date <= ? AND store = ?",
+        [startDate, endDate, store]
+      );
+    } else {
+      rows = await query(
+        "SELECT COALESCE(SUM(count), 0) AS t FROM footfall WHERE date >= ? AND date <= ?",
+        [startDate, endDate]
+      );
+    }
+    var t = (rows && rows[0] && rows[0].t != null) ? Number(rows[0].t) : 0;
+    return t;
+  }
+
+  // ── comms_log (PK id, ord = original app-order) ─────────────────────────────
+  // The mapper (DBSchema.rowToCommsLog) maps the `ts` column back to entry.
+  // timestamp and omits NULL columns, so the domain objects this hands back match
+  // the old in-memory commsLog entries exactly. ORDER BY ord everywhere a stable
+  // order is expected (the data layer re-filters in JS but never re-sorts).
+  async function commsLogAll() {
+    var S = schema();
+    var rows = await query("SELECT * FROM comms_log ORDER BY ord", []);
+    return rows.map(S.rowToCommsLog);
+  }
+
+  async function commsLogByRecordId(recordId) {
+    var S = schema();
+    var rows = await query("SELECT * FROM comms_log WHERE recordId=? ORDER BY ord", [recordId]);
+    return rows.map(S.rowToCommsLog);
+  }
+
+  var CLOG_COLS = ["id", "at", "byUserId", "byName", "channel", "recordId", "mobile", "customerName", "templateId", "templateName", "text", "ts", "ord"];
+
+  async function commsLogInsert(entry) {
+    var S = schema();
+    var ord = await nextOrdFor("comms_log");
+    var row = S.commsLogToRow(entry || {}, ord);
+    await run(insertSql("comms_log", CLOG_COLS), valuesFor(row, CLOG_COLS));
+    var id = (row.id != null && row.id !== "") ? row.id : null;
+    return { id: id, entry: S.rowToCommsLog(row) };
+  }
+
+  async function commsLogDelete(id) {
+    await run("DELETE FROM comms_log WHERE id=?", [id]);
+  }
+
+  // ── comms_templates (PK id, ord = original app-order) ───────────────────────
+  // store/reason default to "" (NOT NULL) in the mapper — the data layer's scope
+  // matching relies on that empty-string encoding, so we never re-encode here.
+  async function commsTemplatesAll() {
+    var S = schema();
+    var rows = await query("SELECT * FROM comms_templates ORDER BY ord", []);
+    return rows.map(S.rowToTmpl);
+  }
+
+  async function commsTemplatesById(id) {
+    var S = schema();
+    var rows = await query("SELECT * FROM comms_templates WHERE id=?", [id]);
+    return rows.length ? S.rowToTmpl(rows[0]) : null;
+  }
+
+  var TMPL_COLS = ["id", "name", "scope", "store", "reason", "text", "active", "ord"];
+
+  async function commsTemplatesInsert(template) {
+    var S = schema();
+    var ord = await nextOrdFor("comms_templates");
+    var row = S.tmplToRow(template || {}, ord);
+    await run(insertSql("comms_templates", TMPL_COLS), valuesFor(row, TMPL_COLS));
+    var id = (row.id != null && row.id !== "") ? row.id : null;
+    return { id: id, template: S.rowToTmpl(row) };
+  }
+
+  // Partial update: only the columns present in `changes` are written, encoded
+  // through tmplToRow's rules (store/reason -> "" if null; active -> 1/0). id and
+  // ord are never touched. Mirrors the old updateTemplate's field-by-field set.
+  async function commsTemplatesUpdate(id, changes) {
+    var S = schema();
+    if (!changes) return;
+    var encoded = S.tmplToRow(changes, 0);   // full encode; we cherry-pick keys
+    var cols = [];
+    ["name", "scope", "store", "reason", "text", "active"].forEach(function (c) {
+      if (Object.prototype.hasOwnProperty.call(changes, c)) cols.push(c);
+    });
+    if (!cols.length) return;
+    var setClause = cols.map(function (c) { return c + "=?"; }).join(",");
+    var vals = cols.map(function (c) { var v = encoded[c]; return v === undefined ? null : v; });
+    vals.push(id);
+    await run("UPDATE comms_templates SET " + setClause + " WHERE id=?", vals);
+  }
+
+  async function commsTemplatesDelete(id) {
+    await run("DELETE FROM comms_templates WHERE id=?", [id]);
+  }
+
   // ── public API (window.Repo, dual-export) ──────────────────────────────────
   var api = {
     // injection + raw pass-throughs
@@ -224,7 +370,8 @@
       insert: recordsInsert,
       update: recordsUpdate,
       "delete": recordsDelete,
-      upsert: recordsUpsert
+      upsert: recordsUpsert,
+      reasonsDistinct: recordsReasonsDistinct
     },
     users: {
       all: usersAll
@@ -233,9 +380,32 @@
       get: metaGet,
       set: metaSet
     },
+    // meta-backed config singletons (parsed/stringified JSON)
+    targets: {
+      get: targetsGet,
+      set: targetsSet
+    },
+    masters: {
+      get: mastersGet,
+      set: mastersSet
+    },
     footfall: {
       get: footfallGet,
-      set: footfallSet
+      set: footfallSet,
+      totalForRange: footfallTotalForRange
+    },
+    commsLog: {
+      all: commsLogAll,
+      byRecordId: commsLogByRecordId,
+      insert: commsLogInsert,
+      "delete": commsLogDelete
+    },
+    commsTemplates: {
+      all: commsTemplatesAll,
+      byId: commsTemplatesById,
+      insert: commsTemplatesInsert,
+      update: commsTemplatesUpdate,
+      "delete": commsTemplatesDelete
     }
   };
 
