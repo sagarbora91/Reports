@@ -196,6 +196,63 @@
     return rows.map(S.rowToUser);
   }
 
+  var USER_COLS = ["id", "name", "role", "pin_salt", "pin_hash", "created_at", "is_active", "phone", "ord"];
+
+  async function usersById(id) {
+    var S = schema();
+    var rows = await query("SELECT * FROM users WHERE id=?", [id]);
+    return rows.length ? S.rowToUser(rows[0]) : null;
+  }
+
+  async function usersInsert(userObj) {
+    var S = schema();
+    var ord = await nextOrdFor("users");
+    var row = S.userToRow(userObj, ord);
+    await run(insertSql("users", USER_COLS), valuesFor(row, USER_COLS));
+    var id = (row.id != null && row.id !== "") ? row.id : null;
+    return { id: id, user: S.rowToUser(row) };
+  }
+
+  // Partial update: merge changes over the existing user, PRESERVE ord, REPLACE.
+  async function usersUpdate(id, changes) {
+    var S = schema();
+    var existing = await usersById(id);
+    if (!existing) return;                       // no-op on unknown id
+    var ordRows = await query("SELECT ord FROM users WHERE id=?", [id]);
+    var ord = (ordRows && ordRows[0] && ordRows[0].ord != null) ? ordRows[0].ord : null;
+    var merged = {}, k;
+    for (k in existing) if (Object.prototype.hasOwnProperty.call(existing, k)) merged[k] = existing[k];
+    if (changes) for (k in changes) if (Object.prototype.hasOwnProperty.call(changes, k)) merged[k] = changes[k];
+    var row = S.userToRow(merged, ord);
+    await run(replaceSql("users", USER_COLS), valuesFor(row, USER_COLS));
+    return S.rowToUser(row);
+  }
+
+  async function usersDelete(id) {
+    await run("DELETE FROM users WHERE id=?", [id]);
+  }
+
+  // ── audit_log (PK id, ord = append order) ───────────────────────────────────
+  // The old in-memory logAudit kept entries newest-first and capped at 5000; here
+  // we APPEND (ord ascending) and the viewer reads ORDER BY ord DESC for newest-
+  // first. Mapper (DBSchema.auditToRow/rowToAudit) JSON-encodes the `detail` field.
+  var AUDIT_COLS = ["id", "at", "userId", "userName", "role", "action", "summary", "detail", "ord"];
+
+  async function auditLogAll() {
+    var S = schema();
+    var rows = await query("SELECT * FROM audit_log ORDER BY ord", []);
+    return rows.map(S.rowToAudit);
+  }
+
+  async function auditLogInsert(entry) {
+    var S = schema();
+    var ord = await nextOrdFor("audit_log");
+    var row = S.auditToRow(entry || {}, ord);
+    await run(insertSql("audit_log", AUDIT_COLS), valuesFor(row, AUDIT_COLS));
+    var id = (row.id != null && row.id !== "") ? row.id : null;
+    return { id: id, entry: S.rowToAudit(row) };
+  }
+
   // ── meta (KV) ──────────────────────────────────────────────────────────────
   // Returns the RAW stored string (callers that store JSON parse it themselves,
   // e.g. Customers.pipelineStages reads meta('masters') and JSON.parses it).
@@ -231,6 +288,17 @@
   }
   async function mastersSet(obj) {
     await metaSet("masters", JSON.stringify(obj != null ? obj : null));
+  }
+
+  // ── settings singleton (meta('settings') JSON) ──────────────────────────────
+  // {current_user_id, my_store, reminder_enabled} — exactly the shape
+  // DBSchema.disassemble writes. Missing -> {} so the boot hydrator applies
+  // defaults (mirrors the old `state.current_user_id == null` checks).
+  async function settingsGet() {
+    return parseMeta(await metaGet("settings")) || {};
+  }
+  async function settingsSet(obj) {
+    await metaSet("settings", JSON.stringify(obj != null ? obj : {}));
   }
 
   // ── footfall (composite PK store,date) ─────────────────────────────────────
@@ -374,11 +442,23 @@
       reasonsDistinct: recordsReasonsDistinct
     },
     users: {
-      all: usersAll
+      all: usersAll,
+      byId: usersById,
+      insert: usersInsert,
+      update: usersUpdate,
+      "delete": usersDelete
+    },
+    auditLog: {
+      all: auditLogAll,
+      insert: auditLogInsert
     },
     meta: {
       get: metaGet,
       set: metaSet
+    },
+    settings: {
+      get: settingsGet,
+      set: settingsSet
     },
     // meta-backed config singletons (parsed/stringified JSON)
     targets: {
