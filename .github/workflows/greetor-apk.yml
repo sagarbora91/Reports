@@ -21,7 +21,7 @@ permissions:
 # "latest-greetor" Release — earlier runs are cancelled mid-flight.
 # Distinct group from the audit app's "release-latest".
 concurrency:
-  group: greetor-release-latest
+  group: greetor-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
