@@ -1559,7 +1559,7 @@ async function handlePinKey(k) {
   if (LoginGuard.isLocked() && !document.querySelector("#ownerName")) return;
   if (k === "back") {
     if (PinBuf.value.length > 0) PinBuf.value = PinBuf.value.slice(0, -1);
-    render();
+    await render();
     return;
   }
   if (!/^[0-9]$/.test(k)) return;
@@ -1583,7 +1583,7 @@ async function onPinComplete() {
       window._setupPin = pin;
       window._setupStage = "confirm";
       PinBuf.reset();
-      render();
+      await render();
       return;
     }
     if (stage === "confirm") {
@@ -1591,8 +1591,8 @@ async function onPinComplete() {
         PinBuf.value = "";
         const err = $("setupErr");
         if (err) { err.textContent = "PINs don't match. Try again."; err.hidden = false; }
-        render();
-        setTimeout(() => { window._setupStage = "pin"; PinBuf.reset(); render(); }, 500);
+        await render();
+        setTimeout(async () => { window._setupStage = "pin"; PinBuf.reset(); await render(); }, 500);
         return;
       }
       const u = await Users.create({ name: window._setupOwnerName, role: "OWNER", pin });
@@ -1627,7 +1627,7 @@ async function onPinComplete() {
         : "Wrong PIN. Try again.";
       err.hidden = false;
     }
-    render();
+    await render();
   }
 }
 
@@ -3051,8 +3051,11 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (action === "wa-customer") {
-    if (window.CommsUI && window.CommsUI.openSendSheet) window.CommsUI.openSendSheet(a.dataset.id);
-    else await waCustomer(a.dataset.id);
+    if (window.CommsUI && window.CommsUI.openSendSheet) {
+      // async (DB reads) — fire-and-forget but surface failures so the sheet
+      // never silently fails to open (QA finding).
+      Promise.resolve(window.CommsUI.openSendSheet(a.dataset.id)).catch(function () { toast("Could not open the message sheet."); });
+    } else await waCustomer(a.dataset.id);
     return;
   }
 

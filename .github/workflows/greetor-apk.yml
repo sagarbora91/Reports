@@ -66,6 +66,9 @@ jobs:
       - name: QA - data-layer byte-identity (Phase 2 diff-harness)
         run: node --experimental-sqlite scripts/qa-diff-datalayers.cjs
 
+      - name: QA - migration safety (Phase 4 backup gate + read-back + fail-closed)
+        run: node --experimental-sqlite scripts/qa-migration.cjs
+
       - name: Install fonts for SVG rasterization
         run: |
           sudo apt-get update -qq
