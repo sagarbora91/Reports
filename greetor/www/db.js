@@ -338,6 +338,17 @@
       });
     }
 
+    // Belt-and-braces: confirm every table exists before we depend on it — fail
+    // LOUD with the missing names rather than a cryptic "no such table" later.
+    var present = await nativeQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'", []
+    );
+    var have = {};
+    present.forEach(function (r) { if (r && r.name) have[r.name] = 1; });
+    var missing = ["records", "users", "audit_log", "comms_log", "comms_templates", "footfall", "meta"]
+      .filter(function (t) { return !have[t]; });
+    if (missing.length) throw new Error("Schema apply incomplete — missing table(s): " + missing.join(", "));
+
     // -- STEP 6: stamp schema_version (idempotent) + run forward migrations. -
     await nativeRun(
       "INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', ?)",
@@ -367,11 +378,18 @@
   }
 
   async function nativeQuery(sql, params) {
-    var res = await _native.plugin.query({
-      database: _native.database,
-      statement: sql,
-      values: params || []
-    });
+    var res;
+    try {
+      res = await _native.plugin.query({
+        database: _native.database,
+        statement: sql,
+        values: params || []
+      });
+    } catch (e) {
+      // Surface the native error WITH the failing SQL so a device-only failure is
+      // diagnosable (the global handler toasts this message) instead of a silent hang.
+      throw new Error("DB query failed: " + (e && e.message || e) + " :: " + String(sql).slice(0, 90));
+    }
     var vals = (res && res.values) ? res.values : [];
     // iOS quirk (capSQLiteValues): the FIRST element is the ios_columns name
     // list, not a data row. Drop it on iOS so callers always get pure data rows.
@@ -387,12 +405,17 @@
   async function nativeRun(sql, params) {
     // transaction:false - bulk callers wrap their own BEGIN/COMMIT; a stray
     // implicit commit here could close an outer transaction prematurely.
-    var res = await _native.plugin.run({
-      database: _native.database,
-      statement: sql,
-      values: params || [],
-      transaction: false
-    });
+    var res;
+    try {
+      res = await _native.plugin.run({
+        database: _native.database,
+        statement: sql,
+        values: params || [],
+        transaction: false
+      });
+    } catch (e) {
+      throw new Error("DB write failed: " + (e && e.message || e) + " :: " + String(sql).slice(0, 90));
+    }
     var changes = 0, lastId = 0;
     if (res && res.changes != null) {
       // 6.x returns { changes: { changes, lastId } }; some builds flatten it.
@@ -412,11 +435,15 @@
   }
 
   async function nativeExec(sql) {
-    await _native.plugin.execute({
-      database: _native.database,
-      statements: sql,
-      transaction: false
-    });
+    try {
+      await _native.plugin.execute({
+        database: _native.database,
+        statements: sql,
+        transaction: false
+      });
+    } catch (e) {
+      throw new Error("DB exec failed: " + (e && e.message || e) + " :: " + String(sql).slice(0, 90));
+    }
   }
 
   // ===========================================================================

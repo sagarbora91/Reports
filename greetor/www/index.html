@@ -715,6 +715,21 @@ body.locked { overflow: hidden; }
 "use strict";
 
 // =====================================================================
+// Global error safety net — registered FIRST, before any boot/async work.
+// The native SQLite plugin rejects its promise on failure; without this a
+// fire-and-forget rejection anywhere is an INVISIBLE hang. Now every
+// unhandled rejection / error is logged AND shown to the user.
+// =====================================================================
+window.addEventListener("unhandledrejection", function (ev) {
+  var msg = (ev && ev.reason && ev.reason.message) || String(ev && ev.reason);
+  console.error("[unhandledrejection]", ev && ev.reason);
+  try { if (typeof toast === "function") toast("Unexpected error: " + msg); } catch (_) {}
+});
+window.addEventListener("error", function (ev) {
+  console.error("[window.error]", (ev && (ev.error || ev.message)));
+});
+
+// =====================================================================
 // Constants + helpers
 // =====================================================================
 
@@ -1571,7 +1586,20 @@ async function handlePinKey(k) {
     [...dots.querySelectorAll(".pin-dot")].forEach((d, i) =>
       d.classList.toggle("filled", PinBuf.value.length > i));
   }
-  if (PinBuf.value.length === 4) setTimeout(onPinComplete, 80);
+  if (PinBuf.value.length === 4) setTimeout(function () {
+    // onPinComplete is async and awaits native DB writes (Users.create / login).
+    // Observe its rejection so a device-only failure becomes a visible toast +
+    // a PIN-entry reset to retry, NOT a silently frozen screen.
+    Promise.resolve(onPinComplete()).catch(function (e) {
+      console.error("[onPinComplete] FATAL", e);
+      try { toast("Setup failed: " + (e && e.message || e)); } catch (_) {}
+      try {
+        if (window._setupStage === "confirm") window._setupStage = "pin";
+        PinBuf.reset();
+        Promise.resolve(render()).catch(function () {});
+      } catch (_) {}
+    });
+  }, 80);
 }
 
 async function onPinComplete() {
@@ -3428,7 +3456,9 @@ async function boot() {
   } catch (e) { console.warn("ensureSeeded skipped", e); }
 
   // 5. Hydrate AppState (users + settings) from the DB so the sync auth gate works.
-  await refreshAppState();
+  try {
+    await refreshAppState();
+  } catch (e) { console.error("[boot] refreshAppState FATAL", e); showFatalDbError(e); return; }
 
   // 6. DPDP retention: prune records past the configured cutoff (no-op if 0).
   //    runBootPurge is async + DB-backed now and logs its own audit event.
@@ -3438,9 +3468,11 @@ async function boot() {
   } catch (e) { console.warn("retention purge skipped", e); }
 
   // 7. First paint + i18n + reminder sweep.
-  await render();
+  try {
+    await render();
+  } catch (e) { console.error("[boot] render FATAL", e); showFatalDbError(e); return; }
   applyI18n();
-  await sweepReminders();
+  try { await sweepReminders(); } catch (e) { console.warn("[boot] sweepReminders skipped", e && e.message || e); }
 
   if (window.SaagarShell && window.SaagarShell.boot) {
     window.SaagarShell.boot({
