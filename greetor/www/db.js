@@ -322,9 +322,21 @@
     _native = { plugin: plugin, database: DB_NAME };
     isEncrypted = true;
 
-    // -- STEP 5: apply schema (all IF NOT EXISTS) in one execute call. -------
-    var ddl = schemaStatements().join(";");
-    await plugin.execute({ database: DB_NAME, statements: ddl, transaction: false });
+    // -- STEP 5: apply schema (all IF NOT EXISTS), ONE statement per execute. -
+    // The native @capacitor-community/sqlite execute() drops a trailing
+    // UNTERMINATED statement from a ";"-joined batch — so a single
+    // execute(stmts.join(";")) created every table EXCEPT the last one (meta),
+    // surfacing as "no such table: meta" on the schema_version stamp below.
+    // Applying each statement individually (terminated with ";") matches the web
+    // path and is idempotent (every statement is CREATE ... IF NOT EXISTS).
+    var stmts = schemaStatements();
+    for (var si = 0; si < stmts.length; si++) {
+      await plugin.execute({
+        database: DB_NAME,
+        statements: String(stmts[si]).trim().replace(/;+\s*$/, "") + ";",
+        transaction: false
+      });
+    }
 
     // -- STEP 6: stamp schema_version (idempotent) + run forward migrations. -
     await nativeRun(
