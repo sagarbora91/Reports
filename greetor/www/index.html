@@ -717,6 +717,10 @@ body.locked { overflow: hidden; }
   <script src="report-defs.js"></script>
   <script src="report-engine.js"></script>
   <script src="report-ui.js"></script>
+  <!-- DEMO BUILD ONLY (sqlite-demo): preloads ~1 year of dummy data
+       (window.DEMO_SEED). boot() step 4b loads it directly into SQLite on a
+       fresh install. Absent on production (sqlite/capacitor). -->
+  <script src="seed-data.js"></script>
   <script>
 "use strict";
 
