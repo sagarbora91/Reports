@@ -523,7 +523,7 @@
         ];
       });
       body.push(dataTable(headers, rows, opts,
-        ["8%", "16%", "12%", "12%", "11%", "11%", "13%", "9%", "8%"]));
+        ["7%", "15%", "11%", "11%", "10%", "10%", "12%", "9%", "15%"]));
       return buildDoc(this.name, label, body, opts);
     }
   };
