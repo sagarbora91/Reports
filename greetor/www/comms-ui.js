@@ -242,10 +242,9 @@
       return empty;
     }
 
-    var C_CAP = 150;
-    var commsTotal = entries.length;
-    var commsMore = commsTotal > C_CAP ? '<div class="muted tiny" style="padding:10px;text-align:center">Showing latest ' + C_CAP + ' of ' + commsTotal + ' messages — export PDF for the full log.</div>' : '';
-    var cards = entries.slice(0, C_CAP).map(function (e) {
+    if (window._commsPage === undefined) window._commsPage = 1;
+    var info = window.Paginate.page(entries, window._commsPage);
+    var cards = info.items.map(function (e) {
       var header = esc(e.customerName || e.mobile || '—');
       var meta = channelPill(e.channel) + ' <span class="muted tiny">' + esc(fmtTs(e.timestamp || e.sentAt || '')) + '</span>';
       if (e.templateName) meta += ' <span class="muted tiny">· ' + esc(e.templateName) + '</span>';
@@ -263,7 +262,7 @@
       + '<h2 style="margin:0;">Message Log</h2>'
       + '<button class="btn btn-ghost" data-action="cm-export-summary" style="min-height:44px;">📄 Export PDF</button>'
       + '</div>'
-      + commsMore + cards
+      + cards + window.Paginate.controls(info, 'cm-page')
       + '</div>';
     var elLog = document.getElementById('screen');
     if (elLog) elLog.innerHTML = outLog;
@@ -493,6 +492,12 @@
         var d = new Date().toISOString().slice(0, 10);
         window.ReportEngine.run('comms-summary', { date: d });
       })();
+      return true;
+    }
+
+    if (action === 'cm-page') {
+      window._commsPage = parseInt(dataset.page, 10) || 1;
+      if (window.render) window.render();
       return true;
     }
 

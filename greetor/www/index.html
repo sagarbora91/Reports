@@ -679,6 +679,7 @@ body.locked { overflow: hidden; }
   <div id="toast" class="toast" hidden></div>
 
   <script src="shell.js"></script>
+  <script src="paginate.js"></script>
   <script src="masters.js"></script>
   <script src="masters-ui.js"></script>
   <script src="customers.js"></script>
@@ -2189,12 +2190,10 @@ async function renderAuditLog() {
   // the viewer wants newest-first, so reverse a copy for display.
   const all = await Repo.auditLog.all();
   const log = (Array.isArray(all) ? all : []).slice().reverse();
-  const A_CAP = 200;
-  const auditMore = log.length > A_CAP
-    ? `<div class="muted tiny" style="padding:10px;text-align:center">Showing latest ${A_CAP} of ${log.length} events — export PDF/CSV for the full log.</div>`
-    : "";
+  if (window._auditPage === undefined) window._auditPage = 1;
+  const aInfo = window.Paginate ? window.Paginate.page(log, window._auditPage) : { items: log.slice(0, 5), page: 1, pages: 1, total: log.length };
   const rows = log.length
-    ? auditMore + log.slice(0, A_CAP).map(e => {
+    ? aInfo.items.map(e => {
         const when = new Date(e.at);
         const ts = isNaN(when.getTime()) ? e.at : when.toLocaleString("en-IN");
         return `
@@ -2205,7 +2204,7 @@ async function renderAuditLog() {
             </div>
             <div class="entry-meta tiny muted">${escapeHtml(ts)} · ${escapeHtml(e.userName || "system")}${e.role ? " (" + escapeHtml(roleLabel(e.role)) + ")" : ""}</div>
           </div>`;
-      }).join("")
+      }).join("") + (window.Paginate ? window.Paginate.controls(aInfo, "audit-page") : "")
     : `<div class="empty-state"><div class="icon">🗒️</div><h3>No activity yet</h3>
          <p class="muted">Every create, edit, delete and conversion will appear here.</p></div>`;
   return `
@@ -2278,6 +2277,7 @@ async function renderSettings(auth) {
       <h3>My store</h3>
       <p>Set your default store — Capture wizard pre-fills it.</p>
       ${chipGroup("my_store", ["(none)"].concat(storeNames), AppState.my_store || "(none)", { action: "set-my-store" })}
+      ${canEditMasters(auth) ? `<div class="spacer-8"></div><button class="btn btn-secondary btn-full" data-action="m-open" data-view="stores" style="min-height:44px;">Manage stores — add / enable / disable ›</button><p class="field-hint">Disabled stores disappear from capture, footfall &amp; this picker.</p>` : ""}
     </div>
 
     ${canEditMasters(auth) ? `
@@ -2872,6 +2872,7 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (action === "export-audit-log") { await exportAuditLogCSV(); return; }
+  if (action === "audit-page") { window._auditPage = parseInt(a.dataset.page, 10) || 1; await render(); return; }
   if (action === "export-audit-log-pdf") { if (window.ReportEngine) window.ReportEngine.run("audit-log", {}); return; }
 
   // Leads tab — delegate customer/pipeline actions to their UI modules

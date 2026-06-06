@@ -3,6 +3,8 @@
 (function () {
   'use strict';
 
+  if (window._custPage === undefined) window._custPage = 1;
+
   /* ── helpers ─────────────────────────────────────────────────────────── */
 
   function fmt91(mobile) {
@@ -56,9 +58,7 @@
       return '<div class="empty-state"><div class="icon">👥</div>' +
         '<h3>No customers yet</h3><p class="muted">Walk-ins will appear here.</p></div>';
     }
-    var _CAP = 150, _tot = customers.length;
-    var _note = _tot > _CAP ? '<div class="muted tiny" style="padding:10px;text-align:center">Showing first ' + _CAP + ' of ' + _tot + ' customers — use search to narrow.</div>' : '';
-    return customers.slice(0, _CAP).map(function (c) {
+    return customers.map(function (c) {
       var name = safeEscape(c.name || 'Unnamed');
       var storeList = safeEscape((c.stores || []).join(', '));
       var ago = c.lastVisitAgoDays != null ? c.lastVisitAgoDays + 'd ago' : '—';
@@ -78,7 +78,19 @@
         safeEscape(ago) + ' · ' + storeList +
         '</div>' +
         '</div>';
-    }).join('') + _note;
+    }).join('');
+  }
+
+  // Builds the #custList INNER html (page slice + Prev/Next controls) from the
+  // FULL filtered customers array. Used by BOTH renderList (initial paint) and
+  // onSearch (incremental repaint) so pagination + search/sort stay consistent
+  // and the controls live INSIDE #custList. Resets to page 1 when the filter
+  // key (sort|search) changes.
+  function buildListInner(customers) {
+    var key = (window._custSort || 'recent') + '|' + (window._custSearch || '');
+    if (window._custPageKey !== key) { window._custPage = 1; window._custPageKey = key; }
+    var info = window.Paginate.page(customers, window._custPage);
+    return buildRows(info.items) + window.Paginate.controls(info, 'c-page');
   }
 
   async function renderList() {
@@ -103,7 +115,7 @@
       ' value="' + safeEscape(search) + '">' +
       '</div>' +
       '<div class="chip-group" style="margin-bottom:12px">' + sortChips + '</div>' +
-      '<div id="custList">' + buildRows(customers) + '</div>';
+      '<div id="custList">' + buildListInner(customers) + '</div>';
   }
 
   /* ── detail helpers ───────────────────────────────────────────────────── */
@@ -230,7 +242,7 @@
       var sort = window._custSort || 'recent';
       try {
         var customers = await Customers.list({ search: val, sort: sort });
-        el.innerHTML = buildRows(customers);
+        el.innerHTML = buildListInner(customers);
       } catch (e) {
         el.innerHTML = '<div class="muted">Could not load customers.</div>';
       }
@@ -264,6 +276,11 @@
           if (!mobile) { if (typeof toast === 'function') toast('No customer selected'); return; }
           window.ReportEngine.run('customer-history', { mobile: mobile });
         })();
+        return true;
+      }
+      if (action === 'c-page') {
+        window._custPage = parseInt(dataset.page, 10) || 1;
+        if (window.render) window.render();
         return true;
       }
       return false;

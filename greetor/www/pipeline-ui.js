@@ -102,6 +102,13 @@
       return html;
     },
 
+    // Search-box input handler. Stores the query in a window.* var and fires the
+    // host's full re-render (which rebuilds the filtered, paginated board).
+    onSearch: function (val) {
+      window._pipeSearch = val;
+      if (window.render) window.render();
+    },
+
     _buildHtml: async function () {
       if (typeof window.Customers === 'undefined') {
         return '<p class="muted" style="padding:24px">Loading…</p>';
@@ -115,6 +122,16 @@
         window._pipelineInit = true;
         window.pipelineCollapsed['Converted'] = true;
         window.pipelineCollapsed['Closed'] = true;
+      }
+
+      // Lazy init search + per-stage page state
+      if (typeof window._pipePage === 'undefined') window._pipePage = {};
+      if (typeof window._pipeSearch === 'undefined') window._pipeSearch = '';
+
+      // Filter-key reset: changing the search jumps every stage back to page 1.
+      if (window._pipePageKey !== (window._pipeSearch || '')) {
+        window._pipePage = {};
+        window._pipePageKey = (window._pipeSearch || '');
       }
 
       var pipeline = await window.Customers.pipeline();
@@ -139,10 +156,23 @@
         '<button class="btn btn-secondary" data-action="p-export-board" style="min-height:44px">&#128196; Export PDF</button>' +
       '</div>';
 
+      // Search box: filters leads by customer name OR mobile across all stages.
+      html += '<div class="field" style="margin:8px 0;"><input type="search" id="pipeSearch" placeholder="Search name or mobile" oninput="window.PipelineUI.onSearch(this.value)" value="' + escapeHtml(window._pipeSearch || '') + '" style="width:100%;"></div>';
+
+      var q = String(window._pipeSearch || '').trim().toLowerCase();
+
       pipeline.forEach(function (group) {
         var stage = group.stage;
-        var count = group.count;
         var records = group.records || [];
+        // When searching, filter each stage's records by name OR mobile and use
+        // the filtered list (+ its length) as the stage's shown count.
+        if (q) {
+          records = records.filter(function (r) {
+            return (String(r.customerName || '').toLowerCase().indexOf(q) >= 0) ||
+                   (String(r.mobile || '').indexOf(q) >= 0);
+          });
+        }
+        var count = records.length;
         var collapsed = !!window.pipelineCollapsed[stage];
         var pillClass = stagePillClass(stage);
 
@@ -172,15 +202,17 @@
 
         if (!collapsed) {
           if (records.length === 0) {
-            html += '<div class="muted tiny" style="padding:8px 12px">No leads in this stage</div>';
+            // With a search active, an empty filtered list means no matches in
+            // this stage; otherwise the stage simply has no leads.
+            html += '<div class="muted tiny" style="padding:8px 12px">' + (q ? 'No matches' : 'No leads in this stage') + '</div>';
           } else {
-            var P_CAP = 30;
-            records.slice(0, P_CAP).forEach(function (r) {
+            // Paginate this stage's (possibly filtered) records, 5 per page.
+            var ppage = (window._pipePage && window._pipePage[stage]) || 1;
+            var info = window.Paginate.page(records, ppage);
+            info.items.forEach(function (r) {
               html += renderCard(r);
             });
-            if (records.length > P_CAP) {
-              html += '<div class="muted tiny" style="padding:8px 12px">+ ' + (records.length - P_CAP) + ' more in ' + escapeHtml(stage) + ' — use Reports for the full list.</div>';
-            }
+            html += window.Paginate.controls(info, 'p-page', ' data-stage="' + escapeHtml(stage) + '"');
           }
         }
 
@@ -292,6 +324,14 @@
           }
           window.ReportEngine.run('lead-pipeline', {});
         })();
+        return true;
+      }
+
+      if (action === 'p-page') {
+        var st = dataset.stage;
+        if (!window._pipePage) window._pipePage = {};
+        window._pipePage[st] = parseInt(dataset.page, 10) || 1;
+        if (window.render) window.render();
         return true;
       }
 
