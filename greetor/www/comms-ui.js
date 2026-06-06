@@ -256,7 +256,10 @@
     }).join('');
 
     var outLog = '<div style="padding:0 16px 80px;">'
-      + '<h2 style="margin:0;padding:16px 0 12px;">Message Log</h2>'
+      + '<div class="row-spread" style="align-items:center;padding:16px 0 12px;">'
+      + '<h2 style="margin:0;">Message Log</h2>'
+      + '<button class="btn btn-ghost" data-action="cm-export-summary" style="min-height:44px;">📄 Export PDF</button>'
+      + '</div>'
       + cards
       + '</div>';
     var elLog = document.getElementById('screen');
@@ -478,6 +481,15 @@
         toast('Clipboard not available');
       }
       toast('Copied');
+      return true;
+    }
+
+    if (action === 'cm-export-summary') {
+      (function () {
+        if (!window.ReportEngine || !window.ReportEngine.run) { if (typeof toast === 'function') toast('Reports not ready yet'); return; }
+        var d = new Date().toISOString().slice(0, 10);
+        window.ReportEngine.run('comms-summary', { date: d });
+      })();
       return true;
     }
 

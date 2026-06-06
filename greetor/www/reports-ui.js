@@ -219,6 +219,7 @@
     html += '<button class="btn btn-secondary" data-action="r-export-visits" style="flex:1;min-height:44px;font-size:13px;">Export Visits CSV</button>';
     html += '<button class="btn btn-secondary" data-action="r-export-summary" style="flex:1;min-height:44px;font-size:13px;">Export Daily Summary</button>';
     html += '</div>';
+    html += '<button class="btn btn-secondary btn-full" data-action="rep-pick" style="min-height:48px;margin-bottom:16px;border:1px solid #c99a2e;color:#0b1f3a;font-weight:700;">📄 Export PDF Report</button>';
 
     // ── Breakdowns ──
     var breakdownFields = [

@@ -711,6 +711,12 @@ body.locked { overflow: hidden; }
        gate + one-txn insert + read-back verify). Uses DBSchema + GreetorDB, so it
        MUST load after the three above and before the inline boot() that calls it. -->
   <script src="migrate.js"></script>
+  <!-- Report engine (PDF): defs (declarative) + engine (pdfmake + pdf.js, lazy-loaded
+       on first use) + picker UI. Loaded after repo.js + all data layers; they resolve
+       Repo/Reports/Targets/etc. lazily at call time. pdfmake/pdf.js are dynamic-injected. -->
+  <script src="report-defs.js"></script>
+  <script src="report-engine.js"></script>
+  <script src="report-ui.js"></script>
   <script>
 "use strict";
 
@@ -2202,7 +2208,8 @@ async function renderAuditLog() {
     <div class="card">
       <h2>Audit log</h2>
       <p class="card-muted">${log.length} event(s) recorded. Append-only — entries can't be edited or removed, even by the Owner. Deleted records keep a full snapshot.</p>
-      ${log.length ? `<button class="btn btn-secondary btn-full" data-action="export-audit-log">Export audit log CSV</button>` : ""}
+      ${log.length ? `<button class="btn btn-secondary btn-full" data-action="export-audit-log">Export audit log CSV</button>
+      <button class="btn btn-secondary btn-full" data-action="export-audit-log-pdf">Export audit log PDF</button>` : ""}
     </div>
     ${rows}
   `;
@@ -2861,6 +2868,7 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (action === "export-audit-log") { await exportAuditLogCSV(); return; }
+  if (action === "export-audit-log-pdf") { if (window.ReportEngine) window.ReportEngine.run("audit-log", {}); return; }
 
   // Leads tab — delegate customer/pipeline actions to their UI modules
   if (action.indexOf("c-") === 0) {
@@ -2871,6 +2879,10 @@ document.addEventListener("click", async (e) => {
   }
   if (action.indexOf("r-") === 0) {
     if (window.ReportsUI && window.ReportsUI.handleAction(action, a.dataset)) return;
+  }
+  // PDF report picker/preview — rep-* actions (note: "rep-" does not match "r-").
+  if (action.indexOf("rep-") === 0) {
+    if (window.ReportUI && window.ReportUI.handleAction(action, a.dataset)) return;
   }
   // Communication — templates/log screens are host-routed; the rest delegate.
   if (action === "cm-open-templates") {

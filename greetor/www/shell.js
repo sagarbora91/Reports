@@ -150,6 +150,87 @@
   }
 
   // ---------------------------------------------------------------------
+  // Lazy <script> loader — resolves when the script has loaded, rejects on
+  // error. Cached by src so concurrent callers share one load and a script is
+  // never injected twice (used to pull in a PDF library only when needed).
+  // ---------------------------------------------------------------------
+
+  var _loaded = {};
+  function loadScript(src) {
+    if (_loaded[src]) return _loaded[src];
+    var p = new Promise(function (resolve, reject) {
+      var el = document.createElement('script');
+      el.src = src;
+      el.async = false;
+      el.onload = resolve;
+      el.onerror = function () { reject(new Error('Failed to load ' + src)); };
+      document.head.appendChild(el);
+    });
+    _loaded[src] = p;
+    return p;
+  }
+
+  // ---------------------------------------------------------------------
+  // PDF export — same device/web split as exportFile, but writes RAW base64
+  // (binary) so the PDF isn't corrupted by utf8 encoding. On device we write
+  // to the Data directory and open the native share sheet; on a browser we
+  // decode to a Blob and trigger a download.
+  // Returns a promise resolving to { ok, via } or { ok:false, cancelled|error }.
+  // ---------------------------------------------------------------------
+
+  function sanitizePdfName(filename) {
+    var name = String(filename == null ? '' : filename)
+      .replace(/[\/\\:?|*"\x00-\x1f]/g, '_')
+      .replace(/\s+/g, '_');
+    if (!/\.pdf$/i.test(name)) name += '.pdf';
+    return name;
+  }
+
+  async function exportPdf(filename, base64) {
+    filename = sanitizePdfName(filename);
+    if (isNative()) {
+      const FS = plugin('Filesystem');
+      const Sh = plugin('Share');
+      if (FS && Sh) {
+        try {
+          await FS.writeFile({
+            path: filename,
+            data: base64,
+            directory: 'DATA',   // Directory.Data — raw base64, NO encoding (binary)
+            recursive: true,
+          });
+          const uriRes = await FS.getUri({ path: filename, directory: 'DATA' });
+          const uri = uriRes.uri;
+          await Sh.share({
+            title: filename,
+            url: uri,
+            dialogTitle: 'Save or share report',
+          });
+          return { ok: true, via: 'share' };
+        } catch (err) {
+          const msg = (err && (err.message || err.errorMessage) || '').toLowerCase();
+          if (msg.indexOf('cancel') !== -1) return { ok: false, cancelled: true };
+          return { ok: false, error: String(err) };
+        }
+      }
+    }
+    try {
+      const bin = atob(base64);
+      const bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      return { ok: true, via: 'download' };
+    } catch (e) {
+      return { ok: false, error: String(e) };
+    }
+  }
+
+  // ---------------------------------------------------------------------
   // Durable state file — survives WebView localStorage eviction.
   // localStorage stays the fast synchronous working copy; every save
   // write-throughs (debounced) to a JSON file in the app's Data directory.
@@ -288,6 +369,8 @@
     scheduleFollowupReminder: scheduleFollowupReminder,
     cancelFollowupReminder: cancelFollowupReminder,
     exportFile: exportFile,
+    loadScript: loadScript,
+    exportPdf: exportPdf,
     durableRead: durableRead,
     durableWrite: durableWrite,
     isBackupReminderEnabled: isBackupReminderEnabled,

@@ -53,12 +53,10 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
-      - name: Copy sql.js WASM to www/assets (web/preview engine)
+      - name: Copy offline libs to www/assets (sql.js + pdfmake + pdf.js)
         run: |
-          mkdir -p www/assets
-          cp node_modules/sql.js/dist/sql-wasm.js   www/assets/sql-wasm.js
-          cp node_modules/sql.js/dist/sql-wasm.wasm www/assets/sql-wasm.wasm
-          ls -lh www/assets/sql-wasm.js www/assets/sql-wasm.wasm
+          npm run copy-wasm
+          ls -lh www/assets/
 
       - name: QA - SQLite schema integrity (node:sqlite)
         run: node --experimental-sqlite scripts/qa-db-schema.cjs

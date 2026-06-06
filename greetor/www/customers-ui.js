@@ -172,6 +172,8 @@
         : '') +
       '<button class="btn btn-secondary entry-action" data-action="call-customer"' +
       ' data-mobile="' + safeEscape(c.mobile) + '">Call</button>' +
+      '<button class="btn btn-secondary entry-action" data-action="c-export-profile"' +
+      ' data-mobile="' + safeEscape(c.mobile) + '">📄 Export PDF</button>' +
       '</div>' +
       '</div>' +
 
@@ -251,6 +253,15 @@
       if (action === 'c-sort') {
         window._custSort = dataset.sort || 'recent';
         if (window.render) window.render();
+        return true;
+      }
+      if (action === 'c-export-profile') {
+        var mobile = dataset.mobile;
+        (function () {
+          if (!window.ReportEngine || !window.ReportEngine.run) { if (typeof toast === 'function') toast('Reports not ready yet'); return; }
+          if (!mobile) { if (typeof toast === 'function') toast('No customer selected'); return; }
+          window.ReportEngine.run('customer-history', { mobile: mobile });
+        })();
         return true;
       }
       return false;

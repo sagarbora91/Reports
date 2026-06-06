@@ -132,6 +132,13 @@
 
       var html = '';
 
+      // Board header: title + board-level actions (Export PDF). Rides the
+      // host's existing p-* delegation via PipelineUI.handleAction.
+      html += '<div class="row-spread" style="margin:0 0 8px;align-items:center">' +
+        '<span style="font-weight:700">Lead pipeline</span>' +
+        '<button class="btn btn-secondary" data-action="p-export-board" style="min-height:44px">&#128196; Export PDF</button>' +
+      '</div>';
+
       pipeline.forEach(function (group) {
         var stage = group.stage;
         var count = group.count;
@@ -270,6 +277,17 @@
             if (typeof toast === 'function') toast('Could not move lead');
           }
         }());
+        return true;
+      }
+
+      if (action === 'p-export-board') {
+        (function () {
+          if (!window.ReportEngine || !window.ReportEngine.run) {
+            if (typeof toast === 'function') toast('Reports not ready yet');
+            return;
+          }
+          window.ReportEngine.run('lead-pipeline', {});
+        })();
         return true;
       }
 
