@@ -56,7 +56,9 @@
       return '<div class="empty-state"><div class="icon">👥</div>' +
         '<h3>No customers yet</h3><p class="muted">Walk-ins will appear here.</p></div>';
     }
-    return customers.map(function (c) {
+    var _CAP = 150, _tot = customers.length;
+    var _note = _tot > _CAP ? '<div class="muted tiny" style="padding:10px;text-align:center">Showing first ' + _CAP + ' of ' + _tot + ' customers — use search to narrow.</div>' : '';
+    return customers.slice(0, _CAP).map(function (c) {
       var name = safeEscape(c.name || 'Unnamed');
       var storeList = safeEscape((c.stores || []).join(', '));
       var ago = c.lastVisitAgoDays != null ? c.lastVisitAgoDays + 'd ago' : '—';
@@ -76,7 +78,7 @@
         safeEscape(ago) + ' · ' + storeList +
         '</div>' +
         '</div>';
-    }).join('');
+    }).join('') + _note;
   }
 
   async function renderList() {

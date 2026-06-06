@@ -242,7 +242,10 @@
       return empty;
     }
 
-    var cards = entries.map(function (e) {
+    var C_CAP = 150;
+    var commsTotal = entries.length;
+    var commsMore = commsTotal > C_CAP ? '<div class="muted tiny" style="padding:10px;text-align:center">Showing latest ' + C_CAP + ' of ' + commsTotal + ' messages — export PDF for the full log.</div>' : '';
+    var cards = entries.slice(0, C_CAP).map(function (e) {
       var header = esc(e.customerName || e.mobile || '—');
       var meta = channelPill(e.channel) + ' <span class="muted tiny">' + esc(fmtTs(e.timestamp || e.sentAt || '')) + '</span>';
       if (e.templateName) meta += ' <span class="muted tiny">· ' + esc(e.templateName) + '</span>';
@@ -260,7 +263,7 @@
       + '<h2 style="margin:0;">Message Log</h2>'
       + '<button class="btn btn-ghost" data-action="cm-export-summary" style="min-height:44px;">📄 Export PDF</button>'
       + '</div>'
-      + cards
+      + commsMore + cards
       + '</div>';
     var elLog = document.getElementById('screen');
     if (elLog) elLog.innerHTML = outLog;

@@ -2189,8 +2189,12 @@ async function renderAuditLog() {
   // the viewer wants newest-first, so reverse a copy for display.
   const all = await Repo.auditLog.all();
   const log = (Array.isArray(all) ? all : []).slice().reverse();
+  const A_CAP = 200;
+  const auditMore = log.length > A_CAP
+    ? `<div class="muted tiny" style="padding:10px;text-align:center">Showing latest ${A_CAP} of ${log.length} events — export PDF/CSV for the full log.</div>`
+    : "";
   const rows = log.length
-    ? log.map(e => {
+    ? auditMore + log.slice(0, A_CAP).map(e => {
         const when = new Date(e.at);
         const ts = isNaN(when.getTime()) ? e.at : when.toLocaleString("en-IN");
         return `
@@ -3466,6 +3470,27 @@ async function boot() {
     if (window.Targets) await window.Targets.ensureSeeded();
     if (window.Footfall) await window.Footfall.ensureSeeded();
   } catch (e) { console.warn("ensureSeeded skipped", e); }
+
+  // 4b. DEMO seed (demo build only): if a demo dataset is bundled (window.DEMO_SEED
+  //     from seed-data.js) and the DB has no records yet, load it straight into
+  //     SQLite. Direct bulkInsert bypasses the ~5MB localStorage quota the old
+  //     localStorage→migration seed path hit at 1-year scale (~11MB). No-op on
+  //     production (seed-data.js absent → window.DEMO_SEED undefined).
+  try {
+    if (window.DEMO_SEED) {
+      const _seedCnt = await Repo.query("SELECT COUNT(*) AS n FROM records", []);
+      const _seedN = (_seedCnt && _seedCnt[0] && _seedCnt[0].n) || 0;
+      if (!_seedN) {
+        const _sm = document.createElement("div");
+        _sm.id = "demo-seed-msg";
+        _sm.setAttribute("style", "position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#0b1f3a;color:#fff;font:600 16px system-ui,sans-serif;text-align:center;padding:24px;line-height:1.5;");
+        _sm.textContent = "Preparing demo data — one-time setup, this may take a few seconds…";
+        document.body.appendChild(_sm);
+        try { await loadStateIntoDB(window.DEMO_SEED); }
+        finally { const _m = document.getElementById("demo-seed-msg"); if (_m && _m.parentNode) _m.parentNode.removeChild(_m); }
+      }
+    }
+  } catch (e) { console.warn("demo seed load skipped", e); }
 
   // 5. Hydrate AppState (users + settings) from the DB so the sync auth gate works.
   try {

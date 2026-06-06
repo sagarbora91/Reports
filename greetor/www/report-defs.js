@@ -1231,12 +1231,19 @@
     toDocDef: function (data, opts) {
       data = data || {};
       var entries = Array.isArray(data.entries) ? data.entries : [];
-      var label = tr(opts, "all_events", "All events") + " (" + entries.length + ")";
-      if (!entries.length) {
+      // Cap to the most-recent N so the PDF stays shareable on a phone (4,000+
+      // events would otherwise be ~160 pages / >1MB). entries are newest-first.
+      var CAP = 500;
+      var total = entries.length;
+      var shown = entries.slice(0, CAP);
+      var label = total > CAP
+        ? ("Latest " + CAP + " of " + total + " events")
+        : (tr(opts, "all_events", "All events") + " (" + total + ")");
+      if (!shown.length) {
         return buildDoc(this.name, label, [emptyBlock(opts)], opts);
       }
       var headers = ["Timestamp", "User", "Role", "Action", "Summary"];
-      var rows = entries.map(function (e) {
+      var rows = shown.map(function (e) {
         return [
           safeStr(e.at),
           safeStr(e.userName),

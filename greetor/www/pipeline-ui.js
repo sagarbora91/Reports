@@ -174,9 +174,13 @@
           if (records.length === 0) {
             html += '<div class="muted tiny" style="padding:8px 12px">No leads in this stage</div>';
           } else {
-            records.forEach(function (r) {
+            var P_CAP = 30;
+            records.slice(0, P_CAP).forEach(function (r) {
               html += renderCard(r);
             });
+            if (records.length > P_CAP) {
+              html += '<div class="muted tiny" style="padding:8px 12px">+ ' + (records.length - P_CAP) + ' more in ' + escapeHtml(stage) + ' — use Reports for the full list.</div>';
+            }
           }
         }
 
