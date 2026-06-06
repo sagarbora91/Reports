@@ -147,3 +147,5 @@ const out = "// AUTO-GENERATED demo data — 40 walk-ins/day x 365 days. Do NOT 
 fs.writeFileSync(path.join(__dirname, "..", "www", "seed-data.js"), out);
 const mb = (out.length / 1048576).toFixed(2);
 console.log("WROTE www/seed-data.js  records=" + records.length + " audit=" + auditLog.length + " comms=" + commsLog.length + " footfall=" + Object.keys(footfallEntries).length + " size=" + mb + "MB");
+
+// ci: re-trigger seeded build
