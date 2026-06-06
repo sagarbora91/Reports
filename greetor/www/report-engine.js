@@ -354,12 +354,33 @@
   // Guards against double-tap with a _busy flag. Callers invoke this from inside
   // the existing sync-boolean handleAction IIFE pattern, so returning a promise
   // is fine (it's fire-and-forget there).
+  // ── busy overlay ───────────────────────────────────────────────────────────
+  // Lightweight full-screen "Generating…" cue shown while libs load + the PDF is
+  // built (the FIRST tap lazy-loads ~2.3MB of libs — a few seconds), so the tap
+  // never reads as a frozen screen. Removed the instant the preview opens / errors.
+  function showBusy(label) {
+    hideBusy();
+    var o = document.createElement("div");
+    o.id = "report-busy";
+    o.setAttribute("style", "position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(11,31,58,0.55);");
+    o.innerHTML = '<div style="background:#0b1f3a;color:#fff;padding:18px 24px;border-radius:12px;font:600 15px system-ui,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.4);display:flex;align-items:center;gap:12px;">' +
+      '<span style="width:18px;height:18px;border:3px solid #c99a2e;border-top-color:transparent;border-radius:50%;display:inline-block;animation:repspin .8s linear infinite;"></span>' +
+      '<span>' + (label || "Generating report…") + '</span></div>' +
+      '<style>@keyframes repspin{to{transform:rotate(360deg)}}</style>';
+    document.body.appendChild(o);
+  }
+  function hideBusy() {
+    var o = document.getElementById("report-busy");
+    if (o && o.parentNode) o.parentNode.removeChild(o);
+  }
+
   function run(defId, ctx) {
     if (ReportEngine._busy) {
       toast("Generating…");
       return Promise.resolve();
     }
     ReportEngine._busy = true;
+    showBusy();
 
     return (async function () {
       try {
@@ -368,6 +389,7 @@
         var def = window.ReportDefs && window.ReportDefs[defId];
         var filename = "saagar_greetor_" + defId + "_" + stamp + ".pdf";
 
+        hideBusy();
         await preview(bytes.uint8, {
           name: (def && def.name) || defId,
           base64: bytes.base64,
@@ -388,6 +410,7 @@
         console.error("[ReportEngine]", e);
         toast("Could not generate report");
       } finally {
+        hideBusy();
         ReportEngine._busy = false;
       }
     })();
