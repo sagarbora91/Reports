@@ -117,6 +117,46 @@
     return window._pdfLibsPromise;
   }
 
+  // ── text sanitisation (emoji / unsupported glyphs) ──────────────────────────
+  // Roboto (pdfmake's only embedded font) can't render emoji or most pictographs.
+  function sanitizePdfText(s) {
+    if (typeof s !== "string" || !s) return s;
+    return s
+      .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, "")        // astral-plane pairs (most emoji)
+      .replace(/[☀-➿⬀-⯿⌀-⏿]/g, "") // misc symbols / dingbats / technical
+      .replace(/[︀-️‍⃣]/g, "");          // variation selectors, ZWJ, keycap
+  }
+  // Walk a pdfmake docDefinition in place: sanitise object `text` props and any
+  // raw string cells inside arrays (table bodies). Leaves colors/widths/numbers.
+  function sanitizeDocDef(node) {
+    if (Array.isArray(node)) {
+      for (var i = 0; i < node.length; i++) {
+        if (typeof node[i] === "string") node[i] = sanitizePdfText(node[i]);
+        else sanitizeDocDef(node[i]);
+      }
+      return;
+    }
+    if (node && typeof node === "object") {
+      Object.keys(node).forEach(function (k) {
+        if (k === "text" && typeof node[k] === "string") node[k] = sanitizePdfText(node[k]);
+        else if (typeof node[k] === "object") sanitizeDocDef(node[k]);
+      });
+    }
+  }
+
+  // ── render timeout helper ────────────────────────────────────────────────────
+  function withTimeout(promise, ms, label) {
+    return new Promise(function (resolve, reject) {
+      var to = setTimeout(function () {
+        reject(new Error((label || "operation") + " timed out"));
+      }, ms);
+      promise.then(
+        function (v) { clearTimeout(to); resolve(v); },
+        function (e) { clearTimeout(to); reject(e); }
+      );
+    });
+  }
+
   // ── buildDocBytes ────────────────────────────────────────────────────────--
   // Resolve a ReportDef, fetch its data, turn it into a pdfmake docDefinition,
   // then generate the document bytes ONCE. We get base64 from pdfmake and derive
@@ -140,6 +180,11 @@
       };
 
       var docDef = def.toDocDef(data, opts);
+      // pdfmake's embedded Roboto font has no emoji/pictograph glyphs — leaving
+      // them in can blank-box or throw during layout. Strip astral-plane chars
+      // (most emoji), misc symbol/dingbat blocks, variation selectors and ZWJ
+      // from all rendered text. Latin + Devanagari (Marathi, U+0900-097F) survive.
+      try { sanitizeDocDef(docDef); } catch (_) {}
 
       return new Promise(function (resolve, reject) {
         try {
@@ -325,7 +370,9 @@
           body.appendChild(canvas);
 
           var ctx2d = canvas.getContext("2d");
-          await page.render({ canvasContext: ctx2d, viewport: viewport }).promise;
+          // 15s per-page timeout so a hung pdf.js worker can't leave the preview
+          // spinning forever — the page is skipped and the loop moves on.
+          await withTimeout(page.render({ canvasContext: ctx2d, viewport: viewport }).promise, 15000, "page " + pageNum);
 
           if (myToken !== renderToken) return; // closed during render -> stop
         } catch (e) {
@@ -408,7 +455,7 @@
         });
       } catch (e) {
         console.error("[ReportEngine]", e);
-        toast("Could not generate report");
+        toast("Could not generate report: " + (e && e.message ? e.message : e));
       } finally {
         hideBusy();
         ReportEngine._busy = false;
@@ -423,6 +470,7 @@
     ensureLibs: ensureLibs,
     buildDocBytes: buildDocBytes,
     preview: preview,
+    teardownPreview: teardownPreview,   // so hardware-back can close the overlay
     run: run
   };
 

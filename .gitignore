@@ -14,8 +14,15 @@ ios/
 build/
 dist/
 
-# SQLite web/preview engine — sql.js wasm is CI-generated (npm run copy-wasm), never committed
-greetor/www/assets/
+# SQLite web/preview engine — sql.js wasm is CI-generated (npm run copy-wasm), never
+# committed. Ignore only the generated files (not the whole assets/ dir, so static
+# assets like self-hosted fonts CAN be committed for offline branding).
+greetor/www/assets/sql-wasm.js
+greetor/www/assets/sql-wasm.wasm
+greetor/www/assets/pdfmake.min.js
+greetor/www/assets/vfs_fonts.js
+greetor/www/assets/pdf.min.js
+greetor/www/assets/pdf.worker.min.js
 
 # OS
 .DS_Store

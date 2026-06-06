@@ -194,9 +194,11 @@
     }
 
     if (photosToRemove.length && typeof root !== "undefined" && root.Photo && typeof root.Photo.remove === "function") {
-      for (var ri = 0; ri < photosToRemove.length; ri++) {
-        try { root.Photo.remove(photosToRemove[ri]); } catch (_) {}
-      }
+      // Await all file deletions (best-effort) so a photo file can't survive past
+      // the retention window if the app is killed mid-purge (orphan-file race).
+      try {
+        await Promise.allSettled(photosToRemove.map(function (p) { return root.Photo.remove(p); }));
+      } catch (_) {}
     }
 
     // Delete the doomed rows. The WHERE predicate is byte-identical to the JS

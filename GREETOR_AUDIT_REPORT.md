@@ -375,6 +375,34 @@ Not present — not needed:
 
 ---
 
+## Round 2 — All remaining issues fixed
+
+After the first round, a second pass closed every open High/Medium/Low item:
+
+| # | Issue | File | Fix |
+|---|---|---|---|
+| O4 | Photo write failure silent | photo.js | Toast "Low storage — photo saved in a reduced way" on native FS failure |
+| O5 | Wizard Next no double-tap guard | index.html | `a.disabled` wrapper around the async dedup/render path |
+| M1 | `today()` UTC vs IST midnight | index.html | Switched to local `getFullYear/Month/Date` (now matches reports.js) |
+| M2 | Remarks no maxlength | index.html | `maxlength="2000"` on the textarea |
+| M3 | Emoji crashes pdfmake | report-engine.js | `sanitizeDocDef()` strips astral/emoji/symbol glyphs before layout (Latin + Devanagari preserved) |
+| M4 | Android back mid-wizard | shell.js + index.html | Removed SPA-breaking `history.back()`; `goBack()` now also closes the PDF preview overlay |
+| M5 | PIN lockout in-memory | index.html | `LoginGuard` persists attempts/lockedUntil to localStorage (survives force-quit) |
+| M6 | Customer History GREETOR label | report-defs.js | "My sale (this customer)" / "My visits" for GREETOR role |
+| M7 | Footfall report empty note | report-defs.js | Adds "set daily footfall in Settings…" note when no estimates entered |
+| M8 | Photo.remove not awaited | index.html + dpdp.js | `await Promise.allSettled(...)` on all photo deletions |
+| Q1 | renderToday full-table scan | index.html + repo.js | New `Repo.records.byDate()` + `countHot()` / `countFollowPending()` indexed queries |
+| Q5 | range-summary 5 redundant scans | report-defs.js | Always aggregates via pure transforms on the single pre-fetched window (byte-identical) |
+| L1 | Google Fonts CDN | index.html + assets/fonts/ | Self-hosted DM Sans + DM Serif Display WOFF2 (~91 KB) — fully offline |
+| L3 | PDF preview hang | report-engine.js | 15 s per-page render timeout |
+| L4 | Generic report error | report-engine.js | Shows the real error message |
+
+**Verified:** all 3 QA harnesses pass (schema 30/30, migration 21/21, data-layer byte-identity 73/73); every edited JS file + the inline index.html script syntax-check clean.
+
+**Not changed (by design):** Targets reports each do a single full scan per PDF action behind a "Generating…" spinner — acceptable, not on an interactive hot path. The DPDP/Marathi PDF rendering depends on Roboto's glyph coverage (pre-existing, out of scope).
+
+---
+
 ## "Ready to Publish?" Verdict
 
 **YES — ready for internal testing build.**

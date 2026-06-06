@@ -111,6 +111,27 @@
     return rows.map(S.rowToRecord);
   }
 
+  // Records for a single visitDate (YYYY-MM-DD), ord-ordered. Indexed query
+  // (idx_records_visitDate) so the Today screen never scans the full table.
+  async function recordsByDate(visitDate) {
+    var S = schema();
+    var rows = await query("SELECT * FROM records WHERE visitDate=? ORDER BY ord", [visitDate]);
+    return rows.map(S.rowToRecord);
+  }
+
+  // Lightweight COUNT helpers for dashboard stats — never load full rows.
+  async function recordsCountHot() {
+    var rows = await query("SELECT COUNT(*) AS c FROM records WHERE leadStatus='Hot'", []);
+    return (rows && rows[0] && Number(rows[0].c)) || 0;
+  }
+  async function recordsCountFollowPending() {
+    var rows = await query(
+      "SELECT COUNT(*) AS c FROM records WHERE followUp='Yes' AND leadStatus NOT IN ('Converted','Closed')",
+      []
+    );
+    return (rows && rows[0] && Number(rows[0].c)) || 0;
+  }
+
   // Next ord value (append at the end of current app-order). Kept as a named
   // helper so insert/upsert agree on placement (delegates to nextOrdFor).
   async function nextOrd() {
@@ -435,6 +456,9 @@
       all: recordsAll,
       byId: recordsById,
       byMobile: recordsByMobile,
+      byDate: recordsByDate,
+      countHot: recordsCountHot,
+      countFollowPending: recordsCountFollowPending,
       insert: recordsInsert,
       update: recordsUpdate,
       "delete": recordsDelete,

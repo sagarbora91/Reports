@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b1f3a">
   <title>Saagar Greetor</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Self-hosted fonts (DM Sans + DM Serif Display) — bundled in assets/fonts/
+       so the app renders branded type fully OFFLINE. Previously loaded from the
+       Google Fonts CDN, which failed on first launch with no network. -->
+  <link rel="stylesheet" href="assets/fonts/fonts.css">
   <link rel="stylesheet" href="theme.css">
   <script src="theme.js"></script>
 <style>
@@ -751,7 +752,14 @@ const $ = (id) => document.getElementById(id);
 
 function uuid()  { return "g" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 function uid()   { return "NP-" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,8).toUpperCase(); }
-function today() { return new Date().toISOString().slice(0, 10); }
+function today() {
+  // LOCAL date (not UTC) so a record saved at 11:30 PM IST gets today's local
+  // date — matches reports.js todayStr() which also uses local getFullYear/Month/Date.
+  // (Previously used toISOString() which is UTC and shifted late-night IST saves
+  // to the next calendar day, hiding them from the "today" range.)
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
 function nowTime() {
   const d = new Date();
   return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
@@ -1106,19 +1114,38 @@ window.onBackupReminderToggle = async function (on) {
 };
 
 const LoginGuard = {
+  _KEY: "saagar_greetor_lockout",
   attempts: 0,
   lockedUntil: 0,
+  // Hydrate the persisted lock so a force-quit can't bypass the 5-attempt lockout.
+  _load() {
+    try {
+      const raw = localStorage.getItem(this._KEY);
+      if (raw) {
+        const o = JSON.parse(raw);
+        this.attempts = Number(o.attempts) || 0;
+        this.lockedUntil = Number(o.lockedUntil) || 0;
+      }
+    } catch (_) {}
+    return this;
+  },
+  _save() {
+    try {
+      localStorage.setItem(this._KEY, JSON.stringify({ attempts: this.attempts, lockedUntil: this.lockedUntil }));
+    } catch (_) {}
+  },
   register(success) {
-    if (success) { this.attempts = 0; this.lockedUntil = 0; return; }
+    if (success) { this.attempts = 0; this.lockedUntil = 0; this._save(); return; }
     this.attempts++;
     if (this.attempts >= 5) {
       this.lockedUntil = Date.now() + 60 * 1000;
       this.attempts = 0;
     }
+    this._save();
   },
   isLocked() { return this.lockedUntil > Date.now(); },
   secondsLeft() { return Math.max(0, Math.ceil((this.lockedUntil - Date.now()) / 1000)); },
-};
+}._load();
 
 const PinBuf = {
   value: "",
@@ -1463,6 +1490,12 @@ async function switchScreen(name) {
 // Back arrow and the Android hardware back button. Returns true if it handled
 // the navigation (false only at the Capture home, so hardware back can exit).
 function goBack() {
+  // PDF preview overlay is appended to <body> (outside modal-root) — close it first.
+  if (document.getElementById("report-preview-root")) {
+    if (window.ReportEngine && window.ReportEngine.teardownPreview) window.ReportEngine.teardownPreview();
+    else { const el = document.getElementById("report-preview-root"); if (el && el.parentNode) el.parentNode.removeChild(el); }
+    return true;
+  }
   if ($("modal-root").innerHTML) { closeModal(); return true; }
   if (currentScreen === "masters") {
     if ((window.mastersView || "home") !== "home") { window.mastersView = "home"; render(); return true; }
@@ -1958,7 +1991,7 @@ async function renderStep4() {
 
     <div class="field">
       <label class="field-label" for="remarksIn">Remarks</label>
-      <textarea id="remarksIn" data-wizard-field="remarks" placeholder="Customer's exact words if you can">${escapeHtml(d.remarks)}</textarea>
+      <textarea id="remarksIn" data-wizard-field="remarks" maxlength="2000" placeholder="Customer's exact words if you can">${escapeHtml(d.remarks)}</textarea>
     </div>
 
     <div class="field">
@@ -2007,14 +2040,16 @@ async function renderStep4() {
 
 async function renderToday(auth) {
   const todayStr = today();
-  const all = await Repo.records.all();
-  const todayRecs = all.filter(r => r.visitDate === todayStr);
+  // Indexed date query + COUNT helpers instead of a full-table scan — keeps the
+  // home screen fast as the records table grows.
+  const [todayRecs, hotCount, followCount] = await Promise.all([
+    Repo.records.byDate(todayStr),
+    Repo.records.countHot(),
+    Repo.records.countFollowPending(),
+  ]);
   const myRecs = auth.role === "GREETOR"
     ? todayRecs.filter(r => r.createdByUserId === auth.id)
     : todayRecs;
-  // Hot / follow counts stay computed over ALL records (not scoped) — preserved exactly.
-  const hotCount = all.filter(r => r.leadStatus === "Hot").length;
-  const followCount = all.filter(r => r.followUp === "Yes" && !["Converted","Closed"].includes(r.leadStatus)).length;
 
   return `
     <div class="today-hero">
@@ -2676,9 +2711,11 @@ async function deleteRecord(recordId) {
   // face/product photos outlive the record and orphan files accumulate in
   // the app's Data dir past the retention window.
   if (snapshot && Array.isArray(snapshot.photos) && window.Photo && window.Photo.remove) {
-    snapshot.photos.forEach(function (p) {
-      try { window.Photo.remove(p); } catch (_) {}
-    });
+    // Await all file deletions so a photo can't outlive its record if the app is
+    // killed right after the DB delete (orphan-file race). allSettled = best-effort.
+    try {
+      await Promise.allSettled(snapshot.photos.map(function (p) { return window.Photo.remove(p); }));
+    } catch (_) {}
   }
   if (snapshot) {
     const who = snapshot.customerName || snapshot.mobile || "walk-in";
@@ -3032,17 +3069,25 @@ document.addEventListener("click", async (e) => {
       showRequiredPopup(miss);
       return;
     }
-    // Step 2 → check dedup once mobile is entered (async: queries by mobile).
-    if (Wizard.step === 2) {
-      const matches = await dedupMatchesFor(Wizard.data.mobile);
-      if (matches.length && !window._dedupSeen) {
-        window._dedupSeen = Wizard.data.mobile;
-        showDedupModal(matches);
-        return;
+    // Double-tap guard: the dedup check + render below are async, so a rapid
+    // second tap could fire a concurrent dedup query and race the modal. Disable
+    // the button for the duration; re-enable on every early-return / completion.
+    a.disabled = true;
+    try {
+      // Step 2 → check dedup once mobile is entered (async: queries by mobile).
+      if (Wizard.step === 2) {
+        const matches = await dedupMatchesFor(Wizard.data.mobile);
+        if (matches.length && !window._dedupSeen) {
+          window._dedupSeen = Wizard.data.mobile;
+          showDedupModal(matches);
+          return;                                  // modal replaces the savebar
+        }
       }
+      Wizard.step += 1;
+      await render();                              // re-renders a fresh savebar
+    } finally {
+      a.disabled = false;
     }
-    Wizard.step += 1;
-    await render();
     return;
   }
   if (action === "wizard-reset") {

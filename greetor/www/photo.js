@@ -257,6 +257,14 @@
           return { path: fileName, uri: uri || '', src: src };
         }).catch(function (e) {
           console.warn('[Photo] Filesystem error, falling back to dataUrl', e);
+          // Native write failed (commonly: device storage full). Warn the user —
+          // the photo is kept inline as a fallback but that bloats the record, so
+          // they should free up space. Silent failure previously hid this.
+          try {
+            if (typeof window.toast === 'function') {
+              window.toast('Low storage — photo saved in a reduced way. Free up space.');
+            }
+          } catch (_) {}
           return { path: '', uri: jpegDataUrl, src: jpegDataUrl };
         });
       }

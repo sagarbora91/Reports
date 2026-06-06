@@ -561,14 +561,18 @@
           ? reports.filterByRange(scoped, range, cs, ce)
           : scoped;
 
-        var isGreetor = auth && auth.role === "GREETOR";
-
+        // Perf: ALWAYS aggregate over the already-fetched windowRecs via the pure
+        // transforms. windowRecs = filterByRange(scope(all)); for non-greetors
+        // scope() is identity, so this is byte-identical to the old
+        // reports.summary()/breakdown() async path — but those each re-ran
+        // Repo.records.all() internally (5 extra full-table scans on top of the
+        // outer all()). Using the pure variants here removes all of them.
         function summaryP() {
-          if (isGreetor && reports && reports.summaryPure) return Promise.resolve(reports.summaryPure(windowRecs));
+          if (reports && reports.summaryPure) return Promise.resolve(reports.summaryPure(windowRecs));
           return reports ? reports.summary(range, cs, ce) : Promise.resolve(null);
         }
         function breakdownP(field) {
-          if (isGreetor && reports && reports.breakdownPure) return Promise.resolve(reports.breakdownPure(windowRecs, field));
+          if (reports && reports.breakdownPure) return Promise.resolve(reports.breakdownPure(windowRecs, field));
           return reports ? reports.breakdown(range, field, cs, ce) : Promise.resolve([]);
         }
 
@@ -878,7 +882,18 @@
       });
       var table = dataTable(headers, body, opts,
         ["18%", "11%", "11%", "12%", "8%", "12%", "13%", "15%"]);
-      return buildDoc(this.name, label, [table], opts);
+      var content = [table];
+      // If NO footfall estimates have been entered, the Coverage % / True Conv %
+      // columns are all "—" / 0 — explain why so the report doesn't look broken.
+      var noFootfall = rows.every(function (r) { return !num(r.footfallEstimate); });
+      if (noFootfall) {
+        content.push({
+          text: tr(opts, "footfall_hint",
+            "Footfall estimates not entered — set daily footfall in Settings to enable coverage and true-conversion stats."),
+          italics: true, color: "#6b7280", fontSize: 9, margin: [0, 8, 0, 0]
+        });
+      }
+      return buildDoc(this.name, label, content, opts);
     }
   };
 
@@ -1108,11 +1123,17 @@
       }
 
       var body = [];
+      // For GREETOR the visit list (and totals) are scoped to their OWN visits, so
+      // label the sale + visit KPIs accordingly to avoid implying these are the
+      // customer's true lifetime totals across all greetors.
+      var isGreetor = auth && auth.role === "GREETOR";
+      var saleLabel = isGreetor ? tr(opts, "my_sale", "My sale (this customer)") : tr(opts, "total_sale", "Total sale");
+      var visitsLabel = isGreetor ? tr(opts, "my_visits", "My visits") : tr(opts, "visits", "Visits");
       body.push(kpiGrid([
         { label: tr(opts, "name", "Name"), value: safeStr(cust.name) || "—" },
-        { label: tr(opts, "visits", "Visits"), value: num(cust.visitCount) },
+        { label: visitsLabel, value: num(cust.visitCount) },
         { label: tr(opts, "status", "Status"), value: safeStr(cust.status) || "—" },
-        { label: tr(opts, "total_sale", "Total sale"), value: inr(opts, cust.totalSaleValue) },
+        { label: saleLabel, value: inr(opts, cust.totalSaleValue) },
         { label: tr(opts, "first_visit", "First visit"), value: safeStr(cust.firstVisitDate) || "—" },
         { label: tr(opts, "last_visit", "Last visit"), value: safeStr(cust.lastVisitDate) || "—" },
         { label: tr(opts, "mobile", "Mobile"), value: maskMobileFor(auth, cust.mobile) }

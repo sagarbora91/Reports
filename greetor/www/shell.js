@@ -342,14 +342,18 @@
         // 1. Open dialog or modal? Close it.
         const dlg = document.querySelector('dialog[open]');
         if (dlg) { try { dlg.close(); return; } catch (_) {} }
-        // 2. Page-specific intercept.
+        // 2. Page-specific intercept. goBack() handles ALL in-app navigation
+        //    (preview overlay, modals, wizard steps, screen→home) and returns
+        //    true whenever it did something. We do NOT fall through to
+        //    window.history.back(): this is a single-page app that never pushes
+        //    history, so history.back() would either no-op or leave the WebView —
+        //    the previous bug where mid-wizard back jumped instead of stepping.
         if (typeof opts.onBack === 'function') {
-          const handled = opts.onBack();
+          let handled = false;
+          try { handled = opts.onBack(); } catch (_) {}
           if (handled) return;
         }
-        // 3. Browser history.
-        if (window.history.length > 1) { window.history.back(); return; }
-        // 4. Confirm exit.
+        // 3. Only reached at the Capture home root → confirm exit.
         if (confirm('Exit Saagar Greetor?')) App.exitApp();
       });
       App.addListener('pause', function () {
