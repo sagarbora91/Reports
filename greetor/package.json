@@ -1,6 +1,6 @@
 {
   "name": "saagar-greetor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Saagar Greetor - Non-Purchase walk-in capture for Tanishq / Titan World / Helios. Sister app to Saagar Audit.",
   "scripts": {

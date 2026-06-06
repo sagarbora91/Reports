@@ -468,13 +468,19 @@
         reports ? reports.summary("today") : Promise.resolve(null),
         repo ? repo.records.all() : Promise.resolve([])
       ]).then(function (res) {
-        var summary = res[0];
+        var teamSummary = res[0];
         var all = Array.isArray(res[1]) ? res[1] : [];
         var scoped = scopeRecords(all, auth);
         var today = (reports && reports.resolveRange) ? reports.resolveRange("today").startDate : stampOf({});
         var rows = (reports && reports.filterByRange)
           ? reports.filterByRange(scoped, "today")
           : scoped.filter(function (r) { return r && r.visitDate === today; });
+        // For GREETOR: scope the KPI strip to their own records so the numbers
+        // match the table below (team-wide totals would mislead — e.g. showing
+        // 30 conversions when the greetor's own count is 5).
+        var summary = (auth && auth.role === 'GREETOR' && reports && reports.summaryPure)
+          ? reports.summaryPure(rows)
+          : teamSummary;
         // newest visitTime last → keep ord order (capture order) which reads
         // naturally on a capture sheet.
         return {

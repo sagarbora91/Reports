@@ -750,7 +750,7 @@ const STORES = ["Tanishq Jewellery", "Titan World", "Helios"];
 const $ = (id) => document.getElementById(id);
 
 function uuid()  { return "g" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
-function uid()   { return "NP-" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,4).toUpperCase(); }
+function uid()   { return "NP-" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,8).toUpperCase(); }
 function today() { return new Date().toISOString().slice(0, 10); }
 function nowTime() {
   const d = new Date();
@@ -2423,6 +2423,14 @@ async function renderSettings(auth) {
       <button class="btn btn-secondary btn-full" data-action="dpdp-purge-now">Purge now</button>
     </div>` : ""}
 
+    ${can("deleteAny") ? `
+    <div class="settings-section">
+      <h3>⚠ Danger zone</h3>
+      <p>Permanently delete all walk-in records, audit log, communications log, and footfall data. User accounts, masters, and templates are preserved. <strong>This cannot be undone — back up first.</strong></p>
+      <button class="btn btn-ghost btn-full" data-action="clear-records" style="color:var(--red)">Clear all records &amp; activity</button>
+    </div>
+    ` : ""}
+
     <div class="settings-section">
       <h3>About</h3>
       <p>Saagar Greetor · v0.2.0 · phone-first non-purchase walk-in capture.</p>
@@ -2986,7 +2994,12 @@ document.addEventListener("click", async (e) => {
     await quickCaptureModal();
     return;
   }
-  if (action === "quick-save") { await quickSave(); return; }
+  if (action === "quick-save") {
+    a.disabled = true;
+    try { await quickSave(); } catch (err) { console.error(err); toast("Couldn't save."); }
+    finally { a.disabled = false; }
+    return;
+  }
   if (action === "add-photo") {
     if (!window.Photo) { toast("Camera not available."); return; }
     toast("Opening camera…");
@@ -3092,7 +3105,8 @@ document.addEventListener("click", async (e) => {
   }
   if (action === "delete-entry") {
     if (!can("deleteAny")) { toast("Only Owner/Manager can delete entries."); return; }
-    await deleteRecord(a.dataset.id);
+    a.disabled = true;
+    try { await deleteRecord(a.dataset.id); } finally { a.disabled = false; }
     return;
   }
   if (action === "wa-customer") {
@@ -3139,6 +3153,32 @@ document.addEventListener("click", async (e) => {
   }
   if (action === "backup-json") { await backupJson(); return; }
   if (action === "restore-json") { restoreJson(); return; }
+  if (action === "clear-records") {
+    if (!can("deleteAny")) { toast("Owner/Manager only."); return; }
+    // Count records so the confirm dialog is informative
+    let recCount = 0;
+    try {
+      const ct = await Repo.query("SELECT COUNT(*) AS c FROM records", []);
+      recCount = (ct[0] && Number(ct[0].c)) || 0;
+    } catch (_) {}
+    if (!confirm(`Delete all ${recCount.toLocaleString()} walk-in records, audit log, communications log, and footfall data?\n\nUser accounts, masters, and templates are kept.\n\nThis cannot be undone — back up first.`)) return;
+    try {
+      // Delete activity data tables but keep users, meta (masters/settings) and comms_templates.
+      await GreetorDB.transaction(async () => {
+        await Repo.run("DELETE FROM records", []);
+        await Repo.run("DELETE FROM audit_log", []);
+        await Repo.run("DELETE FROM comms_log", []);
+        await Repo.run("DELETE FROM footfall", []);
+      });
+      toast("All records cleared. " + recCount.toLocaleString() + " entries removed.");
+    } catch (err) {
+      console.error("clear-records", err);
+      toast("Could not clear records: " + (err && err.message || err));
+      return;
+    }
+    await render();
+    return;
+  }
   if (action === "erase-all") {
     if (!confirm("Erase ALL data on this device — users, entries, staff? This cannot be undone.")) return;
     // Wipe the DB (truncate every owned table) AND the legacy caches, then reload
@@ -3284,8 +3324,14 @@ document.addEventListener("change", (e) => {
 // =====================================================================
 async function sweepReminders() {
   if (!window.SaagarShell || !window.SaagarShell.scheduleFollowupReminder) return;
-  const records = await Repo.records.all();
-  records.forEach(r => {
+  // Filtered query — only load records that actually need a reminder rather than
+  // scanning the full table (which at 14k+ rows causes noticeable boot latency).
+  // Selects the minimal columns scheduleFollowupReminder() needs.
+  const rows = await Repo.query(
+    "SELECT recordId, followUp, followDate, followTime, leadStatus, store, customerName FROM records WHERE followUp='Yes' AND followDate IS NOT NULL AND followDate != ''",
+    []
+  );
+  rows.forEach(r => {
     try { window.SaagarShell.scheduleFollowupReminder(r); } catch (_) {}
   });
 }

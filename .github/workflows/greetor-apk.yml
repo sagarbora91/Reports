@@ -111,7 +111,7 @@ jobs:
       - name: Stamp version code and name from CI run number
         run: |
           BUILD_NUM="${{ github.run_number }}"
-          VERSION_NAME="0.1.${BUILD_NUM}"
+          VERSION_NAME="0.2.${BUILD_NUM}"
           echo "Stamping versionCode=${BUILD_NUM}, versionName=${VERSION_NAME}"
           sed -i "s/versionCode 1/versionCode ${BUILD_NUM}/" android/app/build.gradle
           sed -i "s/versionName \"1.0\"/versionName \"${VERSION_NAME}\"/" android/app/build.gradle

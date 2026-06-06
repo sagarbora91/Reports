@@ -118,10 +118,10 @@
           await FS.writeFile({
             path: filename,
             data: content,
-            directory: 'CACHE',   // Directory.Cache
+            directory: 'DATA',    // Directory.Data — survives OS cache eviction
             encoding: 'utf8',     // Encoding.UTF8
           });
-          const uriRes = await FS.getUri({ path: filename, directory: 'CACHE' });
+          const uriRes = await FS.getUri({ path: filename, directory: 'DATA' });
           await Sh.share({
             title: filename,
             url: uriRes.uri,
